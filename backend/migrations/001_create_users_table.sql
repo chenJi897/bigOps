@@ -21,5 +21,5 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- 初始化管理员账号
 -- 密码: admin123 (bcrypt加密后的hash)
 INSERT INTO `users` (`username`, `password`, `email`, `real_name`, `status`)
-VALUES ('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin@bigops.io', '系统管理员', 1)
+VALUES ('admin', '$2a$10$jS/Xuk9ObP6yZ37nFqzxH.8B8dzoZzv2jZfAf3riEkqEOvJIB1XqK', 'admin@bigops.io', '系统管理员', 1)
 ON DUPLICATE KEY UPDATE `username` = `username`;

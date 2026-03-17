@@ -6,6 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	"github.com/bigops/platform/internal/handler"
+	"github.com/bigops/platform/internal/middleware"
 )
 
 // Setup 创建并配置 Gin 路由引擎。
@@ -29,7 +32,7 @@ func Setup(mode string) *gin.Engine {
 	// Swagger API 文档（仅开发环境建议开启）
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// API v1 路由组，后续模块的路由注册在此分组下
+	// API v1 路由组
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/ping", func(c *gin.Context) {
@@ -37,6 +40,22 @@ func Setup(mode string) *gin.Engine {
 				"message": "pong",
 			})
 		})
+
+		// --- 认证模块路由 ---
+		authHandler := handler.NewAuthHandler()
+
+		// 公开路由（无需认证）
+		v1.POST("/auth/register", authHandler.Register)
+		v1.POST("/auth/login", authHandler.Login)
+
+		// 需要认证的路由
+		authGroup := v1.Group("")
+		authGroup.Use(middleware.AuthMiddleware())
+		{
+			authGroup.POST("/auth/logout", authHandler.Logout)
+			authGroup.GET("/auth/info", authHandler.GetUserInfo)
+			authGroup.PUT("/auth/password", authHandler.ChangePassword)
+		}
 	}
 
 	return r

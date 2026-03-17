@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bigops/platform/api/http/router"
+	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
@@ -65,6 +66,12 @@ func main() {
 		logger.Fatal("Failed to initialize MySQL", zap.Error(err))
 	}
 	defer database.Close()
+
+	// 自动迁移数据库表结构（开发阶段使用，生产环境建议使用 SQL 迁移脚本）
+	if err := database.GetDB().AutoMigrate(&model.User{}); err != nil {
+		logger.Fatal("Failed to migrate database", zap.Error(err))
+	}
+	logger.Info("Database migration completed")
 
 	// 4. 初始化 Redis
 	redisCfg := database.RedisConfig{
