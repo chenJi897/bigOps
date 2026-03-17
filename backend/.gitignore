@@ -33,6 +33,9 @@ config/config.local.yaml
 *.log
 logs/
 
+# Swagger docs
+docs/swagger/
+
 # OS
 .DS_Store
 Thumbs.db
