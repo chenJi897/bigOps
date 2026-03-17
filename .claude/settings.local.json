@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod:*)",
+      "Bash(find /root/bigOps/backend -type f -name *.go)",
+      "Bash(go get:*)",
+      "Bash(export GOPROXY=https://goproxy.cn,direct)",
+      "Bash(git -C /root/bigOps status)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)"
+    ]
+  }
+}
