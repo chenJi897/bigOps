@@ -49,28 +49,28 @@ func Setup(mode string) *gin.Engine {
 			// 认证相关
 			authGroup.POST("/auth/logout", authHandler.Logout)
 			authGroup.GET("/auth/info", authHandler.GetUserInfo)
-			authGroup.PUT("/auth/password", authHandler.ChangePassword)
+			authGroup.POST("/auth/password", authHandler.ChangePassword)
 
 			// --- 角色管理 ---
 			roleHandler := handler.NewRoleHandler()
 			authGroup.GET("/roles", roleHandler.List)
 			authGroup.GET("/roles/:id", roleHandler.GetByID)
 			authGroup.POST("/roles", roleHandler.Create)
-			authGroup.PUT("/roles/:id", roleHandler.Update)
-			authGroup.DELETE("/roles/:id", roleHandler.Delete)
-			authGroup.PUT("/roles/:id/menus", roleHandler.SetMenus)
+			authGroup.POST("/roles/:id", roleHandler.Update)
+			authGroup.POST("/roles/:id/delete", roleHandler.Delete)
+			authGroup.POST("/roles/:id/menus", roleHandler.SetMenus)
 
 			// --- 用户角色管理 ---
 			authGroup.GET("/users/:id/roles", roleHandler.GetUserRoles)
-			authGroup.PUT("/users/:id/roles", roleHandler.SetUserRoles)
+			authGroup.POST("/users/:id/roles", roleHandler.SetUserRoles)
 
 			// --- 菜单管理 ---
 			menuHandler := handler.NewMenuHandler()
 			authGroup.GET("/menus", menuHandler.GetTree)
 			authGroup.GET("/menus/user", menuHandler.GetUserMenus)
 			authGroup.POST("/menus", menuHandler.Create)
-			authGroup.PUT("/menus/:id", menuHandler.Update)
-			authGroup.DELETE("/menus/:id", menuHandler.Delete)
+			authGroup.POST("/menus/:id", menuHandler.Update)
+			authGroup.POST("/menus/:id/delete", menuHandler.Delete)
 		}
 	}
 
