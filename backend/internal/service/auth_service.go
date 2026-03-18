@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"unicode"
 
 	"gorm.io/gorm"
 
@@ -28,8 +29,13 @@ func NewAuthService() *AuthService {
 	}
 }
 
-// Register 用户注册：校验唯一性 → 密码加密 → 写入数据库。
+// Register 用户注册：校验密码复杂度 → 校验唯一性 → 密码加密 → 写入数据库。
 func (s *AuthService) Register(username, password, email string) error {
+	// 密码复杂度校验
+	if err := checkPasswordComplexity(password); err != nil {
+		return err
+	}
+
 	// 检查用户名是否已存在
 	_, err := s.userRepo.GetByUsername(username)
 	if err == nil {
@@ -148,8 +154,13 @@ func (s *AuthService) GetUserInfo(userID int64) (*model.User, error) {
 	return user, nil
 }
 
-// ChangePassword 修改密码：验证旧密码 → 加密新密码 → 更新数据库。
+// ChangePassword 修改密码：验证旧密码 → 校验新密码复杂度 → 加密新密码 → 更新数据库。
 func (s *AuthService) ChangePassword(userID int64, oldPassword, newPassword string) error {
+	// 密码复杂度校验
+	if err := checkPasswordComplexity(newPassword); err != nil {
+		return err
+	}
+
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return errors.New("用户不存在")
@@ -168,4 +179,39 @@ func (s *AuthService) ChangePassword(userID int64, oldPassword, newPassword stri
 
 	user.Password = hashedPassword
 	return s.userRepo.Update(user)
+}
+
+// checkPasswordComplexity 校验密码复杂度：
+// - 长度 8-50 位
+// - 必须包含大写字母、小写字母、数字
+func checkPasswordComplexity(password string) error {
+	if len(password) < 8 {
+		return errors.New("密码长度不能少于8位")
+	}
+	if len(password) > 50 {
+		return errors.New("密码长度不能超过50位")
+	}
+
+	var hasUpper, hasLower, hasDigit bool
+	for _, c := range password {
+		switch {
+		case unicode.IsUpper(c):
+			hasUpper = true
+		case unicode.IsLower(c):
+			hasLower = true
+		case unicode.IsDigit(c):
+			hasDigit = true
+		}
+	}
+
+	if !hasUpper {
+		return errors.New("密码必须包含大写字母")
+	}
+	if !hasLower {
+		return errors.New("密码必须包含小写字母")
+	}
+	if !hasDigit {
+		return errors.New("密码必须包含数字")
+	}
+	return nil
 }

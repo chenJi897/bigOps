@@ -18,8 +18,8 @@ func Setup(mode string) *gin.Engine {
 
 	r := gin.New()
 
-	// 全局中间件：请求日志 + panic 恢复
-	r.Use(gin.Logger())
+	// 全局中间件：请求日志（Zap） + panic 恢复
+	r.Use(middleware.GinLogger())
 	r.Use(gin.Recovery())
 
 	// 健康检查，供负载均衡器 / K8s 探针使用
