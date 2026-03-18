@@ -22,9 +22,16 @@ func Setup(mode string) *gin.Engine {
 	r.Use(gin.Recovery())
 
 	// 404 处理
+	// 404 路由不存在
 	r.NoRoute(func(c *gin.Context) {
 		response.NotFound(c, "接口不存在")
 	})
+
+	// 405 方法不允许
+	r.NoMethod(func(c *gin.Context) {
+		response.Error(c, 405, "请求方法不允许")
+	})
+	r.HandleMethodNotAllowed = true
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {

@@ -12,7 +12,7 @@ type User struct {
 	ID        int64          `gorm:"primaryKey;autoIncrement" json:"id"`
 	Username  string         `gorm:"size:50;uniqueIndex;not null" json:"username"`
 	Password  string         `gorm:"size:255;not null" json:"-"`            // json:"-" 确保密码不会出现在响应中
-	Email     string         `gorm:"size:100;uniqueIndex" json:"email"`
+	Email     *string        `gorm:"size:100;uniqueIndex" json:"email"`
 	Phone     string         `gorm:"size:20" json:"phone"`
 	RealName  string         `gorm:"size:50" json:"real_name"`
 	Avatar    string         `gorm:"size:255" json:"avatar"`

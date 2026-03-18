@@ -62,12 +62,14 @@ func (s *AuthService) Register(username, password, email string) error {
 		return fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	// 创建用户
+	// 创建用户（空邮箱存为 NULL 避免唯一索引冲突）
 	user := &model.User{
 		Username: username,
 		Password: hashedPassword,
-		Email:    email,
 		Status:   1,
+	}
+	if email != "" {
+		user.Email = &email
 	}
 	return s.userRepo.Create(user)
 }
