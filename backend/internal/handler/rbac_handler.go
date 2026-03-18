@@ -1,22 +1,38 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/bigops/platform/internal/model"
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
+	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
 )
 
 // RoleHandler 角色管理 HTTP 处理器。
 type RoleHandler struct {
 	roleService *service.RoleService
+	userRepo    *repository.UserRepository
 }
 
 func NewRoleHandler() *RoleHandler {
-	return &RoleHandler{roleService: service.NewRoleService()}
+	return &RoleHandler{
+		roleService: service.NewRoleService(),
+		userRepo:    repository.NewUserRepository(),
+	}
+}
+
+// getOperator 从 Context 获取操作人用户名。
+func getOperator(c *gin.Context) string {
+	if u, ok := c.Get("username"); ok {
+		return u.(string)
+	}
+	return "unknown"
 }
 
 type createRoleRequest struct {
@@ -26,7 +42,7 @@ type createRoleRequest struct {
 	Sort        int    `json:"sort"`
 }
 
-// Create 创建角色。POST /api/v1/roles
+// Create 创建角色。
 func (h *RoleHandler) Create(c *gin.Context) {
 	var req createRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -37,6 +53,7 @@ func (h *RoleHandler) Create(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("创建角色", zap.String("operator", getOperator(c)), zap.String("role", req.Name), zap.String("display_name", req.DisplayName))
 	response.SuccessWithMessage(c, "创建成功", nil)
 }
 
@@ -44,10 +61,9 @@ type updateRoleRequest struct {
 	DisplayName string `json:"display_name" binding:"required"`
 	Description string `json:"description"`
 	Sort        int    `json:"sort"`
-	Status      int8   `json:"status"`
 }
 
-// Update 更新角色。PUT /api/v1/roles/:id
+// Update 更新角色。
 func (h *RoleHandler) Update(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	var req updateRoleRequest
@@ -55,24 +71,69 @@ func (h *RoleHandler) Update(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
-	if err := h.roleService.Update(id, req.DisplayName, req.Description, req.Sort, req.Status); err != nil {
+	role, err := h.roleService.GetByID(id)
+	if err != nil {
+		response.Error(c, 404, "角色不存在")
+		return
+	}
+	if err := h.roleService.Update(id, req.DisplayName, req.Description, req.Sort, role.Status); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新角色", zap.String("operator", getOperator(c)), zap.Int64("role_id", id), zap.String("display_name", req.DisplayName))
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
-// Delete 删除角色。DELETE /api/v1/roles/:id
+type updateRoleStatusRequest struct {
+	Status int8 `json:"status" binding:"oneof=0 1"`
+}
+
+// UpdateStatus 启用/禁用角色。
+func (h *RoleHandler) UpdateStatus(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var req updateRoleStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	role, err := h.roleService.GetByID(id)
+	if err != nil {
+		response.Error(c, 404, "角色不存在")
+		return
+	}
+	if role.Name == "admin" {
+		response.Error(c, 400, "不允许禁用管理员角色")
+		return
+	}
+	if err := h.roleService.Update(id, role.DisplayName, role.Description, role.Sort, req.Status); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	action := "启用"
+	if req.Status == 0 {
+		action = "禁用"
+	}
+	logger.Info(fmt.Sprintf("%s角色", action), zap.String("operator", getOperator(c)), zap.Int64("role_id", id), zap.String("role", role.Name))
+	response.SuccessWithMessage(c, action+"成功", nil)
+}
+
+// Delete 删除角色。
 func (h *RoleHandler) Delete(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	role, _ := h.roleService.GetByID(id)
 	if err := h.roleService.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	roleName := ""
+	if role != nil {
+		roleName = role.Name
+	}
+	logger.Info("删除角色", zap.String("operator", getOperator(c)), zap.Int64("role_id", id), zap.String("role", roleName))
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
-// GetByID 获取角色详情。GET /api/v1/roles/:id
+// GetByID 获取角色详情。
 func (h *RoleHandler) GetByID(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	role, err := h.roleService.GetByID(id)
@@ -83,7 +144,7 @@ func (h *RoleHandler) GetByID(c *gin.Context) {
 	response.Success(c, role)
 }
 
-// List 角色列表。GET /api/v1/roles
+// List 角色列表。
 func (h *RoleHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
@@ -99,7 +160,7 @@ type setMenusRequest struct {
 	MenuIDs []int64 `json:"menu_ids"`
 }
 
-// SetMenus 设置角色菜单权限。PUT /api/v1/roles/:id/menus
+// SetMenus 设置角色菜单权限。
 func (h *RoleHandler) SetMenus(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	var req setMenusRequest
@@ -111,6 +172,7 @@ func (h *RoleHandler) SetMenus(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("设置角色菜单", zap.String("operator", getOperator(c)), zap.Int64("role_id", id), zap.Int("menu_count", len(req.MenuIDs)))
 	response.SuccessWithMessage(c, "设置成功", nil)
 }
 
@@ -118,7 +180,7 @@ type setUserRolesRequest struct {
 	RoleIDs []int64 `json:"role_ids"`
 }
 
-// SetUserRoles 设置用户角色。PUT /api/v1/users/:id/roles
+// SetUserRoles 设置用户角色。
 func (h *RoleHandler) SetUserRoles(c *gin.Context) {
 	userID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	var req setUserRolesRequest
@@ -126,15 +188,24 @@ func (h *RoleHandler) SetUserRoles(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
-	// TODO: 应查询用户名，这里先用 ID 字符串简化处理
-	if err := h.roleService.SetUserRoles(userID, req.RoleIDs, c.Param("id")); err != nil {
+	// 查询真实用户名用于 Casbin 映射
+	username := ""
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		response.Error(c, 404, "用户不存在")
+		return
+	}
+	username = user.Username
+
+	if err := h.roleService.SetUserRoles(userID, req.RoleIDs, username); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("设置用户角色", zap.String("operator", getOperator(c)), zap.Int64("user_id", userID), zap.String("username", username), zap.Int("role_count", len(req.RoleIDs)))
 	response.SuccessWithMessage(c, "设置成功", nil)
 }
 
-// GetUserRoles 获取用户角色。GET /api/v1/users/:id/roles
+// GetUserRoles 获取用户角色。
 func (h *RoleHandler) GetUserRoles(c *gin.Context) {
 	userID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	roles, err := h.roleService.GetUserRoles(userID)
@@ -172,7 +243,7 @@ type createMenuRequest struct {
 	Visible   int8   `json:"visible"`
 }
 
-// Create 创建菜单。POST /api/v1/menus
+// Create 创建菜单。
 func (h *MenuHandler) Create(c *gin.Context) {
 	var req createMenuRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -189,10 +260,11 @@ func (h *MenuHandler) Create(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("创建菜单", zap.String("operator", getOperator(c)), zap.String("menu", req.Name), zap.String("title", req.Title))
 	response.SuccessWithMessage(c, "创建成功", nil)
 }
 
-// Update 更新菜单。PUT /api/v1/menus/:id
+// Update 更新菜单。
 func (h *MenuHandler) Update(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	var req createMenuRequest
@@ -210,20 +282,22 @@ func (h *MenuHandler) Update(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新菜单", zap.String("operator", getOperator(c)), zap.Int64("menu_id", id), zap.String("title", req.Title))
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
-// Delete 删除菜单。DELETE /api/v1/menus/:id
+// Delete 删除菜单。
 func (h *MenuHandler) Delete(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err := h.menuService.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("删除菜单", zap.String("operator", getOperator(c)), zap.Int64("menu_id", id))
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
-// GetTree 获取完整菜单树。GET /api/v1/menus
+// GetTree 获取完整菜单树。
 func (h *MenuHandler) GetTree(c *gin.Context) {
 	tree, err := h.menuService.GetTree()
 	if err != nil {
@@ -233,8 +307,7 @@ func (h *MenuHandler) GetTree(c *gin.Context) {
 	response.Success(c, tree)
 }
 
-// GetUserMenus 获取当前用户的菜单树。GET /api/v1/menus/user
-// 管理员返回全部菜单，普通用户返回其角色关联的菜单。
+// GetUserMenus 获取当前用户的菜单树。
 func (h *MenuHandler) GetUserMenus(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {

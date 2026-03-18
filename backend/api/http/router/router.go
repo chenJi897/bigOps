@@ -1,5 +1,4 @@
 // Package router 负责 HTTP 路由的注册与初始化。
-// 包含全局中间件、健康检查、Swagger 文档以及 API v1 路由组。
 package router
 
 import (
@@ -9,10 +8,10 @@ import (
 
 	"github.com/bigops/platform/internal/handler"
 	"github.com/bigops/platform/internal/middleware"
+	"github.com/bigops/platform/internal/pkg/response"
 )
 
 // Setup 创建并配置 Gin 路由引擎。
-// mode 对应 Gin 的运行模式：debug / release / test。
 func Setup(mode string) *gin.Engine {
 	gin.SetMode(mode)
 
@@ -22,7 +21,12 @@ func Setup(mode string) *gin.Engine {
 	r.Use(middleware.GinLogger())
 	r.Use(gin.Recovery())
 
-	// 健康检查，供负载均衡器 / K8s 探针使用
+	// 404 处理
+	r.NoRoute(func(c *gin.Context) {
+		response.NotFound(c, "接口不存在")
+	})
+
+	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
@@ -58,6 +62,7 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/roles", roleHandler.Create)
 			authGroup.POST("/roles/:id", roleHandler.Update)
 			authGroup.POST("/roles/:id/delete", roleHandler.Delete)
+			authGroup.POST("/roles/:id/status", roleHandler.UpdateStatus)
 			authGroup.POST("/roles/:id/menus", roleHandler.SetMenus)
 
 			// --- 用户管理 ---
