@@ -60,6 +60,12 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/roles/:id/delete", roleHandler.Delete)
 			authGroup.POST("/roles/:id/menus", roleHandler.SetMenus)
 
+			// --- 用户管理 ---
+			userHandler := handler.NewUserHandler()
+			authGroup.GET("/users", userHandler.List)
+			authGroup.POST("/users/:id/status", userHandler.UpdateStatus)
+			authGroup.POST("/users/:id/delete", userHandler.Delete)
+
 			// --- 用户角色管理 ---
 			authGroup.GET("/users/:id/roles", roleHandler.GetUserRoles)
 			authGroup.POST("/users/:id/roles", roleHandler.SetUserRoles)
