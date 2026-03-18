@@ -12,6 +12,7 @@ import (
 
 	"github.com/bigops/platform/api/http/router"
 	"github.com/bigops/platform/internal/model"
+	casbinPkg "github.com/bigops/platform/internal/pkg/casbin"
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
@@ -68,10 +69,16 @@ func main() {
 	defer database.Close()
 
 	// 自动迁移数据库表结构（开发阶段使用，生产环境建议使用 SQL 迁移脚本）
-	if err := database.GetDB().AutoMigrate(&model.User{}); err != nil {
+	if err := database.GetDB().AutoMigrate(&model.User{}, &model.Role{}, &model.Menu{}, &model.UserRole{}); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
 	logger.Info("Database migration completed")
+
+	// 初始化 Casbin 权限引擎
+	if err := casbinPkg.Init(database.GetDB()); err != nil {
+		logger.Fatal("Failed to initialize Casbin", zap.Error(err))
+	}
+	logger.Info("Casbin initialized")
 
 	// 4. 初始化 Redis
 	redisCfg := database.RedisConfig{

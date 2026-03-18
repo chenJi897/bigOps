@@ -24,37 +24,53 @@ func Setup(mode string) *gin.Engine {
 
 	// 健康检查，供负载均衡器 / K8s 探针使用
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "ok",
-		})
+		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// Swagger API 文档（仅开发环境建议开启）
+	// Swagger API 文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API v1 路由组
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/ping", func(c *gin.Context) {
-			c.JSON(200, gin.H{
-				"message": "pong",
-			})
+			c.JSON(200, gin.H{"message": "pong"})
 		})
 
-		// --- 认证模块路由 ---
+		// --- 认证模块（公开路由） ---
 		authHandler := handler.NewAuthHandler()
-
-		// 公开路由（无需认证）
 		v1.POST("/auth/register", authHandler.Register)
 		v1.POST("/auth/login", authHandler.Login)
 
-		// 需要认证的路由
+		// --- 需要认证的路由 ---
 		authGroup := v1.Group("")
 		authGroup.Use(middleware.AuthMiddleware())
 		{
+			// 认证相关
 			authGroup.POST("/auth/logout", authHandler.Logout)
 			authGroup.GET("/auth/info", authHandler.GetUserInfo)
 			authGroup.PUT("/auth/password", authHandler.ChangePassword)
+
+			// --- 角色管理 ---
+			roleHandler := handler.NewRoleHandler()
+			authGroup.GET("/roles", roleHandler.List)
+			authGroup.GET("/roles/:id", roleHandler.GetByID)
+			authGroup.POST("/roles", roleHandler.Create)
+			authGroup.PUT("/roles/:id", roleHandler.Update)
+			authGroup.DELETE("/roles/:id", roleHandler.Delete)
+			authGroup.PUT("/roles/:id/menus", roleHandler.SetMenus)
+
+			// --- 用户角色管理 ---
+			authGroup.GET("/users/:id/roles", roleHandler.GetUserRoles)
+			authGroup.PUT("/users/:id/roles", roleHandler.SetUserRoles)
+
+			// --- 菜单管理 ---
+			menuHandler := handler.NewMenuHandler()
+			authGroup.GET("/menus", menuHandler.GetTree)
+			authGroup.GET("/menus/user", menuHandler.GetUserMenus)
+			authGroup.POST("/menus", menuHandler.Create)
+			authGroup.PUT("/menus/:id", menuHandler.Update)
+			authGroup.DELETE("/menus/:id", menuHandler.Delete)
 		}
 	}
 
