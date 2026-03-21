@@ -10,17 +10,22 @@ import (
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
+	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
 )
 
 var _ model.ServiceTree // swag import
 
 type ServiceTreeHandler struct {
-	svc *service.ServiceTreeService
+	svc       *service.ServiceTreeService
+	assetRepo *repository.AssetRepository
 }
 
 func NewServiceTreeHandler() *ServiceTreeHandler {
-	return &ServiceTreeHandler{svc: service.NewServiceTreeService()}
+	return &ServiceTreeHandler{
+		svc:       service.NewServiceTreeService(),
+		assetRepo: repository.NewAssetRepository(),
+	}
 }
 
 type CreateServiceTreeRequest struct {
@@ -202,4 +207,35 @@ func (h *ServiceTreeHandler) Move(c *gin.Context) {
 	c.Set("audit_resource_id", id)
 	c.Set("audit_detail", "移动服务树节点")
 	response.SuccessWithMessage(c, "移动成功", nil)
+}
+
+// AssetCount 获取各节点的资产数量统计。
+// @Summary 服务树资产数量统计
+// @Description 返回每个服务树节点的直接资产数量（map: node_id → count）
+// @Tags 服务树
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response "资产数量统计"
+// @Router /service-trees/asset-counts [get]
+func (h *ServiceTreeHandler) AssetCounts(c *gin.Context) {
+	treeRepo := repository.NewServiceTreeRepository()
+	allNodes, err := treeRepo.GetAll()
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	var ids []int64
+	for _, n := range allNodes {
+		ids = append(ids, n.ID)
+	}
+	if len(ids) == 0 {
+		response.Success(c, map[int64]int64{})
+		return
+	}
+	counts, err := h.assetRepo.CountByServiceTreeIDs(ids)
+	if err != nil {
+		response.InternalServerError(c, "统计失败")
+		return
+	}
+	response.Success(c, counts)
 }

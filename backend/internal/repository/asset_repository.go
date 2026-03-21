@@ -53,6 +53,7 @@ type AssetListQuery struct {
 	Size          int
 	Status        string
 	ServiceTreeID int64
+	Recursive     bool   // 是否递归查询子节点下的资产
 	Source        string
 	Keyword       string // 搜索 hostname 或 ip
 }
@@ -66,7 +67,18 @@ func (r *AssetRepository) List(q AssetListQuery) ([]*model.Asset, int64, error) 
 		db = db.Where("status = ?", q.Status)
 	}
 	if q.ServiceTreeID > 0 {
-		db = db.Where("service_tree_id = ?", q.ServiceTreeID)
+		if q.Recursive {
+			// 递归查找所有子节点 ID
+			treeRepo := NewServiceTreeRepository()
+			ids, err := treeRepo.GetAllDescendantIDs(q.ServiceTreeID)
+			if err == nil && len(ids) > 0 {
+				db = db.Where("service_tree_id IN ?", ids)
+			} else {
+				db = db.Where("service_tree_id = ?", q.ServiceTreeID)
+			}
+		} else {
+			db = db.Where("service_tree_id = ?", q.ServiceTreeID)
+		}
 	}
 	if q.Source != "" {
 		db = db.Where("source = ?", q.Source)
@@ -89,4 +101,26 @@ func (r *AssetRepository) CountByServiceTreeID(serviceTreeID int64) (int64, erro
 	var count int64
 	err := database.GetDB().Model(&model.Asset{}).Where("service_tree_id = ?", serviceTreeID).Count(&count).Error
 	return count, err
+}
+
+// CountByServiceTreeIDs 批量统计多个 service_tree_id 的资产数量。
+func (r *AssetRepository) CountByServiceTreeIDs(ids []int64) (map[int64]int64, error) {
+	type Result struct {
+		ServiceTreeID int64 `gorm:"column:service_tree_id"`
+		Count         int64 `gorm:"column:cnt"`
+	}
+	var results []Result
+	err := database.GetDB().Model(&model.Asset{}).
+		Select("service_tree_id, COUNT(*) as cnt").
+		Where("service_tree_id IN ?", ids).
+		Group("service_tree_id").
+		Find(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[int64]int64)
+	for _, r := range results {
+		m[r.ServiceTreeID] = r.Count
+	}
+	return m, nil
 }

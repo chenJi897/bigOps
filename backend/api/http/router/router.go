@@ -94,6 +94,7 @@ func Setup(mode string) *gin.Engine {
 			// --- 服务树管理 ---
 			serviceTreeHandler := handler.NewServiceTreeHandler()
 			authGroup.GET("/service-trees", serviceTreeHandler.GetTree)
+			authGroup.GET("/service-trees/asset-counts", serviceTreeHandler.AssetCounts)
 			authGroup.GET("/service-trees/:id", serviceTreeHandler.GetByID)
 			authGroup.POST("/service-trees", serviceTreeHandler.Create)
 			authGroup.POST("/service-trees/:id", serviceTreeHandler.Update)

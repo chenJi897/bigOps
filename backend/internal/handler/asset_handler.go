@@ -53,6 +53,7 @@ type CreateAssetRequest struct {
 // @Param size query int false "每页条数" default(20)
 // @Param status query string false "状态" Enums(online,offline)
 // @Param service_tree_id query int false "服务树节点ID"
+// @Param recursive query bool false "是否递归查子节点" default(false)
 // @Param source query string false "来源" Enums(manual,aliyun,tencent,aws)
 // @Param keyword query string false "搜索关键字（主机名/IP）"
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.Asset}} "资产列表"
@@ -68,6 +69,7 @@ func (h *AssetHandler) List(c *gin.Context) {
 		Size:          size,
 		Status:        c.Query("status"),
 		ServiceTreeID: serviceTreeID,
+		Recursive:     c.Query("recursive") == "true",
 		Source:        c.Query("source"),
 		Keyword:       c.Query("keyword"),
 	}

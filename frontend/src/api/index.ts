@@ -85,6 +85,7 @@ export const serviceTreeApi = {
   update: (id: number, data: any) => api.post(`/service-trees/${id}`, data),
   delete: (id: number) => api.post(`/service-trees/${id}/delete`),
   move: (id: number, parent_id: number, sort: number) => api.post(`/service-trees/${id}/move`, { parent_id, sort }),
+  assetCounts: () => api.get('/service-trees/asset-counts'),
 }
 
 // 云账号

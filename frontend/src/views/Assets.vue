@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { assetApi, serviceTreeApi } from '../api'
 
+const route = useRoute()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
-const query = ref({ page: 1, size: 20, status: '', source: '', service_tree_id: undefined as number | undefined, keyword: '' })
+const query = ref({ page: 1, size: 20, status: '', source: '', service_tree_id: undefined as number | undefined, recursive: false, keyword: '' })
 
 // 服务树数据（供筛选和表单选择）
 const serviceTreeOptions = ref<any[]>([])
@@ -129,6 +131,11 @@ function handleChangesPage(p: number) {
 }
 
 onMounted(() => {
+  // 从 URL query 读取筛选参数（服务树页跳转过来）
+  if (route.query.service_tree_id) {
+    query.value.service_tree_id = Number(route.query.service_tree_id)
+    query.value.recursive = route.query.recursive === 'true'
+  }
   fetchData()
   fetchServiceTree()
 })

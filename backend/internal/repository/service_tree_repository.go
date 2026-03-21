@@ -57,3 +57,26 @@ func (r *ServiceTreeRepository) HasChildren(id int64) (bool, error) {
 	err := database.GetDB().Model(&model.ServiceTree{}).Where("parent_id = ?", id).Count(&count).Error
 	return count > 0, err
 }
+
+// GetAllDescendantIDs 递归获取某节点及其所有子孙节点的 ID 列表。
+func (r *ServiceTreeRepository) GetAllDescendantIDs(rootID int64) ([]int64, error) {
+	var allNodes []*model.ServiceTree
+	if err := database.GetDB().Select("id, parent_id").Find(&allNodes).Error; err != nil {
+		return nil, err
+	}
+	// 构建 parent_id → children 映射
+	childrenMap := make(map[int64][]int64)
+	for _, n := range allNodes {
+		childrenMap[n.ParentID] = append(childrenMap[n.ParentID], n.ID)
+	}
+	// BFS 收集
+	var ids []int64
+	queue := []int64{rootID}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		ids = append(ids, cur)
+		queue = append(queue, childrenMap[cur]...)
+	}
+	return ids, nil
+}
