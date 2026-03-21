@@ -266,16 +266,29 @@ func (h *CloudAccountHandler) Sync(c *gin.Context) {
 				created++
 			}
 		} else {
-			// 已存在：对比 diff 并更新
+			// 已存在：对比 diff 并更新到 existing 上（保留 existing 的 ID/CreatedAt/Tags 等）
 			changes := diffAsset(existing, ca)
-			ca.ID = existing.ID
-			ca.Source = existing.Source
-			if updateErr := assetRepo.Update(ca); updateErr == nil && len(changes) > 0 {
+			if len(changes) == 0 {
+				continue
+			}
+			existing.Hostname = ca.Hostname
+			existing.IP = ca.IP
+			existing.InnerIP = ca.InnerIP
+			existing.OS = ca.OS
+			existing.OSVersion = ca.OSVersion
+			existing.CPUCores = ca.CPUCores
+			existing.MemoryMB = ca.MemoryMB
+			existing.DiskGB = ca.DiskGB
+			existing.Status = ca.Status
+			existing.IDC = ca.IDC
+			existing.SN = ca.SN
+			existing.CloudAccountID = id
+			if updateErr := assetRepo.Update(existing); updateErr == nil {
 				updated++
-				for _, ch := range changes {
-					ch.AssetID = existing.ID
-					ch.ChangeType = "sync"
-					changeRepo.Create(&ch)
+				for i := range changes {
+					changes[i].AssetID = existing.ID
+					changes[i].ChangeType = "sync"
+					changeRepo.Create(&changes[i])
 				}
 			}
 		}

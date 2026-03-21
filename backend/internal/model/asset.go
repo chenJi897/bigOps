@@ -21,9 +21,9 @@ type Asset struct {
 	ServiceTreeName string         `gorm:"-" json:"service_tree_name,omitempty"`           // 关联查询，不入库
 	CloudAccountID  int64          `gorm:"default:0;index" json:"cloud_account_id"`
 	CloudInstanceID string         `gorm:"size:100;index" json:"cloud_instance_id"`       // 云实例ID，用于同步 upsert
-	IDC             string         `gorm:"size:100" json:"idc"`
+	IDC             string         `gorm:"column:idc;size:100" json:"idc"`
 	SN              string         `gorm:"size:100" json:"sn"`
-	Tags            string         `gorm:"type:json" json:"tags"`                          // JSON 数组 ["tag1","tag2"]
+	Tags            string         `gorm:"type:json;default:null" json:"tags"`               // JSON 数组 ["tag1","tag2"]
 	Remark          string         `gorm:"size:500" json:"remark"`
 	CreatedAt       LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	UpdatedAt       LocalTime      `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
@@ -32,4 +32,12 @@ type Asset struct {
 
 func (Asset) TableName() string {
 	return "assets"
+}
+
+// BeforeSave 确保 tags 字段为合法 JSON（空值转为 "[]"）。
+func (a *Asset) BeforeSave(tx *gorm.DB) error {
+	if a.Tags == "" {
+		a.Tags = "[]"
+	}
+	return nil
 }
