@@ -110,30 +110,40 @@
 
 ---
 
-## Phase 3: Module 02 - 服务树和 CMDB `not_started`
+## Phase 3: Module 02 - 服务树和 CMDB `in_progress`
 
-### 3.1 服务树管理
-- [ ] 服务树模型定义 (ServiceTree)
-- [ ] 服务树 CRUD 接口
-- [ ] 树形结构查询
-- [ ] 节点拖拽移动
+### 3.1 服务树管理 `complete`
+- [x] 服务树模型定义 (ServiceTree) `9a68da6`
+- [x] 服务树 CRUD 接口 (6 个 API)
+- [x] 树形结构查询
+- [x] 节点拖拽移动
 - [ ] 前端服务树页面 + 树形组件
 - [ ] 右键菜单操作
 
-### 3.2 CMDB 资产管理
-- [ ] 资产模型定义 (Asset/Host)
-- [ ] 资产 CRUD 接口
-- [ ] 资产查询和高级筛选
+### 3.2 云账号管理 `complete`
+- [x] 云账号模型 (CloudAccount) + AES-GCM 加密 AK/SK `50c7c19`
+- [x] 云账号 CRUD 接口 (6 个 API)
+- [ ] 前端云账号管理页面
+
+### 3.3 CMDB 资产管理 `complete`
+- [x] 资产模型定义 (Asset + AssetChange) `25450d9`
+- [x] 资产 CRUD 接口 (5 个 API)
+- [x] 资产查询和多条件筛选 (status/service_tree_id/source/keyword)
+- [x] 资产关联服务树 (关联查询节点名称)
 - [ ] 资产导入/导出 (Excel)
-- [ ] 资产关联服务树
 - [ ] 前端资产列表 + 详情 + 表单页面
 - [ ] 批量操作
 
-### 3.3 资产发现
-- [ ] SSH 连接封装
-- [ ] 资产信息采集 (CPU/内存/磁盘/网络)
-- [ ] 定时采集任务 (Asynq)
-- [ ] 变更检测 + 变更历史
+### 3.4 阿里云 ECS 同步 `complete`
+- [x] CloudProvider 接口 + AliyunProvider 实现 `569a06f`
+- [x] 同步接口 POST /api/v1/cloud-accounts/:id/sync
+- [x] 按 cloud_instance_id upsert + diff 变更记录
+- [x] MockProvider 集成测试 (4 场景通过) `60ff9d1`
+
+### 3.5 资产变更历史 `complete`
+- [x] AssetChange 模型 + 查询接口 `f6dc0af`
+- [x] 云同步时自动 diff 并记录
+- [ ] 前端变更历史 tab (资产详情抽屉内)
 
 ---
 

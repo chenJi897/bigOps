@@ -2,6 +2,25 @@
 
 ---
 
+## Session: 2026-03-21 (Module 02 CMDB 后端)
+
+### 完成事项
+
+**Module 02 后端 5 个 Task 全部完成：**
+- Task 1: 服务树管理 (ServiceTree model/repo/service/handler, 6 个 API) `9a68da6`
+- Task 2: 云账号管理 (CloudAccount + AES-GCM 加密 AK/SK, 6 个 API) `50c7c19`
+- Task 3: 主机资产 CRUD + 变更历史模型 (Asset/AssetChange, 5 个 API) `25450d9`
+- Task 4: 阿里云 ECS 同步 (Provider 接口 + AliyunProvider, 1 个 API) `569a06f`
+- Task 5: 变更历史查询接口 (1 个 API) + Swagger 更新 `f6dc0af`
+
+**新增 19 个 API 端点，总计 41 个端点**
+
+### 下一步工作
+- Module 02 前端 (Task 6-8): 服务树页面、云账号页面、资产列表页面
+- 或先完成 Module 01 前端遗留: 动态路由、v-permission、布局增强
+
+---
+
 ## Session: 2026-03-21 (项目状态审计 + Swagger 完善)
 
 ### 完成事项

@@ -6,6 +6,8 @@
 *.dylib
 bin/
 dist/
+core
+sync_test
 
 # Test binary
 *.test
