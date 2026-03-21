@@ -3,8 +3,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../api'
+import { useUserStore } from '../stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const isLogin = ref(true) // true=登录模式, false=注册模式
 const loading = ref(false)
 
@@ -18,8 +20,7 @@ async function handleLogin() {
   }
   loading.value = true
   try {
-    const res: any = await authApi.login(loginForm.value.username, loginForm.value.password)
-    localStorage.setItem('token', res.data.token)
+    await userStore.login(loginForm.value.username, loginForm.value.password)
     ElMessage.success('登录成功')
     router.push('/')
   } catch {

@@ -3,9 +3,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { authApi } from '../api'
+import { useUserStore } from '../stores/user'
 
 const router = useRouter()
-const userInfo = ref<any>(null)
+const userStore = useUserStore()
 const isCollapse = ref(false)
 
 // 修改密码
@@ -13,19 +14,19 @@ const pwdVisible = ref(false)
 const pwdForm = ref({ old_password: '', new_password: '', confirm_password: '' })
 
 onMounted(async () => {
-  try {
-    const res: any = await authApi.getInfo()
-    userInfo.value = res.data
-  } catch {
-    router.push('/login')
+  if (!userStore.userInfo) {
+    try {
+      await userStore.fetchUserInfo()
+    } catch {
+      router.push('/login')
+    }
   }
 })
 
 async function handleLogout() {
   try {
     await ElMessageBox.confirm('确定退出登录？', '提示', { type: 'warning' })
-    await authApi.logout()
-    localStorage.removeItem('token')
+    await userStore.logout()
     router.push('/login')
   } catch {}
 }
@@ -43,7 +44,7 @@ async function submitPwd() {
     await authApi.changePassword(old_password, new_password)
     ElMessage.success('密码修改成功，请重新登录')
     pwdVisible.value = false
-    localStorage.removeItem('token')
+    userStore.clearToken()
     router.push('/login')
   } catch {}
 }
@@ -70,7 +71,7 @@ async function submitPwd() {
           <el-dropdown trigger="click">
             <span class="user-drop">
               <el-icon><User /></el-icon>
-              {{ userInfo?.username }}
+              {{ userStore.userInfo?.username }}
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
