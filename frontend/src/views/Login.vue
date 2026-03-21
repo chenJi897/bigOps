@@ -52,85 +52,263 @@ async function handleRegister() {
 </script>
 
 <template>
-  <div class="login-container">
+  <div class="login-bg">
+    <!-- 装饰性几何图形 -->
+    <div class="geo geo-1"></div>
+    <div class="geo geo-2"></div>
+    <div class="geo geo-3"></div>
+
     <div class="login-card">
-      <h2>BigOps 运维平台</h2>
-      <p class="subtitle">{{ isLogin ? '登录' : '注册' }}</p>
+      <div class="brand">
+        <div class="brand-icon"><el-icon><Monitor /></el-icon></div>
+        <h1>BigOps</h1>
+        <p class="brand-sub">智能运维管理平台</p>
+      </div>
+
+      <div class="tab-switch">
+        <span :class="{ active: isLogin }" @click="isLogin = true">登 录</span>
+        <span :class="{ active: !isLogin }" @click="isLogin = false">注 册</span>
+      </div>
 
       <!-- 登录表单 -->
-      <el-form v-if="isLogin" @submit.prevent="handleLogin">
+      <el-form v-if="isLogin" @submit.prevent="handleLogin" class="form">
         <el-form-item>
-          <el-input v-model="loginForm.username" placeholder="用户名" prefix-icon="User" size="large" />
+          <el-input
+            v-model="loginForm.username"
+            placeholder="用户名"
+            prefix-icon="User"
+            size="large"
+            class="custom-input"
+          />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="loginForm.password" type="password" placeholder="密码" prefix-icon="Lock" size="large"
-            show-password @keyup.enter="handleLogin" />
+          <el-input
+            v-model="loginForm.password"
+            type="password"
+            placeholder="密码"
+            prefix-icon="Lock"
+            size="large"
+            show-password
+            class="custom-input"
+            @keyup.enter="handleLogin"
+          />
         </el-form-item>
-        <el-button type="primary" size="large" :loading="loading" style="width:100%" @click="handleLogin">
+        <el-button
+          type="primary"
+          size="large"
+          :loading="loading"
+          class="submit-btn"
+          @click="handleLogin"
+        >
           登录
         </el-button>
       </el-form>
 
       <!-- 注册表单 -->
-      <el-form v-else @submit.prevent="handleRegister">
+      <el-form v-else @submit.prevent="handleRegister" class="form">
         <el-form-item>
-          <el-input v-model="registerForm.username" placeholder="用户名（至少3位）" prefix-icon="User" size="large" />
+          <el-input
+            v-model="registerForm.username"
+            placeholder="用户名（至少3位）"
+            prefix-icon="User"
+            size="large"
+            class="custom-input"
+          />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="registerForm.password" type="password" placeholder="密码（至少6位）" prefix-icon="Lock"
-            size="large" show-password />
+          <el-input
+            v-model="registerForm.password"
+            type="password"
+            placeholder="密码（至少8位，含大小写字母和数字）"
+            prefix-icon="Lock"
+            size="large"
+            show-password
+            class="custom-input"
+          />
         </el-form-item>
         <el-form-item>
-          <el-input v-model="registerForm.email" placeholder="邮箱（可选）" prefix-icon="Message" size="large"
-            @keyup.enter="handleRegister" />
+          <el-input
+            v-model="registerForm.email"
+            placeholder="邮箱（可选）"
+            prefix-icon="Message"
+            size="large"
+            class="custom-input"
+            @keyup.enter="handleRegister"
+          />
         </el-form-item>
-        <el-button type="primary" size="large" :loading="loading" style="width:100%" @click="handleRegister">
-          注册
+        <el-button
+          type="primary"
+          size="large"
+          :loading="loading"
+          class="submit-btn"
+          @click="handleRegister"
+        >
+          注册账号
         </el-button>
       </el-form>
 
-      <div class="toggle">
-        <span v-if="isLogin">没有账号？<el-link type="primary" @click="isLogin = false">去注册</el-link></span>
-        <span v-else>已有账号？<el-link type="primary" @click="isLogin = true">去登录</el-link></span>
-      </div>
+      <p class="footer-tip">安全、高效、智能的云原生运维平台</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.login-container {
+.login-bg {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0f172a;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 装饰几何形状 */
+.geo {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+.geo-1 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #1d4ed8, transparent);
+  top: -100px; left: -100px;
+}
+.geo-2 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, #0ea5e9, transparent);
+  bottom: -80px; right: -80px;
+}
+.geo-3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, #6366f1, transparent);
+  top: 50%; left: 55%;
+  transform: translate(-50%, -50%);
 }
 
 .login-card {
-  width: 400px;
-  padding: 40px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
+  width: 420px;
+  padding: 40px 44px 36px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-.login-card h2 {
+.brand {
   text-align: center;
-  margin-bottom: 4px;
-  color: #303133;
+  margin-bottom: 28px;
+}
+.brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border-radius: 14px;
+  font-size: 26px;
+  color: #fff;
+  margin-bottom: 12px;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+}
+.brand h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 2px;
+}
+.brand-sub {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
 }
 
-.subtitle {
+.tab-switch {
+  display: flex;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+.tab-switch span {
+  flex: 1;
   text-align: center;
-  color: #909399;
-  margin-bottom: 30px;
+  padding: 8px 0;
+  border-radius: 7px;
   font-size: 14px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.25s;
+  font-weight: 500;
+  letter-spacing: 2px;
+}
+.tab-switch span.active {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
-.toggle {
+.form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+.custom-input :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: none !important;
+  border-radius: 10px;
+  transition: border-color 0.2s;
+}
+.custom-input :deep(.el-input__wrapper:hover) {
+  border-color: rgba(99, 102, 241, 0.6) !important;
+}
+.custom-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+.custom-input :deep(.el-input__inner) {
+  color: #f1f5f9;
+  background: transparent;
+}
+.custom-input :deep(.el-input__inner::placeholder) {
+  color: #64748b;
+}
+.custom-input :deep(.el-input__prefix-inner .el-icon),
+.custom-input :deep(.el-input__suffix-inner .el-icon) {
+  color: #64748b;
+}
+
+.submit-btn {
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+  border: none !important;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  height: 46px;
+  margin-top: 4px;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+  transition: opacity 0.2s, transform 0.1s;
+}
+.submit-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+.footer-tip {
   text-align: center;
-  margin-top: 16px;
-  font-size: 14px;
-  color: #909399;
+  margin: 20px 0 0;
+  font-size: 12px;
+  color: #475569;
 }
 </style>

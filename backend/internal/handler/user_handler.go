@@ -27,19 +27,21 @@ func NewUserHandler() *UserHandler {
 
 // List 用户列表（分页）。
 // @Summary 用户列表
-// @Description 分页获取用户列表
+// @Description 分页获取用户列表，支持关键字模糊搜索（用户名/邮箱/姓名）
 // @Tags 用户管理
 // @Produce json
 // @Security BearerAuth
 // @Param page query int false "页码" default(1)
 // @Param size query int false "每页条数" default(20)
+// @Param keyword query string false "关键字（用户名/邮箱/姓名）"
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.User}} "用户列表"
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /users [get]
 func (h *UserHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
-	users, total, err := h.userRepo.List(page, size)
+	keyword := c.Query("keyword")
+	users, total, err := h.userRepo.List(page, size, keyword)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")
 		return

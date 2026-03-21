@@ -97,28 +97,30 @@ onMounted(loadRoles)
 </script>
 
 <template>
-  <div>
-    <el-card>
+  <div class="page">
+    <el-card shadow="never">
       <template #header>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>角色管理</span>
-          <el-button type="primary" size="small" @click="openCreate">新增角色</el-button>
+          <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 新增角色</el-button>
         </div>
       </template>
       <el-table :data="roles" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="name" label="标识" width="120" />
-        <el-table-column prop="display_name" label="名称" width="150" />
-        <el-table-column prop="description" label="描述" />
-        <el-table-column prop="sort" label="排序" width="70" />
-        <el-table-column label="状态" width="80">
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="标识" width="140" />
+        <el-table-column prop="display_name" label="名称" width="160" />
+        <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="sort" label="排序" width="80" />
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '启用' : '禁用' }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="220">
           <template #default="{ row }">
-            <el-button size="small" @click="openMenuDialog(row)">菜单</el-button>
+            <el-button size="small" @click="openMenuDialog(row)">菜单权限</el-button>
             <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)" :disabled="row.name === 'admin'">删除</el-button>
           </template>
@@ -128,11 +130,19 @@ onMounted(loadRoles)
 
     <!-- 新增/编辑角色 -->
     <el-dialog v-model="formVisible" :title="isEdit ? '编辑角色' : '新增角色'" width="450px">
-      <el-form label-width="70px">
-        <el-form-item label="标识"><el-input v-model="form.name" :disabled="isEdit" placeholder="英文标识如 viewer" /></el-form-item>
-        <el-form-item label="名称"><el-input v-model="form.display_name" placeholder="显示名称" /></el-form-item>
-        <el-form-item label="描述"><el-input v-model="form.description" /></el-form-item>
-        <el-form-item label="排序"><el-input-number v-model="form.sort" :min="0" /></el-form-item>
+      <el-form label-width="80px">
+        <el-form-item label="标识">
+          <el-input v-model="form.name" :disabled="isEdit" placeholder="英文标识，如 viewer" />
+        </el-form-item>
+        <el-form-item label="名称">
+          <el-input v-model="form.display_name" placeholder="显示名称" />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="form.description" type="textarea" :rows="2" />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="form.sort" :min="0" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="formVisible = false">取消</el-button>
@@ -141,9 +151,16 @@ onMounted(loadRoles)
     </el-dialog>
 
     <!-- 菜单权限 -->
-    <el-dialog v-model="menuVisible" title="菜单权限" width="400px">
-      <el-tree ref="treeRef" :data="menuTree" show-checkbox node-key="id" :default-checked-keys="selectedMenus"
-        :props="{ label: 'title', children: 'children' }" default-expand-all />
+    <el-dialog v-model="menuVisible" title="菜单权限" width="420px">
+      <el-tree
+        ref="treeRef"
+        :data="menuTree"
+        show-checkbox
+        node-key="id"
+        :default-checked-keys="selectedMenus"
+        :props="{ label: 'title', children: 'children' }"
+        default-expand-all
+      />
       <template #footer>
         <el-button @click="menuVisible = false">取消</el-button>
         <el-button type="primary" @click="submitMenus">确定</el-button>
@@ -151,3 +168,7 @@ onMounted(loadRoles)
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.page { padding: 20px; }
+</style>
