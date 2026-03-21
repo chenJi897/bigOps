@@ -12,11 +12,15 @@ import (
 )
 
 type ServiceTreeService struct {
-	repo *repository.ServiceTreeRepository
+	repo      *repository.ServiceTreeRepository
+	assetRepo *repository.AssetRepository
 }
 
 func NewServiceTreeService() *ServiceTreeService {
-	return &ServiceTreeService{repo: repository.NewServiceTreeRepository()}
+	return &ServiceTreeService{
+		repo:      repository.NewServiceTreeRepository(),
+		assetRepo: repository.NewAssetRepository(),
+	}
 }
 
 func (s *ServiceTreeService) Create(node *model.ServiceTree) error {
@@ -63,6 +67,14 @@ func (s *ServiceTreeService) Delete(id int64) error {
 	}
 	if hasChildren {
 		return errors.New("存在子节点，不允许删除")
+	}
+	// 校验是否有关联资产
+	assetCount, err := s.assetRepo.CountByServiceTreeID(id)
+	if err != nil {
+		return fmt.Errorf("查询关联资产失败: %w", err)
+	}
+	if assetCount > 0 {
+		return fmt.Errorf("该节点下有 %d 个关联资产，请先移除或迁移后再删除", assetCount)
 	}
 	return s.repo.Delete(id)
 }

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { assetApi } from '../api'
+import { assetApi, serviceTreeApi } from '../api'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
 const query = ref({ page: 1, size: 20, status: '', source: '', service_tree_id: undefined as number | undefined, keyword: '' })
+
+// 服务树数据（供筛选和表单选择）
+const serviceTreeOptions = ref<any[]>([])
 
 // 详情抽屉
 const drawerVisible = ref(false)
@@ -25,8 +28,16 @@ const editId = ref(0)
 const form = ref({
   hostname: '', ip: '', inner_ip: '', os: '', os_version: '',
   cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online',
-  asset_type: 'server', source: 'manual', idc: '', sn: '', remark: '',
+  asset_type: 'server', source: 'manual', service_tree_id: 0,
+  idc: '', sn: '', remark: '',
 })
+
+async function fetchServiceTree() {
+  try {
+    const res: any = await serviceTreeApi.tree()
+    serviceTreeOptions.value = res.data || []
+  } catch {}
+}
 
 async function fetchData() {
   loading.value = true
@@ -52,7 +63,7 @@ function handlePageChange(p: number) {
 function handleAdd() {
   isCreate.value = true
   dialogTitle.value = '新增资产'
-  form.value = { hostname: '', ip: '', inner_ip: '', os: '', os_version: '', cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online', asset_type: 'server', source: 'manual', idc: '', sn: '', remark: '' }
+  form.value = { hostname: '', ip: '', inner_ip: '', os: '', os_version: '', cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online', asset_type: 'server', source: 'manual', service_tree_id: 0, idc: '', sn: '', remark: '' }
   dialogVisible.value = true
 }
 
@@ -64,6 +75,7 @@ function handleEdit(row: any) {
     hostname: row.hostname, ip: row.ip, inner_ip: row.inner_ip || '', os: row.os || '', os_version: row.os_version || '',
     cpu_cores: row.cpu_cores || 0, memory_mb: row.memory_mb || 0, disk_gb: row.disk_gb || 0,
     status: row.status, asset_type: row.asset_type, source: row.source,
+    service_tree_id: row.service_tree_id || 0,
     idc: row.idc || '', sn: row.sn || '', remark: row.remark || '',
   }
   dialogVisible.value = true
@@ -116,7 +128,10 @@ function handleChangesPage(p: number) {
   if (currentAsset.value) fetchChanges(currentAsset.value.id)
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  fetchServiceTree()
+})
 </script>
 
 <template>
@@ -147,6 +162,17 @@ onMounted(fetchData)
           </el-select>
         </el-form-item>
         <el-form-item>
+          <el-tree-select
+            v-model="query.service_tree_id"
+            :data="serviceTreeOptions"
+            :props="{ children: 'children', label: 'name', value: 'id' }"
+            placeholder="所属服务"
+            clearable
+            check-strictly
+            style="width: 160px;"
+          />
+        </el-form-item>
+        <el-form-item>
           <el-button type="primary" @click="handleSearch">搜索</el-button>
         </el-form-item>
       </el-form>
@@ -169,6 +195,9 @@ onMounted(fetchData)
           <template #default="{ row }">
             <el-tag size="small" type="info">{{ row.source }}</el-tag>
           </template>
+        </el-table-column>
+        <el-table-column prop="service_tree_name" label="所属服务" width="120" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.service_tree_name || '-' }}</template>
         </el-table-column>
         <el-table-column prop="idc" label="机房/区域" width="120" show-overflow-tooltip />
         <el-table-column label="操作" width="150" fixed="right">
@@ -204,6 +233,7 @@ onMounted(fetchData)
             <el-descriptions-item label="磁盘">{{ currentAsset.disk_gb }} GB</el-descriptions-item>
             <el-descriptions-item label="状态">{{ currentAsset.status }}</el-descriptions-item>
             <el-descriptions-item label="来源">{{ currentAsset.source }}</el-descriptions-item>
+            <el-descriptions-item label="所属服务">{{ currentAsset.service_tree_name || '-' }}</el-descriptions-item>
             <el-descriptions-item label="机房/区域">{{ currentAsset.idc }}</el-descriptions-item>
             <el-descriptions-item label="SN">{{ currentAsset.sn }}</el-descriptions-item>
             <el-descriptions-item label="云实例ID">{{ currentAsset.cloud_instance_id }}</el-descriptions-item>
@@ -244,6 +274,19 @@ onMounted(fetchData)
           <el-col :span="8"><el-form-item label="内存MB"><el-input-number v-model="form.memory_mb" :min="0" style="width: 100%;" /></el-form-item></el-col>
           <el-col :span="8"><el-form-item label="磁盘GB"><el-input-number v-model="form.disk_gb" :min="0" style="width: 100%;" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="机房"><el-input v-model="form.idc" /></el-form-item></el-col>
+          <el-col :span="12">
+            <el-form-item label="所属服务">
+              <el-tree-select
+                v-model="form.service_tree_id"
+                :data="serviceTreeOptions"
+                :props="{ children: 'children', label: 'name', value: 'id' }"
+                placeholder="选择服务树节点"
+                clearable
+                check-strictly
+                style="width: 100%;"
+              />
+            </el-form-item>
+          </el-col>
           <el-col :span="12"><el-form-item label="SN"><el-input v-model="form.sn" /></el-form-item></el-col>
           <el-col :span="24"><el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item></el-col>
         </el-row>
