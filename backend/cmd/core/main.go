@@ -75,7 +75,7 @@ func main() {
 	defer database.Close()
 
 	// 自动迁移数据库表结构（开发阶段使用，生产环境建议使用 SQL 迁移脚本）
-	if err := database.GetDB().AutoMigrate(&model.User{}, &model.Role{}, &model.Menu{}, &model.UserRole{}, &model.AuditLog{}); err != nil {
+	if err := database.GetDB().AutoMigrate(&model.User{}, &model.Role{}, &model.Menu{}, &model.UserRole{}, &model.AuditLog{}, &model.ServiceTree{}); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
 	logger.Info("Database migration completed")

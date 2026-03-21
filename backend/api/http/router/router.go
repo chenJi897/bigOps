@@ -91,6 +91,15 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/menus/:id", menuHandler.Update)
 			authGroup.POST("/menus/:id/delete", menuHandler.Delete)
 
+			// --- 服务树管理 ---
+			serviceTreeHandler := handler.NewServiceTreeHandler()
+			authGroup.GET("/service-trees", serviceTreeHandler.GetTree)
+			authGroup.GET("/service-trees/:id", serviceTreeHandler.GetByID)
+			authGroup.POST("/service-trees", serviceTreeHandler.Create)
+			authGroup.POST("/service-trees/:id", serviceTreeHandler.Update)
+			authGroup.POST("/service-trees/:id/delete", serviceTreeHandler.Delete)
+			authGroup.POST("/service-trees/:id/move", serviceTreeHandler.Move)
+
 			// --- 审计日志 ---
 			auditLogHandler := handler.NewAuditLogHandler()
 			authGroup.GET("/audit-logs", auditLogHandler.List)
