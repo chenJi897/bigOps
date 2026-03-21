@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -9,7 +12,9 @@ import (
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
+	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
+	cloudsync "github.com/bigops/platform/internal/service/cloud_sync"
 )
 
 var _ model.CloudAccount // swag import
@@ -195,4 +200,122 @@ func (h *CloudAccountHandler) Delete(c *gin.Context) {
 	c.Set("audit_resource_id", id)
 	c.Set("audit_detail", "删除云账号")
 	response.SuccessWithMessage(c, "删除成功", nil)
+}
+
+// Sync 触发云账号同步。
+// @Summary 触发云资产同步
+// @Description 手动触发从云端同步主机资产到本地
+// @Tags 云账号
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "云账号ID"
+// @Success 200 {object} response.Response "同步完成"
+// @Failure 400 {object} response.Response "同步失败"
+// @Router /cloud-accounts/{id}/sync [post]
+func (h *CloudAccountHandler) Sync(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+
+	account, err := h.svc.GetByID(id)
+	if err != nil {
+		response.Error(c, 404, "云账号不存在")
+		return
+	}
+
+	accessKey, secretKey, err := h.svc.GetDecryptedKeys(id)
+	if err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+
+	// 根据 provider 选择同步器
+	var provider cloudsync.CloudProvider
+	switch account.Provider {
+	case "aliyun":
+		provider = cloudsync.NewAliyunProvider()
+	default:
+		response.Error(c, 400, "暂不支持该云厂商: "+account.Provider)
+		return
+	}
+
+	// 解析 region 列表
+	regions := strings.Split(account.Region, ",")
+
+	// 更新状态为 syncing
+	h.svc.UpdateSyncStatus(id, "syncing", "", nil)
+
+	// 同步资产
+	cloudAssets, err := provider.SyncInstances(accessKey, secretKey, regions)
+	if err != nil {
+		h.svc.UpdateSyncStatus(id, "failed", err.Error(), nil)
+		response.Error(c, 400, "同步失败: "+err.Error())
+		return
+	}
+
+	// Upsert 逻辑
+	assetSvc := service.NewAssetService()
+	assetRepo := repository.NewAssetRepository()
+	changeRepo := repository.NewAssetChangeRepository()
+	created, updated := 0, 0
+
+	for _, ca := range cloudAssets {
+		ca.CloudAccountID = id
+		existing, err := assetRepo.GetByCloudInstanceID(ca.CloudInstanceID)
+		if err != nil {
+			// 新资产
+			if createErr := assetSvc.Create(ca); createErr == nil {
+				created++
+			}
+		} else {
+			// 已存在：对比 diff 并更新
+			changes := diffAsset(existing, ca)
+			ca.ID = existing.ID
+			ca.Source = existing.Source
+			if updateErr := assetRepo.Update(ca); updateErr == nil && len(changes) > 0 {
+				updated++
+				for _, ch := range changes {
+					ch.AssetID = existing.ID
+					ch.ChangeType = "sync"
+					changeRepo.Create(&ch)
+				}
+			}
+		}
+	}
+
+	// 更新同步状态
+	now := model.LocalTime(time.Now())
+	msg := fmt.Sprintf("同步完成: 新增 %d, 更新 %d, 总计 %d", created, updated, len(cloudAssets))
+	h.svc.UpdateSyncStatus(id, "success", msg, &now)
+
+	logger.Info("云资产同步", zap.String("operator", getOperator(c)), zap.Int64("account_id", id), zap.Int("created", created), zap.Int("updated", updated))
+	c.Set("audit_action", "update")
+	c.Set("audit_resource", "cloud_account")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", msg)
+	response.SuccessWithMessage(c, msg, nil)
+}
+
+// diffAsset 对比两个 Asset 的关键字段，返回变更列表。
+func diffAsset(old, new *model.Asset) []model.AssetChange {
+	var changes []model.AssetChange
+	check := func(field, oldVal, newVal string) {
+		if oldVal != newVal {
+			changes = append(changes, model.AssetChange{
+				Field:    field,
+				OldValue: oldVal,
+				NewValue: newVal,
+			})
+		}
+	}
+	check("ip", old.IP, new.IP)
+	check("inner_ip", old.InnerIP, new.InnerIP)
+	check("os", old.OS, new.OS)
+	check("status", old.Status, new.Status)
+	check("hostname", old.Hostname, new.Hostname)
+	if old.CPUCores != new.CPUCores {
+		changes = append(changes, model.AssetChange{Field: "cpu_cores", OldValue: strconv.Itoa(old.CPUCores), NewValue: strconv.Itoa(new.CPUCores)})
+	}
+	if old.MemoryMB != new.MemoryMB {
+		changes = append(changes, model.AssetChange{Field: "memory_mb", OldValue: strconv.Itoa(old.MemoryMB), NewValue: strconv.Itoa(new.MemoryMB)})
+	}
+	return changes
 }
