@@ -89,10 +89,10 @@
 - [ ] **面包屑导航**
 - [ ] **主题切换** (暗色模式)
 
-### 2.6 操作审计日志 `not_started`
-- [ ] 操作日志模型 (AuditLog)
-- [ ] 操作日志中间件 (自动记录写操作)
-- [ ] 操作日志查询接口
+### 2.6 操作审计日志 `complete`
+- [x] 操作日志模型 (AuditLog) `audit_log.go`
+- [x] 操作日志中间件 (自动记录写操作) `middleware/audit.go`
+- [x] 操作日志查询接口 `GET /api/v1/audit-logs`
 - [ ] 前端操作日志页面 + 筛选
 
 ### 2.7 Swagger API 文档 `complete`
@@ -103,10 +103,10 @@
 - [x] `/swagger/index.html` 路由就绪
 - [x] swaggo/swag 升级至 v1.16.6
 
-### 2.8 前端状态管理 `not_started`
-- [ ] Pinia stores 初始化 (目录存在但为空)
-- [ ] 用户信息 store (userStore)
-- [ ] 权限/菜单 store (permissionStore)
+### 2.8 前端状态管理 `complete`
+- [x] Pinia stores 初始化
+- [x] 用户信息 store (userStore) `stores/user.ts`
+- [x] 权限/菜单 store (permissionStore) `stores/permission.ts`
 
 ---
 

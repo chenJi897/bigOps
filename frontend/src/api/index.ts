@@ -71,4 +71,42 @@ export const menuApi = {
   delete: (id: number) => api.post(`/menus/${id}/delete`),
 }
 
+// 审计日志
+export const auditLogApi = {
+  list: (params: { page?: number; size?: number; username?: string; action?: string; resource?: string }) =>
+    api.get('/audit-logs', { params }),
+}
+
+// 服务树
+export const serviceTreeApi = {
+  tree: () => api.get('/service-trees'),
+  getById: (id: number) => api.get(`/service-trees/${id}`),
+  create: (data: any) => api.post('/service-trees', data),
+  update: (id: number, data: any) => api.post(`/service-trees/${id}`, data),
+  delete: (id: number) => api.post(`/service-trees/${id}/delete`),
+  move: (id: number, parent_id: number, sort: number) => api.post(`/service-trees/${id}/move`, { parent_id, sort }),
+}
+
+// 云账号
+export const cloudAccountApi = {
+  list: (page = 1, size = 20) => api.get('/cloud-accounts', { params: { page, size } }),
+  getById: (id: number) => api.get(`/cloud-accounts/${id}`),
+  create: (data: any) => api.post('/cloud-accounts', data),
+  update: (id: number, data: any) => api.post(`/cloud-accounts/${id}`, data),
+  updateKeys: (id: number, access_key: string, secret_key: string) => api.post(`/cloud-accounts/${id}/keys`, { access_key, secret_key }),
+  delete: (id: number) => api.post(`/cloud-accounts/${id}/delete`),
+  sync: (id: number) => api.post(`/cloud-accounts/${id}/sync`),
+}
+
+// 资产管理
+export const assetApi = {
+  list: (params: { page?: number; size?: number; status?: string; source?: string; service_tree_id?: number; keyword?: string }) =>
+    api.get('/assets', { params }),
+  getById: (id: number) => api.get(`/assets/${id}`),
+  create: (data: any) => api.post('/assets', data),
+  update: (id: number, data: any) => api.post(`/assets/${id}`, data),
+  delete: (id: number) => api.post(`/assets/${id}/delete`),
+  changes: (id: number, page = 1, size = 20) => api.get(`/assets/${id}/changes`, { params: { page, size } }),
+}
+
 export default api

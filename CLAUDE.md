@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 大文件写入规则
+
+当需要写入超过 500 行的文件时，禁止使用 Write 工具，改用 Bash 的 cat heredoc 分段写入。
+
 ## Repository overview
 
 BigOps is a full-stack operations platform with a Go backend (`backend/`) and a Vue 3 + Vite frontend (`frontend/`).

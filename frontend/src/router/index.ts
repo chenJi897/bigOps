@@ -1,31 +1,134 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '../stores/user'
+import { usePermissionStore } from '../stores/permission'
+
+// 静态路由（不需要权限）
+const constantRoutes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+  },
+  {
+    path: '/404',
+    name: 'NotFound',
+    component: () => import('../views/404.vue'),
+  },
+]
+
+// 布局容器路由（动态子路由挂载于此）
+export const layoutRoute: RouteRecordRaw = {
+  path: '/',
+  component: () => import('../views/Layout.vue'),
+  meta: { requiresAuth: true },
+  redirect: '/dashboard',
+  children: [],
+}
+
+// 页面组件映射表：后端菜单 component 字段 → 前端组件
+const viewModules: Record<string, () => Promise<any>> = {
+  'Dashboard': () => import('../views/Dashboard.vue'),
+  'Users': () => import('../views/Users.vue'),
+  'Roles': () => import('../views/Roles.vue'),
+  'Menus': () => import('../views/Menus.vue'),
+  'AuditLogs': () => import('../views/AuditLogs.vue'),
+  'ServiceTree': () => import('../views/ServiceTree.vue'),
+  'CloudAccounts': () => import('../views/CloudAccounts.vue'),
+  'Assets': () => import('../views/Assets.vue'),
+}
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    {
-      path: '/login',
-      name: 'Login',
-      component: () => import('../views/Login.vue'),
-    },
-    {
-      path: '/',
-      component: () => import('../views/Layout.vue'),
-      meta: { requiresAuth: true },
-      redirect: '/system/users',
-      children: [
-        { path: 'system/users', name: 'Users', component: () => import('../views/Users.vue') },
-        { path: 'system/roles', name: 'Roles', component: () => import('../views/Roles.vue') },
-        { path: 'system/menus', name: 'Menus', component: () => import('../views/Menus.vue') },
-      ],
-    },
-  ],
+  routes: [...constantRoutes, layoutRoute],
 })
 
-router.beforeEach((to) => {
+// 路由守卫：登录检查 + 动态路由加载
+let routesAdded = false
+
+router.beforeEach(async (to) => {
   const token = localStorage.getItem('token')
-  if (to.meta.requiresAuth && !token) return '/login'
-  if (to.path === '/login' && token) return '/'
+
+  if (to.path === '/login') {
+    if (token) return '/'
+    return true
+  }
+
+  if (!token) return '/login'
+
+  // 如果动态路由还没加载
+  if (!routesAdded) {
+    const userStore = useUserStore()
+    const permissionStore = usePermissionStore()
+
+    try {
+      if (!userStore.userInfo) await userStore.fetchUserInfo()
+      const menus = await permissionStore.fetchMenus()
+      const dynamicChildren = generateRoutes(menus)
+      // 添加仪表盘作为默认页
+      dynamicChildren.unshift({
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: viewModules['Dashboard'],
+        meta: { title: '仪表盘', icon: 'Odometer' },
+      })
+      dynamicChildren.forEach(route => {
+        router.addRoute(layoutRoute.name || '/', route)
+        // 同时添加到 layoutRoute.children 供菜单渲染
+        layoutRoute.children!.push(route)
+      })
+      // 兜底 404
+      router.addRoute({ path: '/:pathMatch(.*)*', redirect: '/404' })
+      routesAdded = true
+      return to.fullPath // 重新导航
+    } catch {
+      localStorage.removeItem('token')
+      return '/login'
+    }
+  }
 })
+
+/**
+ * 将后端菜单树转换为 Vue Router 路由
+ */
+function generateRoutes(menus: any[]): RouteRecordRaw[] {
+  const routes: RouteRecordRaw[] = []
+  for (const menu of menus) {
+    if (menu.type === 3) continue // 按钮权限，不生成路由
+    if (!menu.path) continue
+
+    const route: RouteRecordRaw = {
+      path: menu.path,
+      name: menu.name,
+      meta: { title: menu.title, icon: menu.icon },
+      component: undefined,
+      children: [],
+    }
+
+    if (menu.component && viewModules[menu.component]) {
+      route.component = viewModules[menu.component]
+    }
+
+    if (menu.children?.length) {
+      const childRoutes = generateRoutes(menu.children)
+      if (route.component) {
+        // 有自身组件的同时有子路由（目录+页面合一）
+        routes.push(route)
+        routes.push(...childRoutes)
+      } else {
+        // 纯目录节点，子路由直接展平
+        routes.push(...childRoutes)
+      }
+    } else if (route.component) {
+      routes.push(route)
+    }
+  }
+  return routes
+}
+
+// 供登出时重置路由状态
+export function resetRouter() {
+  routesAdded = false
+  layoutRoute.children = []
+}
 
 export default router

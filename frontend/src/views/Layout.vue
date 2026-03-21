@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { authApi } from '../api'
 import { useUserStore } from '../stores/user'
+import { usePermissionStore } from '../stores/permission'
+import { resetRouter } from '../router'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
+const permissionStore = usePermissionStore()
 const isCollapse = ref(false)
 
 // 修改密码
 const pwdVisible = ref(false)
 const pwdForm = ref({ old_password: '', new_password: '', confirm_password: '' })
+
+const activeMenu = computed(() => route.path)
+
+// 从 permissionStore 获取菜单树
+const menuTree = computed(() => permissionStore.menus)
 
 onMounted(async () => {
   if (!userStore.userInfo) {
@@ -27,6 +36,8 @@ async function handleLogout() {
   try {
     await ElMessageBox.confirm('确定退出登录？', '提示', { type: 'warning' })
     await userStore.logout()
+    permissionStore.reset()
+    resetRouter()
     router.push('/login')
   } catch {}
 }
@@ -45,6 +56,8 @@ async function submitPwd() {
     ElMessage.success('密码修改成功，请重新登录')
     pwdVisible.value = false
     userStore.clearToken()
+    permissionStore.reset()
+    resetRouter()
     router.push('/login')
   } catch {}
 }
@@ -54,19 +67,60 @@ async function submitPwd() {
   <el-container class="layout">
     <el-aside :width="isCollapse ? '64px' : '200px'" class="aside">
       <div class="logo">{{ isCollapse ? 'B' : 'BigOps' }}</div>
-      <el-menu :default-active="$route.path" router :collapse="isCollapse" background-color="#304156" text-color="#bfcbd9" active-text-color="#409eff">
-        <el-sub-menu index="/system">
-          <template #title><el-icon><Setting /></el-icon><span>系统管理</span></template>
-          <el-menu-item index="/system/users"><el-icon><User /></el-icon>用户管理</el-menu-item>
-          <el-menu-item index="/system/roles"><el-icon><Key /></el-icon>角色管理</el-menu-item>
-          <el-menu-item index="/system/menus"><el-icon><Menu /></el-icon>菜单管理</el-menu-item>
-        </el-sub-menu>
-      </el-menu>
+      <el-scrollbar>
+        <el-menu
+          :default-active="activeMenu"
+          router
+          :collapse="isCollapse"
+          background-color="#304156"
+          text-color="#bfcbd9"
+          active-text-color="#409eff"
+        >
+          <!-- 仪表盘（固定） -->
+          <el-menu-item index="/dashboard">
+            <el-icon><Odometer /></el-icon>
+            <template #title>仪表盘</template>
+          </el-menu-item>
+
+          <!-- 动态菜单 -->
+          <template v-for="menu in menuTree" :key="menu.id">
+            <!-- 有子菜单的目录 -->
+            <el-sub-menu v-if="menu.children?.length && menu.type !== 3" :index="menu.path || String(menu.id)">
+              <template #title>
+                <el-icon><component :is="menu.icon || 'Folder'" /></el-icon>
+                <span>{{ menu.title }}</span>
+              </template>
+              <template v-for="child in menu.children" :key="child.id">
+                <el-menu-item v-if="child.type !== 3 && child.path" :index="child.path">
+                  <el-icon><component :is="child.icon || 'Document'" /></el-icon>
+                  <template #title>{{ child.title }}</template>
+                </el-menu-item>
+              </template>
+            </el-sub-menu>
+            <!-- 没有子菜单的页面 -->
+            <el-menu-item v-else-if="menu.type !== 3 && menu.path" :index="menu.path">
+              <el-icon><component :is="menu.icon || 'Document'" /></el-icon>
+              <template #title>{{ menu.title }}</template>
+            </el-menu-item>
+          </template>
+        </el-menu>
+      </el-scrollbar>
     </el-aside>
 
     <el-container>
       <el-header class="header">
-        <el-icon class="collapse-btn" @click="isCollapse = !isCollapse"><Fold v-if="!isCollapse" /><Expand v-else /></el-icon>
+        <div class="header-left">
+          <el-icon class="collapse-btn" @click="isCollapse = !isCollapse">
+            <Fold v-if="!isCollapse" /><Expand v-else />
+          </el-icon>
+          <!-- 面包屑 -->
+          <el-breadcrumb separator="/" class="breadcrumb">
+            <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
+            <el-breadcrumb-item v-for="item in route.matched.filter(r => r.meta?.title)" :key="item.path">
+              {{ item.meta.title }}
+            </el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
         <div class="header-right">
           <el-dropdown trigger="click">
             <span class="user-drop">
@@ -105,7 +159,9 @@ async function submitPwd() {
 .aside { background: #304156; transition: width 0.3s; overflow: hidden; }
 .logo { height: 50px; line-height: 50px; text-align: center; color: #fff; font-size: 18px; font-weight: 600; background: #263445; }
 .header { background: #fff; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 0 16px; }
+.header-left { display: flex; align-items: center; gap: 12px; }
 .collapse-btn { font-size: 20px; cursor: pointer; }
+.breadcrumb { margin-left: 4px; }
 .user-drop { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 14px; color: #606266; }
 .main { background: #f0f2f5; }
 .el-menu { border-right: none; }
