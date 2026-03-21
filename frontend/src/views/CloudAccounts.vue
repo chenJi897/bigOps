@@ -133,10 +133,10 @@ onMounted(fetchData)
           </template>
         </el-table-column>
         <el-table-column prop="region" label="Region" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="sync_status" label="同步状态" width="100">
+        <el-table-column prop="last_sync_status" label="同步状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.sync_status === 'success' ? 'success' : row.sync_status === 'failed' ? 'danger' : row.sync_status === 'syncing' ? 'warning' : 'info'" size="small">
-              {{ row.sync_status || '未同步' }}
+            <el-tag :type="row.last_sync_status === 'success' ? 'success' : row.last_sync_status === 'failed' ? 'danger' : row.last_sync_status === 'syncing' ? 'warning' : 'info'" size="small">
+              {{ row.last_sync_status || '未同步' }}
             </el-tag>
           </template>
         </el-table-column>

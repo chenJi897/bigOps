@@ -19,6 +19,7 @@ const constantRoutes: RouteRecordRaw[] = [
 // 布局容器路由（动态子路由挂载于此）
 export const layoutRoute: RouteRecordRaw = {
   path: '/',
+  name: 'Layout',
   component: () => import('../views/Layout.vue'),
   meta: { requiresAuth: true },
   redirect: '/dashboard',
@@ -66,15 +67,13 @@ router.beforeEach(async (to) => {
       const dynamicChildren = generateRoutes(menus)
       // 添加仪表盘作为默认页
       dynamicChildren.unshift({
-        path: '/dashboard',
+        path: 'dashboard',
         name: 'Dashboard',
         component: viewModules['Dashboard'],
         meta: { title: '仪表盘', icon: 'Odometer' },
       })
       dynamicChildren.forEach(route => {
-        router.addRoute(layoutRoute.name || '/', route)
-        // 同时添加到 layoutRoute.children 供菜单渲染
-        layoutRoute.children!.push(route)
+        router.addRoute('Layout', route)
       })
       // 兜底 404
       router.addRoute({ path: '/:pathMatch(.*)*', redirect: '/404' })
@@ -96,8 +95,11 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
     if (menu.type === 3) continue // 按钮权限，不生成路由
     if (!menu.path) continue
 
+    // 子路由 path 不能以 / 开头，去掉前导斜杠
+    const routePath = menu.path.startsWith('/') ? menu.path.slice(1) : menu.path
+
     const route: RouteRecordRaw = {
-      path: menu.path,
+      path: routePath,
       name: menu.name,
       meta: { title: menu.title, icon: menu.icon },
       component: undefined,

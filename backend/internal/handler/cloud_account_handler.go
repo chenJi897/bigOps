@@ -244,8 +244,19 @@ func (h *CloudAccountHandler) Sync(c *gin.Context) {
 	h.svc.UpdateSyncStatus(id, "syncing", "", nil)
 
 	// 同步资产
+	logger.Info("开始云资产同步",
+		zap.String("operator", getOperator(c)),
+		zap.Int64("account_id", id),
+		zap.String("provider", account.Provider),
+		zap.String("regions", account.Region),
+	)
 	cloudAssets, err := provider.SyncInstances(accessKey, secretKey, regions)
 	if err != nil {
+		logger.Error("云资产同步失败",
+			zap.Int64("account_id", id),
+			zap.String("provider", account.Provider),
+			zap.Error(err),
+		)
 		h.svc.UpdateSyncStatus(id, "failed", err.Error(), nil)
 		response.Error(c, 400, "同步失败: "+err.Error())
 		return

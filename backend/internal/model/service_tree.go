@@ -7,7 +7,7 @@ import "gorm.io/gorm"
 type ServiceTree struct {
 	ID          int64          `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name        string         `gorm:"size:100;not null" json:"name"`
-	Code        string         `gorm:"size:100;uniqueIndex" json:"code"`
+	Code        string         `gorm:"size:100;index" json:"code"`
 	ParentID    int64          `gorm:"default:0;not null;index" json:"parent_id"`
 	Level       int            `gorm:"not null" json:"level"`       // 1=业务线 2=产品 3=模块（不硬限制，支持N层）
 	Sort        int            `gorm:"default:0;not null" json:"sort"`

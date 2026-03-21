@@ -21,7 +21,10 @@ jwt:
   expire: 7200  # 2 hours
 
 encrypt:
-  key: "CHANGE_ME_0123456789abcdef0123456789abcdef0123456789abcdef01234567"  # 64 hex chars = 32 bytes, 生产环境必须更换！
+  key: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"  # 64 hex chars = 32 bytes AES-256
+
+aliyun:
+  ecs_endpoint: "ecs.%s.aliyuncs.com"  # %s 会被替换为 region，如 ecs.cn-hangzhou.aliyuncs.com
 
 log:
   level: debug

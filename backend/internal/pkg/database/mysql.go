@@ -39,8 +39,8 @@ func InitMySQL(cfg MySQLConfig, log *zap.Logger) error {
 		cfg.Charset,
 	)
 
-	// 设置 GORM 日志级别为 Info，便于开发阶段排查 SQL 问题
-	gormLogger := logger.Default.LogMode(logger.Info)
+	// 生产环境只输出 Error 级别的 SQL 日志，避免大量 SQL 刷屏
+	gormLogger := logger.Default.LogMode(logger.Error)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: gormLogger,

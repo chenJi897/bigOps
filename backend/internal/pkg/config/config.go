@@ -16,11 +16,17 @@ type Config struct {
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Log      LogConfig      `mapstructure:"log"`
 	Encrypt  EncryptConfig  `mapstructure:"encrypt"`
+	Aliyun   AliyunConfig   `mapstructure:"aliyun"`
 }
 
 // EncryptConfig 加密配置。
 type EncryptConfig struct {
 	Key string `mapstructure:"key"` // 32 字节 AES-256 密钥（hex 编码）
+}
+
+// AliyunConfig 阿里云相关配置。
+type AliyunConfig struct {
+	ECSEndpoint string `mapstructure:"ecs_endpoint"` // ECS API 地址模板，含 %s 占位符表示 region，例如 ecs.%s.aliyuncs.com
 }
 
 // ServerConfig HTTP 服务器配置。
