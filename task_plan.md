@@ -2,7 +2,7 @@
 
 **项目**: BigOps 大运维平台
 **启动日期**: 2026-03-17
-**当前状态**: 阶段2 核心模块开发中（Module 01 接近完成）
+**当前状态**: Phase 2 完成，Phase 3 完成
 **最后更新**: 2026-03-21
 
 ---
@@ -44,7 +44,7 @@
 
 ---
 
-## Phase 2: Module 01 - 前后端底座 `in_progress`
+## Phase 2: Module 01 - 前后端底座 `complete`
 
 ### 2.1 用户认证 `complete`
 - [x] User 模型 (`internal/model/user.go`) - 含 LocalTime 自定义时间类型
@@ -65,15 +65,15 @@
 - [x] 角色菜单分配 `POST /api/v1/roles/:id/menus`
 - [x] 用户角色分配 `POST /api/v1/users/:id/roles`
 - [x] 前端角色管理页 (`views/Roles.vue`)
-- [ ] **前端权限指令 v-permission** (按钮级权限控制)
-- [ ] **前端动态路由加载** (根据用户权限动态生成路由)
+- [x] 前端权限指令 v-permission (`directives/permission.ts`)
+- [x] 前端动态路由加载 (`router/index.ts` generateRoutes)
 
 ### 2.3 菜单管理 `complete`
 - [x] 菜单树形结构查询 `GET /api/v1/menus`
 - [x] 用户菜单查询 `GET /api/v1/menus/user`
 - [x] 菜单 CRUD 接口
 - [x] 前端菜单管理页 (`views/Menus.vue`)
-- [ ] **前端动态菜单渲染** (从后端 /menus/user 加载，替代硬编码路由)
+- [x] 前端动态菜单渲染 (Layout 从 permissionStore 加载)
 
 ### 2.4 用户管理 `complete`
 - [x] 用户列表分页 `GET /api/v1/users`
@@ -85,15 +85,15 @@
 - [x] 侧边栏导航 (`views/Layout.vue`)
 - [x] 顶部导航栏 + 用户下拉菜单
 - [x] 修改密码弹窗
+- [x] 面包屑导航
 - [ ] **标签页 (Tabs)** - 多页签导航
-- [ ] **面包屑导航**
 - [ ] **主题切换** (暗色模式)
 
 ### 2.6 操作审计日志 `complete`
 - [x] 操作日志模型 (AuditLog) `audit_log.go`
 - [x] 操作日志中间件 (自动记录写操作) `middleware/audit.go`
 - [x] 操作日志查询接口 `GET /api/v1/audit-logs`
-- [ ] 前端操作日志页面 + 筛选
+- [x] 前端操作日志页面 + 筛选 (`views/AuditLogs.vue`)
 
 ### 2.7 Swagger API 文档 `complete`
 - [x] 全部 21 个端点 Swagger 注解
@@ -110,28 +110,32 @@
 
 ---
 
-## Phase 3: Module 02 - 服务树和 CMDB `in_progress`
+## Phase 3: Module 02 - 服务树和 CMDB `complete`
 
 ### 3.1 服务树管理 `complete`
 - [x] 服务树模型定义 (ServiceTree) `9a68da6`
-- [x] 服务树 CRUD 接口 (6 个 API)
+- [x] 服务树 CRUD 接口 (6 个 API) + 资产数量统计 API
 - [x] 树形结构查询
 - [x] 节点拖拽移动
-- [ ] 前端服务树页面 + 树形组件
-- [ ] 右键菜单操作
+- [x] 前端服务树页面 + 树形组件 + 节点资产数量 badge
+- [x] 右侧联动资产列表（递归查子节点）
+- [x] 删除节点前校验关联资产
+- [x] 跳转到资产页自动筛选
 
 ### 3.2 云账号管理 `complete`
 - [x] 云账号模型 (CloudAccount) + AES-GCM 加密 AK/SK `50c7c19`
-- [x] 云账号 CRUD 接口 (6 个 API)
-- [ ] 前端云账号管理页面
+- [x] 云账号 CRUD 接口 (7 个 API，含同步)
+- [x] 前端云账号管理页面 (`views/CloudAccounts.vue`)
+- [x] 同步详细日志 + 阿里云 endpoint 可配置
+- [x] last_sync_message 改为 TEXT 类型
 
 ### 3.3 CMDB 资产管理 `complete`
 - [x] 资产模型定义 (Asset + AssetChange) `25450d9`
-- [x] 资产 CRUD 接口 (5 个 API)
-- [x] 资产查询和多条件筛选 (status/service_tree_id/source/keyword)
-- [x] 资产关联服务树 (关联查询节点名称)
+- [x] 资产 CRUD 接口 (6 个 API)
+- [x] 资产查询和多条件筛选 (status/service_tree_id/source/keyword/recursive)
+- [x] 资产关联服务树 (关联查询节点名称 + 表单选择 + 列表展示)
+- [x] 前端资产列表 + 详情抽屉 + 表单 (`views/Assets.vue`)
 - [ ] 资产导入/导出 (Excel)
-- [ ] 前端资产列表 + 详情 + 表单页面
 - [ ] 批量操作
 
 ### 3.4 阿里云 ECS 同步 `complete`
@@ -143,7 +147,7 @@
 ### 3.5 资产变更历史 `complete`
 - [x] AssetChange 模型 + 查询接口 `f6dc0af`
 - [x] 云同步时自动 diff 并记录
-- [ ] 前端变更历史 tab (资产详情抽屉内)
+- [x] 前端变更历史 tab (资产详情抽屉内)
 
 ---
 
@@ -196,13 +200,12 @@
 
 | 优先级 | 任务 | 原因 |
 |--------|------|------|
-| P0 | 操作审计日志 (2.6) | Module 01 的遗留项，安全合规基础 |
-| P0 | Pinia 状态管理 (2.8) | 前端基础，后续所有页面依赖 |
-| P1 | 动态菜单 + 动态路由 (2.2/2.3) | 权限系统的前端落地 |
-| P1 | v-permission 指令 (2.2) | 按钮级权限控制 |
-| P2 | 布局增强 (2.5) | 标签页/面包屑/主题切换 |
-| P3 | 服务树 + CMDB (Phase 3) | 运维平台核心数据基础 |
-| P4 | 工单系统 (Phase 4) | 运维流程管理 |
+| P1 | 标签页多页签 (2.5) | 布局增强，用户体验 |
+| P1 | 主题切换 (2.5) | 暗色模式 |
+| P2 | 资产导入/导出 Excel (3.3) | CMDB 数据迁移必备 |
+| P2 | 资产批量操作 (3.3) | 运维效率 |
+| P3 | 工单系统 (Phase 4) | 运维流程管理 |
+| P4 | 任务执行中心 (Phase 5) | 自动化运维 |
 
 ---
 
@@ -213,3 +216,12 @@
 | swag cannot find model.User | auth_handler.go 未导入 model 包 | 添加 `var _ model.User` 确保导入 |
 | swag LeftDelim/RightDelim field error | swag CLI v1.16.6 vs go.mod v1.8.12 不兼容 | 升级 go.mod 中 swaggo/swag 到 v1.16.6 |
 | go test ./... pattern error | 在项目根目录执行而非 backend/ | 需在 backend/ 目录下执行 |
+| AES key invalid hex | config.yaml 中 CHANGE_ME_ 前缀含非 hex 字符 | 替换为合法 64 位 hex key |
+| Asset IDC → id_c 列名 | GORM 自动 snake_case 转换 | 添加 `gorm:"column:idc"` tag |
+| Asset tags 空字符串 MySQL JSON 报错 | `gorm:"type:json"` 不允许空字符串 | BeforeSave hook 转为 "[]" |
+| Sync upsert 覆盖 CreatedAt/Tags | 用新对象 Save 导致零值覆盖 | 改为在 existing 上更新字段 |
+| last_sync_message Data too long | varchar(500) 放不下 SDK 错误信息 | 改为 TEXT 类型 |
+| ServiceTree code 唯一索引空串冲突 | 多个空 code 违反 unique | uniqueIndex → 普通 index |
+| Vue Router parent "/" not found | layoutRoute 没有 name 属性 | 添加 `name: 'Layout'` |
+| 子路由 path 以 / 开头 warning | 作为 Layout 子路由不能带前导 / | generateRoutes 去掉前导 / |
+| 前端 sync_status 字段不显示 | 后端 JSON 是 last_sync_status | 前端字段名改为 last_sync_status |
