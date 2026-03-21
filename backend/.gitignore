@@ -39,3 +39,4 @@ docs/swagger/
 # OS
 .DS_Store
 Thumbs.db
+.ace-tool/

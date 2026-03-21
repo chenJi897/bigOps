@@ -5,8 +5,8 @@ server:
 database:
   host: localhost
   port: 3306
-  username: bigops
-  password: bigops123
+  username: root
+  password: DBB4CuIwxc
   database: bigops
   charset: utf8mb4
 
