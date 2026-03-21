@@ -10,6 +10,8 @@ import (
 
 	"go.uber.org/zap"
 
+	_ "github.com/bigops/platform/docs"
+
 	"github.com/bigops/platform/api/http/router"
 	"github.com/bigops/platform/internal/model"
 	casbinPkg "github.com/bigops/platform/internal/pkg/casbin"
@@ -23,6 +25,10 @@ import (
 // @description BigOps 运维平台 API 文档
 // @host localhost:8080
 // @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Bearer token 认证，格式: Bearer {token}
 func main() {
 	// 1. 加载配置文件，优先使用环境变量 CONFIG_PATH 指定的路径
 	configPath := os.Getenv("CONFIG_PATH")
@@ -69,7 +75,7 @@ func main() {
 	defer database.Close()
 
 	// 自动迁移数据库表结构（开发阶段使用，生产环境建议使用 SQL 迁移脚本）
-	if err := database.GetDB().AutoMigrate(&model.User{}, &model.Role{}, &model.Menu{}, &model.UserRole{}); err != nil {
+	if err := database.GetDB().AutoMigrate(&model.User{}, &model.Role{}, &model.Menu{}, &model.UserRole{}, &model.AuditLog{}); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
 	logger.Info("Database migration completed")

@@ -50,12 +50,13 @@ func Setup(mode string) *gin.Engine {
 
 		// --- 认证模块（公开路由） ---
 		authHandler := handler.NewAuthHandler()
-		v1.POST("/auth/register", authHandler.Register)
-		v1.POST("/auth/login", authHandler.Login)
+		v1.POST("/auth/register", middleware.AuditLog(), authHandler.Register)
+		v1.POST("/auth/login", middleware.AuditLog(), authHandler.Login)
 
 		// --- 需要认证的路由 ---
 		authGroup := v1.Group("")
 		authGroup.Use(middleware.AuthMiddleware())
+		authGroup.Use(middleware.AuditLog())
 		{
 			// 认证相关
 			authGroup.POST("/auth/logout", authHandler.Logout)
@@ -89,6 +90,10 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/menus", menuHandler.Create)
 			authGroup.POST("/menus/:id", menuHandler.Update)
 			authGroup.POST("/menus/:id/delete", menuHandler.Delete)
+
+			// --- 审计日志 ---
+			auditLogHandler := handler.NewAuditLogHandler()
+			authGroup.GET("/audit-logs", auditLogHandler.List)
 		}
 	}
 
