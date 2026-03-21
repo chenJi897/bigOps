@@ -100,6 +100,15 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/service-trees/:id/delete", serviceTreeHandler.Delete)
 			authGroup.POST("/service-trees/:id/move", serviceTreeHandler.Move)
 
+			// --- 云账号管理 ---
+			cloudAccountHandler := handler.NewCloudAccountHandler()
+			authGroup.GET("/cloud-accounts", cloudAccountHandler.List)
+			authGroup.GET("/cloud-accounts/:id", cloudAccountHandler.GetByID)
+			authGroup.POST("/cloud-accounts", cloudAccountHandler.Create)
+			authGroup.POST("/cloud-accounts/:id", cloudAccountHandler.Update)
+			authGroup.POST("/cloud-accounts/:id/keys", cloudAccountHandler.UpdateKeys)
+			authGroup.POST("/cloud-accounts/:id/delete", cloudAccountHandler.Delete)
+
 			// --- 审计日志 ---
 			auditLogHandler := handler.NewAuditLogHandler()
 			authGroup.GET("/audit-logs", auditLogHandler.List)

@@ -15,6 +15,12 @@ type Config struct {
 	Redis    RedisConfig    `mapstructure:"redis"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	Log      LogConfig      `mapstructure:"log"`
+	Encrypt  EncryptConfig  `mapstructure:"encrypt"`
+}
+
+// EncryptConfig 加密配置。
+type EncryptConfig struct {
+	Key string `mapstructure:"key"` // 32 字节 AES-256 密钥（hex 编码）
 }
 
 // ServerConfig HTTP 服务器配置。

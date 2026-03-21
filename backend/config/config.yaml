@@ -20,6 +20,9 @@ jwt:
   secret: your-secret-key-change-in-production
   expire: 7200  # 2 hours
 
+encrypt:
+  key: "CHANGE_ME_0123456789abcdef0123456789abcdef0123456789abcdef01234567"  # 64 hex chars = 32 bytes, 生产环境必须更换！
+
 log:
   level: debug
   filename: logs/bigops.log
