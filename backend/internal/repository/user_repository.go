@@ -56,12 +56,16 @@ func (r *UserRepository) Delete(id int64) error {
 	return database.GetDB().Delete(&model.User{}, id).Error
 }
 
-// List 分页查询用户列表，返回用户列表和总数。
-func (r *UserRepository) List(page, size int) ([]*model.User, int64, error) {
+// List 分页查询用户列表，返回用户列表和总数。keyword 为可选模糊搜索（用户名/邮箱/姓名）。
+func (r *UserRepository) List(page, size int, keyword string) ([]*model.User, int64, error) {
 	var users []*model.User
 	var total int64
 
 	db := database.GetDB().Model(&model.User{})
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		db = db.Where("username LIKE ? OR email LIKE ? OR real_name LIKE ?", like, like, like)
+	}
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
