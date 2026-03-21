@@ -13,8 +13,8 @@ type Role struct {
 	Sort        int            `gorm:"default:0;not null" json:"sort"`
 	Status      int8           `gorm:"default:1;not null" json:"status"`
 	Menus       []Menu         `gorm:"many2many:role_menus;" json:"menus,omitempty"`
-	CreatedAt   LocalTime      `json:"created_at"`
-	UpdatedAt   LocalTime      `json:"updated_at"`
+	CreatedAt   LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
+	UpdatedAt   LocalTime      `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 

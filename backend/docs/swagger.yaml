@@ -1,0 +1,1059 @@
+basePath: /api/v1
+definitions:
+  github_com_bigops_platform_internal_model.AuditLog:
+    properties:
+      action:
+        description: create/update/delete/login/logout
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      detail:
+        type: string
+      id:
+        type: integer
+      ip:
+        type: string
+      resource:
+        description: user/role/menu
+        type: string
+      resource_id:
+        type: integer
+      status_code:
+        type: integer
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  github_com_bigops_platform_internal_model.Menu:
+    properties:
+      api_method:
+        type: string
+      api_path:
+        type: string
+      children:
+        items:
+          $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+        type: array
+      component:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: integer
+      path:
+        type: string
+      sort:
+        type: integer
+      status:
+        type: integer
+      title:
+        type: string
+      type:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      visible:
+        type: integer
+    type: object
+  github_com_bigops_platform_internal_model.Role:
+    properties:
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      menus:
+        items:
+          $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+        type: array
+      name:
+        type: string
+      sort:
+        type: integer
+      status:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  github_com_bigops_platform_internal_model.User:
+    properties:
+      avatar:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      phone:
+        type: string
+      real_name:
+        type: string
+      status:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      username:
+        type: string
+    type: object
+  github_com_bigops_platform_internal_pkg_response.PageData:
+    properties:
+      list: {}
+      page:
+        description: 当前页码
+        type: integer
+      size:
+        description: 每页条数
+        type: integer
+      total:
+        description: 总记录数
+        type: integer
+    type: object
+  github_com_bigops_platform_internal_pkg_response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+  github_com_bigops_platform_internal_service.LoginResult:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_bigops_platform_internal_model.User'
+    type: object
+  internal_handler.ChangePasswordRequest:
+    properties:
+      new_password:
+        example: NewPass456
+        maxLength: 50
+        minLength: 6
+        type: string
+      old_password:
+        example: OldPass123
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  internal_handler.CreateMenuRequest:
+    properties:
+      api_method:
+        example: GET
+        type: string
+      api_path:
+        example: /api/v1/users
+        type: string
+      component:
+        example: Layout
+        type: string
+      icon:
+        example: setting
+        type: string
+      name:
+        example: system
+        type: string
+      parent_id:
+        example: 0
+        type: integer
+      path:
+        example: /system
+        type: string
+      sort:
+        example: 1
+        type: integer
+      title:
+        example: 系统管理
+        type: string
+      type:
+        description: 1:目录 2:菜单 3:按钮/权限
+        enum:
+        - 1
+        - 2
+        - 3
+        example: 1
+        type: integer
+      visible:
+        description: 0:隐藏 1:显示
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    required:
+    - name
+    - title
+    - type
+    type: object
+  internal_handler.CreateRoleRequest:
+    properties:
+      description:
+        example: 内容编辑角色
+        type: string
+      display_name:
+        example: 编辑员
+        type: string
+      name:
+        example: editor
+        maxLength: 50
+        minLength: 2
+        type: string
+      sort:
+        example: 1
+        type: integer
+    required:
+    - display_name
+    - name
+    type: object
+  internal_handler.LoginRequest:
+    properties:
+      password:
+        example: Admin123
+        type: string
+      username:
+        example: admin
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  internal_handler.RegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: Pass123456
+        maxLength: 50
+        minLength: 6
+        type: string
+      username:
+        example: johndoe
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  internal_handler.SetMenusRequest:
+    properties:
+      menu_ids:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_handler.SetUserRolesRequest:
+    properties:
+      role_ids:
+        example:
+        - 1
+        - 2
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_handler.UpdateRoleRequest:
+    properties:
+      description:
+        example: 内容编辑角色
+        type: string
+      display_name:
+        example: 编辑员
+        type: string
+      sort:
+        example: 1
+        type: integer
+    required:
+    - display_name
+    type: object
+  internal_handler.UpdateRoleStatusRequest:
+    properties:
+      status:
+        description: 0:禁用 1:启用
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    type: object
+  internal_handler.UpdateUserStatusRequest:
+    properties:
+      status:
+        description: 0:禁用 1:启用
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: BigOps 运维平台 API 文档
+  title: BigOps API
+  version: "1.0"
+paths:
+  /audit-logs:
+    get:
+      description: 分页获取操作审计日志，支持按用户名、操作类型、资源类型过滤
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 用户名
+        in: query
+        name: username
+        type: string
+      - description: 操作类型(create/update/delete/login/logout)
+        in: query
+        name: action
+        type: string
+      - description: 资源类型(user/role/menu)
+        in: query
+        name: resource
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 审计日志列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/github_com_bigops_platform_internal_model.AuditLog'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 审计日志列表
+      tags:
+      - 审计日志
+  /auth/info:
+    get:
+      description: 根据 token 获取当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_bigops_platform_internal_model.User'
+              type: object
+        "401":
+          description: 用户未认证
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前登录用户信息
+      tags:
+      - 认证
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用用户名密码登录，返回 JWT token 和用户信息
+      parameters:
+      - description: 登录请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_bigops_platform_internal_service.LoginResult'
+              type: object
+        "401":
+          description: 用户名或密码错误/账号已被禁用
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      summary: 用户登录
+      tags:
+      - 认证
+  /auth/logout:
+    post:
+      description: 使当前 token 失效，加入 Redis 黑名单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: token 格式错误
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 用户登出
+      tags:
+      - 认证
+  /auth/password:
+    post:
+      consumes:
+      - application/json
+      description: 验证旧密码后修改为新密码，新密码需包含大小写字母和数字，长度 8-50 位
+      parameters:
+      - description: 修改密码请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 密码修改成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误/原密码错误/密码复杂度不够
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改当前用户密码
+      tags:
+      - 认证
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 注册新用户账号，密码需包含大小写字母和数字，长度 8-50 位
+      parameters:
+      - description: 注册请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误/用户名已存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      summary: 用户注册
+      tags:
+      - 认证
+  /menus:
+    get:
+      description: 获取所有菜单的树形结构
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 菜单树
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+                  type: array
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取完整菜单树
+      tags:
+      - 菜单管理
+    post:
+      consumes:
+      - application/json
+      description: '创建菜单/目录/权限按钮，type: 1=目录 2=菜单 3=按钮权限'
+      parameters:
+      - description: 创建菜单请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.CreateMenuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建菜单
+      tags:
+      - 菜单管理
+  /menus/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 更新菜单信息
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新菜单请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.CreateMenuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新菜单
+      tags:
+      - 菜单管理
+  /menus/{id}/delete:
+    post:
+      description: 删除菜单/目录/权限按钮
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除菜单
+      tags:
+      - 菜单管理
+  /menus/user:
+    get:
+      description: 获取当前登录用户有权限访问的菜单树，管理员返回所有菜单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户菜单树
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+                  type: array
+              type: object
+        "401":
+          description: 用户未认证
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户菜单
+      tags:
+      - 菜单管理
+  /roles:
+    get:
+      description: 分页获取角色列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 角色列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/github_com_bigops_platform_internal_model.Role'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 角色列表
+      tags:
+      - 角色管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新角色，角色名不可重复
+      parameters:
+      - description: 创建角色请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误/角色名已存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建角色
+      tags:
+      - 角色管理
+  /roles/{id}:
+    get:
+      description: 根据角色 ID 获取角色详细信息
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 角色详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_bigops_platform_internal_model.Role'
+              type: object
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取角色详情
+      tags:
+      - 角色管理
+    post:
+      consumes:
+      - application/json
+      description: 更新角色显示名、描述、排序
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新角色请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新角色
+      tags:
+      - 角色管理
+  /roles/{id}/delete:
+    post:
+      description: 删除角色，管理员角色不可删除
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 不允许删除管理员角色
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除角色
+      tags:
+      - 角色管理
+  /roles/{id}/menus:
+    post:
+      consumes:
+      - application/json
+      description: 为角色分配菜单权限，传入菜单 ID 列表
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 菜单ID列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.SetMenusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 设置成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置角色菜单权限
+      tags:
+      - 角色管理
+  /roles/{id}/status:
+    post:
+      consumes:
+      - application/json
+      description: 更新角色状态，0=禁用 1=启用，不允许禁用管理员角色
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 状态请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.UpdateRoleStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 启用/禁用成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 不允许禁用管理员角色
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 启用/禁用角色
+      tags:
+      - 角色管理
+  /users:
+    get:
+      description: 分页获取用户列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/github_com_bigops_platform_internal_model.User'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 用户列表
+      tags:
+      - 用户管理
+  /users/{id}/delete:
+    post:
+      description: 软删除用户，不允许删除管理员（ID=1）
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 不允许删除管理员
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "500":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除用户
+      tags:
+      - 用户管理
+  /users/{id}/roles:
+    get:
+      description: 获取指定用户的角色列表
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 角色列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_bigops_platform_internal_model.Role'
+                  type: array
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户角色
+      tags:
+      - 用户角色
+    post:
+      consumes:
+      - application/json
+      description: 为用户分配角色，传入角色 ID 列表
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 角色ID列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.SetUserRolesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 设置成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置用户角色
+      tags:
+      - 用户角色
+  /users/{id}/status:
+    post:
+      consumes:
+      - application/json
+      description: 更新用户状态，0=禁用 1=启用，不允许禁用管理员（ID=1）
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 状态请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 启用/禁用成功
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "400":
+          description: 不允许禁用管理员
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 启用/禁用用户
+      tags:
+      - 用户管理
+securityDefinitions:
+  BearerAuth:
+    description: 'Bearer token 认证，格式: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

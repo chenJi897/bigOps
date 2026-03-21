@@ -15,8 +15,8 @@ type User struct {
 	RealName  string         `gorm:"size:50" json:"real_name"`
 	Avatar    string         `gorm:"size:255" json:"avatar"`
 	Status    int8           `gorm:"default:1;not null;index" json:"status"`
-	CreatedAt LocalTime      `json:"created_at"`
-	UpdatedAt LocalTime      `json:"updated_at"`
+	CreatedAt LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
+	UpdatedAt LocalTime      `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
