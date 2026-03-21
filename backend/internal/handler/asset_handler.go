@@ -14,7 +14,8 @@ import (
 	"github.com/bigops/platform/internal/service"
 )
 
-var _ model.Asset // swag import
+var _ model.Asset       // swag import
+var _ model.AssetChange // swag import
 
 type AssetHandler struct {
 	svc *service.AssetService
@@ -194,4 +195,30 @@ func (h *AssetHandler) Delete(c *gin.Context) {
 	c.Set("audit_resource_id", id)
 	c.Set("audit_detail", "删除资产")
 	response.SuccessWithMessage(c, "删除成功", nil)
+}
+
+// GetChanges 资产变更历史。
+// @Summary 资产变更历史
+// @Description 获取指定资产的变更历史记录
+// @Tags 资产管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "资产ID"
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Success 200 {object} response.Response{data=response.PageData{list=[]model.AssetChange}} "变更历史"
+// @Failure 500 {object} response.Response "查询失败"
+// @Router /assets/{id}/changes [get]
+func (h *AssetHandler) GetChanges(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+
+	changeRepo := repository.NewAssetChangeRepository()
+	changes, total, err := changeRepo.ListByAssetID(id, page, size)
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Page(c, changes, total, page, size)
 }

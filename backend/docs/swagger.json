@@ -9,6 +9,380 @@
     "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
+        "/assets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取主机资产列表，支持多条件筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "资产管理"
+                ],
+                "summary": "资产列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "online",
+                            "offline"
+                        ],
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "服务树节点ID",
+                        "name": "service_tree_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "manual",
+                            "aliyun",
+                            "tencent",
+                            "aws"
+                        ],
+                        "type": "string",
+                        "description": "来源",
+                        "name": "source",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "搜索关键字（主机名/IP）",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "资产列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.Asset"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "手动创建主机资产",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "资产管理"
+                ],
+                "summary": "创建资产",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.CreateAssetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误/主机名已存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/assets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取主机资产详情",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "资产管理"
+                ],
+                "summary": "资产详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "资产ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "资产详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.Asset"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "资产不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新主机资产信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "资产管理"
+                ],
+                "summary": "更新资产",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "资产ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.CreateAssetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/assets/{id}/changes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取指定资产的变更历史记录",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "资产管理"
+                ],
+                "summary": "资产变更历史",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "资产ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "变更历史",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.AssetChange"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/assets/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "软删除主机资产",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "资产管理"
+                ],
+                "summary": "删除资产",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "资产ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "删除失败",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/audit-logs": {
             "get": {
                 "security": [
@@ -311,6 +685,357 @@
                     },
                     "400": {
                         "description": "参数错误/用户名已存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud-accounts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取云账号列表（AK/SK 不返回）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "云账号列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "云账号列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.CloudAccount"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建云账号，AK/SK 加密存储",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "创建云账号",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.CreateCloudAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud-accounts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取云账号详情（AK/SK 不返回）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "云账号详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "云账号详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.CloudAccount"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "云账号不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新云账号基本信息（不含密钥）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "更新云账号",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.UpdateCloudAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud-accounts/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "软删除云账号",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "删除云账号",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "删除失败",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud-accounts/{id}/keys": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新云账号的 AK/SK",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "更新云账号密钥",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "密钥请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.UpdateCloudAccountKeysRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "密钥更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud-accounts/{id}/sync": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "手动触发从云端同步主机资产到本地",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "触发云资产同步",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "同步完成",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "同步失败",
                         "schema": {
                             "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
                         }
@@ -926,6 +1651,289 @@
                 }
             }
         },
+        "/service-trees": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "获取完整的服务树结构",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "服务树"
+                ],
+                "summary": "获取服务树",
+                "responses": {
+                    "200": {
+                        "description": "服务树",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.ServiceTree"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "创建服务树节点，level 自动根据父节点计算",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "服务树"
+                ],
+                "summary": "创建服务树节点",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.CreateServiceTreeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/service-trees/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据 ID 获取服务树节点",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "服务树"
+                ],
+                "summary": "获取服务树节点详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "节点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "节点详情",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.ServiceTree"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "节点不存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新服务树节点信息（不改变父节点，移动请用 move 接口）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "服务树"
+                ],
+                "summary": "更新服务树节点",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "节点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.UpdateServiceTreeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/service-trees/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除节点，有子节点时不允许删除",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "服务树"
+                ],
+                "summary": "删除服务树节点",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "节点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "存在子节点",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/service-trees/{id}/move": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "将节点移动到新的父节点下",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "服务树"
+                ],
+                "summary": "移动服务树节点",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "节点ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "目标父节点",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.MoveServiceTreeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "移动成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "移动失败",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -1217,6 +2225,119 @@
         }
     },
     "definitions": {
+        "github_com_bigops_platform_internal_model.Asset": {
+            "type": "object",
+            "properties": {
+                "asset_type": {
+                    "description": "server/network",
+                    "type": "string"
+                },
+                "cloud_account_id": {
+                    "type": "integer"
+                },
+                "cloud_instance_id": {
+                    "description": "云实例ID，用于同步 upsert",
+                    "type": "string"
+                },
+                "cpu_cores": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "disk_gb": {
+                    "type": "integer"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "idc": {
+                    "type": "string"
+                },
+                "inner_ip": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "memory_mb": {
+                    "type": "integer"
+                },
+                "os": {
+                    "type": "string"
+                },
+                "os_version": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "service_tree_id": {
+                    "type": "integer"
+                },
+                "service_tree_name": {
+                    "description": "关联查询，不入库",
+                    "type": "string"
+                },
+                "sn": {
+                    "type": "string"
+                },
+                "source": {
+                    "description": "manual/aliyun/tencent/aws",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "online/offline",
+                    "type": "string"
+                },
+                "tags": {
+                    "description": "JSON 数组 [\"tag1\",\"tag2\"]",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "github_com_bigops_platform_internal_model.AssetChange": {
+            "type": "object",
+            "properties": {
+                "asset_id": {
+                    "type": "integer"
+                },
+                "change_type": {
+                    "description": "create/update/sync/delete",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "field": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "new_value": {
+                    "type": "string"
+                },
+                "old_value": {
+                    "type": "string"
+                },
+                "operator_id": {
+                    "type": "integer"
+                },
+                "operator_name": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_bigops_platform_internal_model.AuditLog": {
             "type": "object",
             "properties": {
@@ -1252,6 +2373,48 @@
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_bigops_platform_internal_model.CloudAccount": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_sync_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "last_sync_message": {
+                    "type": "string"
+                },
+                "last_sync_status": {
+                    "description": "success/failed/syncing",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "provider": {
+                    "description": "aliyun/tencent/aws",
+                    "type": "string"
+                },
+                "region": {
+                    "description": "逗号分隔的地域列表",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "1=启用 0=禁用",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
                 }
             }
         },
@@ -1342,6 +2505,50 @@
                     "type": "integer"
                 },
                 "status": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "github_com_bigops_platform_internal_model.ServiceTree": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_bigops_platform_internal_model.ServiceTree"
+                    }
+                },
+                "code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "level": {
+                    "description": "1=业务线 2=产品 3=模块（不硬限制，支持N层）",
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "integer"
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "sort": {
                     "type": "integer"
                 },
                 "updated_at": {
@@ -1444,6 +2651,119 @@
                 }
             }
         },
+        "internal_handler.CreateAssetRequest": {
+            "type": "object",
+            "required": [
+                "hostname",
+                "ip"
+            ],
+            "properties": {
+                "asset_type": {
+                    "type": "string",
+                    "enum": [
+                        "server",
+                        "network"
+                    ],
+                    "example": "server"
+                },
+                "cpu_cores": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "disk_gb": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "hostname": {
+                    "type": "string",
+                    "example": "web-server-01"
+                },
+                "idc": {
+                    "type": "string",
+                    "example": "杭州"
+                },
+                "inner_ip": {
+                    "type": "string",
+                    "example": "192.168.1.1"
+                },
+                "ip": {
+                    "type": "string",
+                    "example": "10.0.1.1"
+                },
+                "memory_mb": {
+                    "type": "integer",
+                    "example": 8192
+                },
+                "os": {
+                    "type": "string",
+                    "example": "CentOS"
+                },
+                "os_version": {
+                    "type": "string",
+                    "example": "7.9"
+                },
+                "remark": {
+                    "type": "string",
+                    "example": "Web 前端服务器"
+                },
+                "service_tree_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "sn": {
+                    "type": "string",
+                    "example": "SN12345"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "online",
+                        "offline"
+                    ],
+                    "example": "online"
+                },
+                "tags": {
+                    "type": "string",
+                    "example": "[\"production\",\"web\"]"
+                }
+            }
+        },
+        "internal_handler.CreateCloudAccountRequest": {
+            "type": "object",
+            "required": [
+                "access_key",
+                "name",
+                "provider",
+                "secret_key"
+            ],
+            "properties": {
+                "access_key": {
+                    "type": "string",
+                    "example": "LTAI5t..."
+                },
+                "name": {
+                    "type": "string",
+                    "example": "阿里云生产环境"
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "aliyun",
+                        "tencent",
+                        "aws"
+                    ],
+                    "example": "aliyun"
+                },
+                "region": {
+                    "type": "string",
+                    "example": "cn-hangzhou,cn-beijing"
+                },
+                "secret_key": {
+                    "type": "string",
+                    "example": "xxxxxxxx"
+                }
+            }
+        },
         "internal_handler.CreateMenuRequest": {
             "type": "object",
             "required": [
@@ -1536,6 +2856,38 @@
                 }
             }
         },
+        "internal_handler.CreateServiceTreeRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "infra"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "基础架构部"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "基础架构"
+                },
+                "owner_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "parent_id": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "sort": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "internal_handler.LoginRequest": {
             "type": "object",
             "required": [
@@ -1550,6 +2902,15 @@
                 "username": {
                     "type": "string",
                     "example": "admin"
+                }
+            }
+        },
+        "internal_handler.MoveServiceTreeRequest": {
+            "type": "object",
+            "properties": {
+                "parent_id": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
@@ -1609,6 +2970,47 @@
                 }
             }
         },
+        "internal_handler.UpdateCloudAccountKeysRequest": {
+            "type": "object",
+            "required": [
+                "access_key",
+                "secret_key"
+            ],
+            "properties": {
+                "access_key": {
+                    "type": "string",
+                    "example": "LTAI5t..."
+                },
+                "secret_key": {
+                    "type": "string",
+                    "example": "xxxxxxxx"
+                }
+            }
+        },
+        "internal_handler.UpdateCloudAccountRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "阿里云生产环境"
+                },
+                "region": {
+                    "type": "string",
+                    "example": "cn-hangzhou,cn-beijing"
+                },
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 1
+                }
+            }
+        },
         "internal_handler.UpdateRoleRequest": {
             "type": "object",
             "required": [
@@ -1639,6 +3041,34 @@
                         0,
                         1
                     ],
+                    "example": 1
+                }
+            }
+        },
+        "internal_handler.UpdateServiceTreeRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "infra"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "基础架构部"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "基础架构"
+                },
+                "owner_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "sort": {
+                    "type": "integer",
                     "example": 1
                 }
             }
