@@ -38,6 +38,40 @@ const viewModules: Record<string, () => Promise<any>> = {
   'Assets': () => import('../views/Assets.vue'),
 }
 
+// 系统管理静态路由（始终可访问，无需数据库菜单配置）
+export const systemRoutes: RouteRecordRaw[] = [
+  {
+    path: 'dashboard',
+    name: 'Dashboard',
+    component: viewModules['Dashboard'],
+    meta: { title: '仪表盘', icon: 'Odometer' },
+  },
+  {
+    path: 'users',
+    name: 'Users',
+    component: viewModules['Users'],
+    meta: { title: '用户管理', icon: 'User' },
+  },
+  {
+    path: 'roles',
+    name: 'Roles',
+    component: viewModules['Roles'],
+    meta: { title: '角色管理', icon: 'UserFilled' },
+  },
+  {
+    path: 'menus',
+    name: 'Menus',
+    component: viewModules['Menus'],
+    meta: { title: '菜单管理', icon: 'Menu' },
+  },
+  {
+    path: 'audit-logs',
+    name: 'AuditLogs',
+    component: viewModules['AuditLogs'],
+    meta: { title: '审计日志', icon: 'DocumentChecked' },
+  },
+]
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [...constantRoutes, layoutRoute],
@@ -63,18 +97,21 @@ router.beforeEach(async (to) => {
 
     try {
       if (!userStore.userInfo) await userStore.fetchUserInfo()
-      const menus = await permissionStore.fetchMenus()
-      const dynamicChildren = generateRoutes(menus)
-      // 添加仪表盘作为默认页
-      dynamicChildren.unshift({
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: viewModules['Dashboard'],
-        meta: { title: '仪表盘', icon: 'Odometer' },
-      })
-      dynamicChildren.forEach(route => {
+
+      // 先注册系统管理静态路由
+      systemRoutes.forEach(route => {
         router.addRoute('Layout', route)
       })
+
+      // 再加载后端动态菜单路由（跳过已注册的路由名称）
+      const menus = await permissionStore.fetchMenus()
+      const dynamicChildren = generateRoutes(menus)
+      dynamicChildren.forEach(route => {
+        if (route.name && !router.hasRoute(route.name)) {
+          router.addRoute('Layout', route)
+        }
+      })
+
       // 兜底 404
       router.addRoute({ path: '/:pathMatch(.*)*', redirect: '/404' })
       routesAdded = true
