@@ -13,7 +13,7 @@ type CloudAccount struct {
 	Status          int8           `gorm:"default:1;not null" json:"status"`                  // 1=启用 0=禁用
 	LastSyncAt      *LocalTime     `json:"last_sync_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	LastSyncStatus  string         `gorm:"size:20" json:"last_sync_status"`                   // success/failed/syncing
-	LastSyncMessage string         `gorm:"size:500" json:"last_sync_message"`
+	LastSyncMessage string         `gorm:"type:text" json:"last_sync_message"`
 	CreatedAt       LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	UpdatedAt       LocalTime      `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
