@@ -109,6 +109,14 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/cloud-accounts/:id/keys", cloudAccountHandler.UpdateKeys)
 			authGroup.POST("/cloud-accounts/:id/delete", cloudAccountHandler.Delete)
 
+			// --- 资产管理 ---
+			assetHandler := handler.NewAssetHandler()
+			authGroup.GET("/assets", assetHandler.List)
+			authGroup.GET("/assets/:id", assetHandler.GetByID)
+			authGroup.POST("/assets", assetHandler.Create)
+			authGroup.POST("/assets/:id", assetHandler.Update)
+			authGroup.POST("/assets/:id/delete", assetHandler.Delete)
+
 			// --- 审计日志 ---
 			auditLogHandler := handler.NewAuditLogHandler()
 			authGroup.GET("/audit-logs", auditLogHandler.List)
