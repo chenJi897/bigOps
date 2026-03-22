@@ -90,9 +90,43 @@ func (s *AssetService) List(q repository.AssetListQuery) ([]*model.Asset, int64,
 }
 
 func (s *AssetService) fillServiceTreeName(asset *model.Asset) {
-	if asset.ServiceTreeID > 0 {
-		if node, err := s.serviceTreeRepo.GetByID(asset.ServiceTreeID); err == nil {
-			asset.ServiceTreeName = node.Name
-		}
+	if asset.ServiceTreeID <= 0 {
+		return
 	}
+	node, err := s.serviceTreeRepo.GetByID(asset.ServiceTreeID)
+	if err != nil {
+		return
+	}
+	asset.ServiceTreeName = node.Name
+
+	// 向上追溯构建完整路径: "根 / 父 / 子"
+	var parts []string
+	current := node
+	for current != nil {
+		parts = append(parts, current.Name)
+		if current.ParentID <= 0 {
+			break
+		}
+		parent, err := s.serviceTreeRepo.GetByID(current.ParentID)
+		if err != nil {
+			break
+		}
+		current = parent
+	}
+	// 反转: parts 现在是 [子, 父, 根]，需要变成 [根, 父, 子]
+	for i, j := 0, len(parts)-1; i < j; i, j = i+1, j-1 {
+		parts[i], parts[j] = parts[j], parts[i]
+	}
+	asset.ServiceTreePath = joinPath(parts)
+}
+
+func joinPath(parts []string) string {
+	result := ""
+	for i, p := range parts {
+		if i > 0 {
+			result += " / "
+		}
+		result += p
+	}
+	return result
 }

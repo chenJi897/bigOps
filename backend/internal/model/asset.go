@@ -19,6 +19,7 @@ type Asset struct {
 	Source          string         `gorm:"size:20;default:manual;index" json:"source"`     // manual/aliyun/tencent/aws
 	ServiceTreeID   int64          `gorm:"default:0;index" json:"service_tree_id"`
 	ServiceTreeName string         `gorm:"-" json:"service_tree_name,omitempty"`           // 关联查询，不入库
+	ServiceTreePath string         `gorm:"-" json:"service_tree_path,omitempty"`           // 完整路径，如 "阿里云 / 北京 / xxx"
 	CloudAccountID  int64          `gorm:"default:0;index" json:"cloud_account_id"`
 	CloudInstanceID string         `gorm:"size:100;index" json:"cloud_instance_id"`       // 云实例ID，用于同步 upsert
 	IDC             string         `gorm:"column:idc;size:100" json:"idc"`
