@@ -46,6 +46,14 @@ const dashboardRoute: RouteRecordRaw = {
   meta: { title: '仪表盘', icon: 'Odometer' },
 }
 
+// 审计日志静态路由（首页"查看全部"始终可跳转）
+const auditLogsRoute: RouteRecordRaw = {
+  path: 'audit-logs',
+  name: 'audit_logs',
+  component: viewModules['AuditLogs'],
+  meta: { title: '审计日志', icon: 'DocumentChecked' },
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [...constantRoutes, layoutRoute],
@@ -74,6 +82,11 @@ router.beforeEach(async (to) => {
 
       // 仪表盘始终可访问
       router.addRoute('Layout', dashboardRoute)
+
+      // 审计日志始终可访问（首页查看全部跳转用）
+      if (!router.hasRoute('audit_logs')) {
+        router.addRoute('Layout', auditLogsRoute)
+      }
 
       // 加载后端动态菜单路由
       const menus = await permissionStore.fetchMenus()
