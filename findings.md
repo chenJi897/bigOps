@@ -1,6 +1,6 @@
 # BigOps - 项目发现与架构决策记录
 
-**最后更新**: 2026-03-21
+**最后更新**: 2026-03-22
 
 ---
 
@@ -25,7 +25,7 @@
 | 框架 | Vue 3.5 + TypeScript | 组合式 API、类型安全 |
 | 构建 | Vite 8 | 极速 HMR |
 | UI 库 | Element Plus | Vue 3 生态最成熟 |
-| 状态管理 | Pinia (未使用) | Vue 3 官方推荐 |
+| 状态管理 | Pinia (已使用) | Vue 3 官方推荐 |
 | HTTP | Axios | 拦截器、取消请求 |
 
 ### 1.3 关键架构决策
@@ -47,6 +47,14 @@
 **时间字段使用 LocalTime 自定义类型**
 - JSON 序列化格式：`"2006-01-02 15:04:05"`
 - 避免前端处理 ISO 8601 时区问题
+- **重要**：Value() 零值返回 nil，避免 MySQL Error 1292
+
+**云同步架构：SyncRunner + Scheduler** (2026-03-22)
+- SyncRunner 是唯一同步入口，手动/定时都调它
+- per-account sync.Mutex TryLock 防并发（单进程，不需分布式锁）
+- Scheduler 用 Go ticker 每 60s 巡检 enabled 账号
+- CloudSyncTask 记录每次同步完整生命周期（独立表，不与 audit_logs 混用）
+- 失败不立即重试，等下一个周期
 
 ---
 
@@ -64,15 +72,15 @@ internal/middleware/        → Gin 中间件
 internal/pkg/               → 基础设施包
 ```
 
-### 2.2 代码量统计 (截至 2026-03-21)
-- 后端总代码：~2785 行
-- 前端总代码：~729 行
-- Handler 文件：3 个 (auth/user/rbac)
-- Service 文件：3 个 (auth/role/menu)
-- Repository 文件：3 个 (user/role/menu)
-- Model 文件：4 个 (user/role/menu/local_time)
-- 前端页面：5 个 (Login/Layout/Users/Roles/Menus)
-- API 端点：21 个 (含 Swagger 注解)
+### 2.2 代码量统计 (截至 2026-03-22)
+- 后端总代码：~6003 行
+- 前端总代码：~2686 行
+- Handler 文件：6 个 (auth/user/rbac + cloud_account/asset/cloud_sync_task)
+- Service 文件：7 个 (auth/role/menu + cloud_account/asset/service_tree + cloud_sync/runner)
+- Repository 文件：7 个 (user/role/menu + cloud_account/asset/service_tree/cloud_sync_task)
+- Model 文件：9 个 (user/role/menu/local_time + audit_log/service_tree/cloud_account/asset/cloud_sync_task)
+- 前端页面：11 个
+- API 端点：48 个
 
 ### 2.3 单元测试覆盖
 | 包 | 状态 |
@@ -87,21 +95,22 @@ internal/pkg/               → 基础设施包
 
 ## 3. 关键发现
 
-### 3.1 前端硬编码路由问题
-- `router/index.ts` 中路由写死了 3 个页面 (users/roles/menus)
-- Layout.vue 侧边栏菜单也是硬编码
-- 后端已提供 `GET /api/v1/menus/user` 接口返回用户有权限的菜单
-- **需要改造为动态路由**：登录后调用接口获取菜单树 → 动态注册路由 → 动态渲染侧边栏
+### 3.1 ~~前端硬编码路由问题~~ **已解决** (2026-03-21)
+- 已改造为动态路由：登录后调用 `/menus/user` → generateRoutes → addRoute
+- Layout.vue 从 permissionStore 渲染侧边栏
 
-### 3.2 Pinia 完全未使用
-- `frontend/src/stores/` 目录存在但为空
-- 用户信息、Token、菜单权限都散落在各组件 localStorage 操作中
-- 需要创建 userStore 和 permissionStore
+### 3.2 ~~Pinia 完全未使用~~ **已解决** (2026-03-21)
+- userStore: 管理 token + 用户信息
+- permissionStore: 管理菜单 + 权限 + 动态路由
 
-### 3.3 操作审计只有日志无入库
-- Handler 层已有审计日志打印 (zap.Info)：登录、注册、角色变更、用户状态变更等
-- 但没有入库（无 AuditLog 模型、无 Repository）
-- 前端无法查看操作历史
+### 3.3 ~~操作审计只有日志无入库~~ **已解决** (2026-03-21)
+- AuditLog 模型 + Repository + 中间件自动记录
+- 前端审计日志页面 + 筛选
+
+### 3.4 LocalTime 零值陷阱 (2026-03-22 发现)
+- 数据库 NULL → Scan 返回零值 → Value() 输出 `0000-00-00` → MySQL Error 1292
+- **修复**: Value() 零值返回 nil；所有 Update 必须先查 existing 再改字段
+- **规则**: 任何 handler 不能构造新 model 对象直接 Save()，必须经 service 层查出再改
 
 ### 3.4 Swagger 定义名称不美观
 - swag 生成的类型名称带完整包路径：`github_com_bigops_platform_internal_model.User`
