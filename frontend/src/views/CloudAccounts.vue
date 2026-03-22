@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { cloudAccountApi } from '../api'
+import { cloudAccountApi, serviceTreeApi } from '../api'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -9,11 +9,15 @@ const total = ref(0)
 const page = ref(1)
 const size = ref(20)
 
+// 服务树数据
+const serviceTreeData = ref<any[]>([])
+const serviceTreeMap = ref<Record<number, string>>({})
+
 // 表单
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增云账号')
 const editId = ref(0)
-const form = ref({ name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', sync_enabled: false, sync_interval: 0 })
+const form = ref<any>({ name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', service_tree_id: 0, sync_enabled: false, sync_interval: 0 })
 const isCreate = ref(true)
 
 // 更新密钥
@@ -43,6 +47,26 @@ const intervalOptions = [
   { label: '每天', value: 1440 },
 ]
 
+// 构建服务树名称映射（含完整路径）
+function buildTreeMap(nodes: any[], parentPath = '') {
+  for (const node of nodes) {
+    const fullPath = parentPath ? `${parentPath} / ${node.name}` : node.name
+    serviceTreeMap.value[node.id] = fullPath
+    if (node.children?.length) {
+      buildTreeMap(node.children, fullPath)
+    }
+  }
+}
+
+async function fetchServiceTree() {
+  try {
+    const res: any = await serviceTreeApi.tree()
+    serviceTreeData.value = res.data || []
+    serviceTreeMap.value = {}
+    buildTreeMap(serviceTreeData.value)
+  } catch {}
+}
+
 async function fetchData() {
   loading.value = true
   try {
@@ -57,7 +81,7 @@ async function fetchData() {
 function handleAdd() {
   isCreate.value = true
   dialogTitle.value = '新增云账号'
-  form.value = { name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', sync_enabled: false, sync_interval: 0 }
+  form.value = { name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', service_tree_id: 0, sync_enabled: false, sync_interval: 0 }
   dialogVisible.value = true
 }
 
@@ -67,7 +91,8 @@ function handleEdit(row: any) {
   editId.value = row.id
   form.value = {
     name: row.name, provider: row.provider, access_key: '', secret_key: '',
-    region: row.region || '', sync_enabled: row.sync_enabled || false, sync_interval: row.sync_interval || 0
+    region: row.region || '', service_tree_id: row.service_tree_id || 0,
+    sync_enabled: row.sync_enabled || false, sync_interval: row.sync_interval || 0
   }
   dialogVisible.value = true
 }
@@ -80,8 +105,10 @@ async function submitForm() {
       await cloudAccountApi.create(form.value)
       ElMessage.success('创建成功')
     } else {
-      await cloudAccountApi.update(editId.value, { name: form.value.name, region: form.value.region, status: 1 })
-      // 同时更新同步配置
+      await cloudAccountApi.update(editId.value, {
+        name: form.value.name, region: form.value.region, status: 1,
+        service_tree_id: form.value.service_tree_id
+      })
       await cloudAccountApi.syncConfig(editId.value, form.value.sync_enabled, form.value.sync_interval)
       ElMessage.success('更新成功')
     }
@@ -127,6 +154,10 @@ function providerLabel(val: string) {
   return providerOptions.find(o => o.value === val)?.label || val
 }
 
+function serviceTreeLabel(id: number) {
+  return serviceTreeMap.value[id] || ''
+}
+
 function handlePageChange(p: number) {
   page.value = p
   fetchData()
@@ -163,7 +194,10 @@ function formatDuration(ms: number) {
   return (ms / 1000).toFixed(1) + 's'
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  fetchServiceTree()
+})
 </script>
 
 <template>
@@ -178,13 +212,19 @@ onMounted(fetchData)
 
       <el-table :data="tableData" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="名称" min-width="150" />
-        <el-table-column prop="provider" label="云厂商" width="120">
+        <el-table-column prop="name" label="名称" min-width="120" />
+        <el-table-column prop="provider" label="云厂商" width="100">
           <template #default="{ row }">
             <el-tag size="small">{{ providerLabel(row.provider) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="region" label="Region" min-width="150" show-overflow-tooltip />
+        <el-table-column label="所属服务" min-width="140" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.service_tree_id">{{ serviceTreeLabel(row.service_tree_id) }}</span>
+            <span v-else style="color: #999;">未指定</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="region" label="Region" min-width="130" show-overflow-tooltip />
         <el-table-column label="定时同步" width="110">
           <template #default="{ row }">
             <el-tag v-if="row.sync_enabled" type="success" size="small">{{ row.sync_interval }}分钟</el-tag>
@@ -198,7 +238,7 @@ onMounted(fetchData)
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="last_sync_at" label="最后同步" width="180" />
+        <el-table-column prop="last_sync_at" label="最后同步" width="170" />
         <el-table-column label="操作" width="340" fixed="right">
           <template #default="{ row }">
             <el-button link size="small" @click="handleSync(row)"><el-icon><Refresh /></el-icon> 同步</el-button>
@@ -231,6 +271,16 @@ onMounted(fetchData)
         <el-form-item label="AccessKey" v-if="isCreate"><el-input v-model="form.access_key" /></el-form-item>
         <el-form-item label="SecretKey" v-if="isCreate"><el-input v-model="form.secret_key" type="password" show-password /></el-form-item>
         <el-form-item label="Region"><el-input v-model="form.region" placeholder="cn-hangzhou,cn-beijing" /></el-form-item>
+        <el-form-item label="所属服务">
+          <el-tree-select
+            v-model="form.service_tree_id"
+            :data="serviceTreeData"
+            :props="{ label: 'name', value: 'id', children: 'children' }"
+            placeholder="选择服务树节点（同步资产将归属此节点）"
+            clearable check-strictly
+            style="width: 100%;"
+          />
+        </el-form-item>
         <el-form-item label="定时同步" v-if="!isCreate">
           <el-switch v-model="form.sync_enabled" />
         </el-form-item>
