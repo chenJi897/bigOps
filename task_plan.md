@@ -2,8 +2,8 @@
 
 **项目**: BigOps 大运维平台
 **启动日期**: 2026-03-17
-**当前状态**: Phase 2 完成，Phase 3 完成
-**最后更新**: 2026-03-21
+**当前状态**: Phase 3 完成（含定时同步系统）
+**最后更新**: 2026-03-22
 
 ---
 
@@ -128,6 +128,18 @@
 - [x] 前端云账号管理页面 (`views/CloudAccounts.vue`)
 - [x] 同步详细日志 + 阿里云 endpoint 可配置
 - [x] last_sync_message 改为 TEXT 类型
+- [x] 云账号关联服务树 — 同步资产自动归属指定节点 `7b94db2`
+
+### 3.5 定时同步系统 `complete`
+- [x] CloudSyncTask 同步任务记录模型 `a1ac2ab`
+- [x] CloudSyncTask Repository (CRUD + 分页)
+- [x] CloudAccount 新增 sync_enabled / sync_interval 字段
+- [x] SyncRunner 统一同步执行器 (per-account mutex 防重复)
+- [x] 重构 handler Sync 方法，改为调用 RunSync()
+- [x] Scheduler 定时调度器 (60s 巡检 + Go ticker)
+- [x] 同步日志查询 API (3 个新端点)
+- [x] 前端同步配置 (编辑表单) + 同步记录抽屉
+- [x] main.go 集成调度器启动
 
 ### 3.3 CMDB 资产管理 `complete`
 - [x] 资产模型定义 (Asset + AssetChange) `25450d9`
@@ -225,3 +237,6 @@
 | Vue Router parent "/" not found | layoutRoute 没有 name 属性 | 添加 `name: 'Layout'` |
 | 子路由 path 以 / 开头 warning | 作为 Layout 子路由不能带前导 / | generateRoutes 去掉前导 / |
 | 前端 sync_status 字段不显示 | 后端 JSON 是 last_sync_status | 前端字段名改为 last_sync_status |
+| 菜单更新排序 Error 1292 | handler 构造新 Menu{} 零值 CreatedAt | service 层先查 existing 再更新字段 |
+| LocalTime 零值 0000-00-00 | 数据库 NULL → Scan 零值 → Value 输出 0000-00-00 | Value() 零值返回 nil |
+| 系统管理菜单权限失效 | Layout.vue 硬编码菜单 + 静态路由 | 移除硬编码，全部走动态路由 |
