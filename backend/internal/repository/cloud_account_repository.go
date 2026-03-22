@@ -44,3 +44,11 @@ func (r *CloudAccountRepository) List(page, size int) ([]*model.CloudAccount, in
 	}
 	return accounts, total, nil
 }
+
+// ListEnabled 获取所有启用定时同步的云账号。
+func (r *CloudAccountRepository) ListEnabled() ([]*model.CloudAccount, error) {
+	var accounts []*model.CloudAccount
+	err := database.GetDB().Where("sync_enabled = ? AND sync_interval > 0 AND status = 1", true).
+		Find(&accounts).Error
+	return accounts, err
+}

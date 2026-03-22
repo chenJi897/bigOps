@@ -97,6 +97,16 @@ export const cloudAccountApi = {
   updateKeys: (id: number, access_key: string, secret_key: string) => api.post(`/cloud-accounts/${id}/keys`, { access_key, secret_key }),
   delete: (id: number) => api.post(`/cloud-accounts/${id}/delete`),
   sync: (id: number) => api.post(`/cloud-accounts/${id}/sync`),
+  syncConfig: (id: number, sync_enabled: boolean, sync_interval: number) =>
+    api.post(`/cloud-accounts/${id}/sync-config`, { sync_enabled, sync_interval }),
+  syncTasks: (id: number, page = 1, size = 10) =>
+    api.get(`/cloud-accounts/${id}/sync-tasks`, { params: { page, size } }),
+}
+
+// 同步日志
+export const syncTaskApi = {
+  list: (params: { page?: number; size?: number; status?: string; trigger_type?: string; cloud_account_id?: number }) =>
+    api.get('/sync-tasks', { params }),
 }
 
 // 资产管理
