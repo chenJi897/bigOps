@@ -103,30 +103,6 @@ async function submitPwd() {
               <template #title>{{ menu.title }}</template>
             </el-menu-item>
           </template>
-
-          <!-- 系统管理（固定，始终可见） -->
-          <el-sub-menu index="/system-management">
-            <template #title>
-              <el-icon><Setting /></el-icon>
-              <span>系统管理</span>
-            </template>
-            <el-menu-item index="/users">
-              <el-icon><User /></el-icon>
-              <template #title>用户管理</template>
-            </el-menu-item>
-            <el-menu-item index="/roles">
-              <el-icon><UserFilled /></el-icon>
-              <template #title>角色管理</template>
-            </el-menu-item>
-            <el-menu-item index="/menus">
-              <el-icon><Menu /></el-icon>
-              <template #title>菜单管理</template>
-            </el-menu-item>
-            <el-menu-item index="/audit-logs">
-              <el-icon><DocumentChecked /></el-icon>
-              <template #title>审计日志</template>
-            </el-menu-item>
-          </el-sub-menu>
         </el-menu>
       </el-scrollbar>
     </el-aside>
