@@ -46,14 +46,6 @@ const dashboardRoute: RouteRecordRaw = {
   meta: { title: '仪表盘', icon: 'Odometer' },
 }
 
-// 审计日志静态路由（首页"查看全部"始终可跳转）
-const auditLogsRoute: RouteRecordRaw = {
-  path: 'audit-logs',
-  name: 'audit_logs',
-  component: viewModules['AuditLogs'],
-  meta: { title: '审计日志', icon: 'DocumentChecked' },
-}
-
 const router = createRouter({
   history: createWebHistory(),
   routes: [...constantRoutes, layoutRoute],
@@ -83,11 +75,6 @@ router.beforeEach(async (to) => {
       // 仪表盘始终可访问
       router.addRoute('Layout', dashboardRoute)
 
-      // 审计日志始终可访问（首页查看全部跳转用）
-      if (!router.hasRoute('audit_logs')) {
-        router.addRoute('Layout', auditLogsRoute)
-      }
-
       // 加载后端动态菜单路由
       const menus = await permissionStore.fetchMenus()
       const dynamicChildren = generateRoutes(menus)
@@ -115,7 +102,13 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
   const routes: RouteRecordRaw[] = []
   for (const menu of menus) {
     if (menu.type === 3) continue // 按钮权限，不生成路由
-    if (!menu.path) continue
+    if (!menu.path) {
+      // 无路径的目录节点，直接展平子路由
+      if (menu.children?.length) {
+        routes.push(...generateRoutes(menu.children))
+      }
+      continue
+    }
 
     // 子路由 path 不能以 / 开头，去掉前导斜杠
     const routePath = menu.path.startsWith('/') ? menu.path.slice(1) : menu.path
