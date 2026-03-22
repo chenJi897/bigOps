@@ -29,7 +29,11 @@ func (t *LocalTime) UnmarshalJSON(data []byte) error {
 }
 
 func (t LocalTime) Value() (driver.Value, error) {
-	return time.Time(t), nil
+	tt := time.Time(t)
+	if tt.IsZero() {
+		return nil, nil
+	}
+	return tt, nil
 }
 
 func (t *LocalTime) Scan(v interface{}) error {
