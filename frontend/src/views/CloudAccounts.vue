@@ -13,7 +13,7 @@ const size = ref(20)
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增云账号')
 const editId = ref(0)
-const form = ref({ name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '' })
+const form = ref({ name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', sync_enabled: false, sync_interval: 0 })
 const isCreate = ref(true)
 
 // 更新密钥
@@ -21,10 +21,26 @@ const keysDialogVisible = ref(false)
 const keysForm = ref({ access_key: '', secret_key: '' })
 const keysId = ref(0)
 
+// 同步记录抽屉
+const syncLogDrawer = ref(false)
+const syncLogAccountId = ref(0)
+const syncLogAccountName = ref('')
+const syncLogs = ref<any[]>([])
+const syncLogTotal = ref(0)
+const syncLogPage = ref(1)
+const syncLogLoading = ref(false)
+
 const providerOptions = [
   { label: '阿里云', value: 'aliyun' },
   { label: '腾讯云', value: 'tencent' },
   { label: 'AWS', value: 'aws' },
+]
+
+const intervalOptions = [
+  { label: '每 10 分钟', value: 10 },
+  { label: '每 30 分钟', value: 30 },
+  { label: '每小时', value: 60 },
+  { label: '每天', value: 1440 },
 ]
 
 async function fetchData() {
@@ -41,7 +57,7 @@ async function fetchData() {
 function handleAdd() {
   isCreate.value = true
   dialogTitle.value = '新增云账号'
-  form.value = { name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '' }
+  form.value = { name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', sync_enabled: false, sync_interval: 0 }
   dialogVisible.value = true
 }
 
@@ -49,7 +65,10 @@ function handleEdit(row: any) {
   isCreate.value = false
   dialogTitle.value = '编辑云账号'
   editId.value = row.id
-  form.value = { name: row.name, provider: row.provider, access_key: '', secret_key: '', region: row.region || '' }
+  form.value = {
+    name: row.name, provider: row.provider, access_key: '', secret_key: '',
+    region: row.region || '', sync_enabled: row.sync_enabled || false, sync_interval: row.sync_interval || 0
+  }
   dialogVisible.value = true
 }
 
@@ -62,6 +81,8 @@ async function submitForm() {
       ElMessage.success('创建成功')
     } else {
       await cloudAccountApi.update(editId.value, { name: form.value.name, region: form.value.region, status: 1 })
+      // 同时更新同步配置
+      await cloudAccountApi.syncConfig(editId.value, form.value.sync_enabled, form.value.sync_interval)
       ElMessage.success('更新成功')
     }
     dialogVisible.value = false
@@ -111,6 +132,37 @@ function handlePageChange(p: number) {
   fetchData()
 }
 
+// 同步记录
+async function openSyncLogs(row: any) {
+  syncLogAccountId.value = row.id
+  syncLogAccountName.value = row.name
+  syncLogPage.value = 1
+  syncLogDrawer.value = true
+  fetchSyncLogs()
+}
+
+async function fetchSyncLogs() {
+  syncLogLoading.value = true
+  try {
+    const res: any = await cloudAccountApi.syncTasks(syncLogAccountId.value, syncLogPage.value, 10)
+    syncLogs.value = res.data?.list || []
+    syncLogTotal.value = res.data?.total || 0
+  } finally {
+    syncLogLoading.value = false
+  }
+}
+
+function handleSyncLogPageChange(p: number) {
+  syncLogPage.value = p
+  fetchSyncLogs()
+}
+
+function formatDuration(ms: number) {
+  if (!ms) return '-'
+  if (ms < 1000) return ms + 'ms'
+  return (ms / 1000).toFixed(1) + 's'
+}
+
 onMounted(fetchData)
 </script>
 
@@ -133,6 +185,12 @@ onMounted(fetchData)
           </template>
         </el-table-column>
         <el-table-column prop="region" label="Region" min-width="150" show-overflow-tooltip />
+        <el-table-column label="定时同步" width="110">
+          <template #default="{ row }">
+            <el-tag v-if="row.sync_enabled" type="success" size="small">{{ row.sync_interval }}分钟</el-tag>
+            <el-tag v-else type="info" size="small">关闭</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="last_sync_status" label="同步状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.last_sync_status === 'success' ? 'success' : row.last_sync_status === 'failed' ? 'danger' : row.last_sync_status === 'syncing' ? 'warning' : 'info'" size="small">
@@ -141,10 +199,10 @@ onMounted(fetchData)
           </template>
         </el-table-column>
         <el-table-column prop="last_sync_at" label="最后同步" width="180" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="340" fixed="right">
           <template #default="{ row }">
             <el-button link size="small" @click="handleSync(row)"><el-icon><Refresh /></el-icon> 同步</el-button>
+            <el-button link size="small" @click="openSyncLogs(row)"><el-icon><Document /></el-icon> 记录</el-button>
             <el-button link size="small" @click="handleEdit(row)"><el-icon><Edit /></el-icon> 编辑</el-button>
             <el-button link size="small" @click="handleUpdateKeys(row)"><el-icon><Key /></el-icon> 密钥</el-button>
             <el-button link size="small" type="danger" @click="handleDelete(row)"><el-icon><Delete /></el-icon> 删除</el-button>
@@ -163,7 +221,7 @@ onMounted(fetchData)
 
     <!-- 新增/编辑 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="form" label-width="80px">
+      <el-form :model="form" label-width="90px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="云厂商" v-if="isCreate">
           <el-select v-model="form.provider" style="width: 100%;">
@@ -173,6 +231,14 @@ onMounted(fetchData)
         <el-form-item label="AccessKey" v-if="isCreate"><el-input v-model="form.access_key" /></el-form-item>
         <el-form-item label="SecretKey" v-if="isCreate"><el-input v-model="form.secret_key" type="password" show-password /></el-form-item>
         <el-form-item label="Region"><el-input v-model="form.region" placeholder="cn-hangzhou,cn-beijing" /></el-form-item>
+        <el-form-item label="定时同步" v-if="!isCreate">
+          <el-switch v-model="form.sync_enabled" />
+        </el-form-item>
+        <el-form-item label="同步周期" v-if="!isCreate && form.sync_enabled">
+          <el-select v-model="form.sync_interval" style="width: 100%;">
+            <el-option v-for="o in intervalOptions" :key="o.value" :label="o.label" :value="o.value" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -191,6 +257,49 @@ onMounted(fetchData)
         <el-button type="primary" @click="submitKeys">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 同步记录抽屉 -->
+    <el-drawer v-model="syncLogDrawer" :title="'同步记录 - ' + syncLogAccountName" size="700px">
+      <el-table :data="syncLogs" v-loading="syncLogLoading" stripe size="small">
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="trigger_type" label="触发" width="70">
+          <template #default="{ row }">
+            <el-tag :type="row.trigger_type === 'manual' ? '' : 'success'" size="small">
+              {{ row.trigger_type === 'manual' ? '手动' : '定时' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'success' ? 'success' : row.status === 'failed' ? 'danger' : 'warning'" size="small">
+              {{ row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="结果" min-width="180">
+          <template #default="{ row }">
+            <span v-if="row.status === 'success'">
+              新增 {{ row.created_count }} / 更新 {{ row.updated_count }} / 无变化 {{ row.unchanged_count }} / 总计 {{ row.total_count }}
+            </span>
+            <span v-else-if="row.status === 'failed'" style="color: #f56c6c;">{{ row.error_message }}</span>
+            <span v-else>运行中...</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="耗时" width="80">
+          <template #default="{ row }">{{ formatDuration(row.duration_ms) }}</template>
+        </el-table-column>
+        <el-table-column prop="operator_name" label="操作人" width="80" />
+        <el-table-column prop="started_at" label="开始时间" width="170" />
+      </el-table>
+      <el-pagination
+        v-if="syncLogTotal > 10"
+        style="margin-top: 12px; justify-content: flex-end;"
+        background layout="total, prev, pager, next"
+        :total="syncLogTotal" :page-size="10" :current-page="syncLogPage"
+        @current-change="handleSyncLogPageChange"
+      />
+      <el-empty v-if="!syncLogLoading && syncLogs.length === 0" description="暂无同步记录" />
+    </el-drawer>
   </div>
 </template>
 

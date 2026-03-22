@@ -4,9 +4,11 @@ import "github.com/bigops/platform/internal/model"
 
 // SyncResult 同步结果。
 type SyncResult struct {
-	Created int
-	Updated int
-	Total   int
+	Created   int
+	Updated   int
+	Unchanged int
+	Offline   int
+	Total     int
 }
 
 // CloudProvider 云资产同步接口。

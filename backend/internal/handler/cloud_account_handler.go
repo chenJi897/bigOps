@@ -3,8 +3,6 @@ package handler
 import (
 	"fmt"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -12,7 +10,6 @@ import (
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
-	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
 	cloudsync "github.com/bigops/platform/internal/service/cloud_sync"
 )
@@ -215,131 +212,64 @@ func (h *CloudAccountHandler) Delete(c *gin.Context) {
 func (h *CloudAccountHandler) Sync(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 
-	account, err := h.svc.GetByID(id)
-	if err != nil {
-		response.Error(c, 404, "云账号不存在")
-		return
-	}
+	// 获取操作人信息
+	userID, _ := c.Get("userID")
+	operatorID, _ := userID.(int64)
+	operatorName := getOperator(c)
 
-	accessKey, secretKey, err := h.svc.GetDecryptedKeys(id)
+	task, err := cloudsync.RunSync(id, "manual", operatorID, operatorName)
 	if err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
 
-	// 根据 provider 选择同步器
-	var provider cloudsync.CloudProvider
-	switch account.Provider {
-	case "aliyun":
-		provider = cloudsync.NewAliyunProvider()
-	default:
-		response.Error(c, 400, "暂不支持该云厂商: "+account.Provider)
-		return
-	}
-
-	// 解析 region 列表
-	regions := strings.Split(account.Region, ",")
-
-	// 更新状态为 syncing
-	h.svc.UpdateSyncStatus(id, "syncing", "", nil)
-
-	// 同步资产
-	logger.Info("开始云资产同步",
-		zap.String("operator", getOperator(c)),
-		zap.Int64("account_id", id),
-		zap.String("provider", account.Provider),
-		zap.String("regions", account.Region),
-	)
-	cloudAssets, err := provider.SyncInstances(accessKey, secretKey, regions)
-	if err != nil {
-		logger.Error("云资产同步失败",
-			zap.Int64("account_id", id),
-			zap.String("provider", account.Provider),
-			zap.Error(err),
-		)
-		h.svc.UpdateSyncStatus(id, "failed", err.Error(), nil)
-		response.Error(c, 400, "同步失败: "+err.Error())
-		return
-	}
-
-	// Upsert 逻辑
-	assetSvc := service.NewAssetService()
-	assetRepo := repository.NewAssetRepository()
-	changeRepo := repository.NewAssetChangeRepository()
-	created, updated := 0, 0
-
-	for _, ca := range cloudAssets {
-		ca.CloudAccountID = id
-		existing, err := assetRepo.GetByCloudInstanceID(ca.CloudInstanceID)
-		if err != nil {
-			// 新资产
-			if createErr := assetSvc.Create(ca); createErr == nil {
-				created++
-			}
-		} else {
-			// 已存在：对比 diff 并更新到 existing 上（保留 existing 的 ID/CreatedAt/Tags 等）
-			changes := diffAsset(existing, ca)
-			if len(changes) == 0 {
-				continue
-			}
-			existing.Hostname = ca.Hostname
-			existing.IP = ca.IP
-			existing.InnerIP = ca.InnerIP
-			existing.OS = ca.OS
-			existing.OSVersion = ca.OSVersion
-			existing.CPUCores = ca.CPUCores
-			existing.MemoryMB = ca.MemoryMB
-			existing.DiskGB = ca.DiskGB
-			existing.Status = ca.Status
-			existing.IDC = ca.IDC
-			existing.SN = ca.SN
-			existing.CloudAccountID = id
-			if updateErr := assetRepo.Update(existing); updateErr == nil {
-				updated++
-				for i := range changes {
-					changes[i].AssetID = existing.ID
-					changes[i].ChangeType = "sync"
-					changeRepo.Create(&changes[i])
-				}
-			}
-		}
-	}
-
-	// 更新同步状态
-	now := model.LocalTime(time.Now())
-	msg := fmt.Sprintf("同步完成: 新增 %d, 更新 %d, 总计 %d", created, updated, len(cloudAssets))
-	h.svc.UpdateSyncStatus(id, "success", msg, &now)
-
-	logger.Info("云资产同步", zap.String("operator", getOperator(c)), zap.Int64("account_id", id), zap.Int("created", created), zap.Int("updated", updated))
+	msg := fmt.Sprintf("同步完成: 新增 %d, 更新 %d, 无变化 %d, 总计 %d",
+		task.CreatedCount, task.UpdatedCount, task.UnchangedCount, task.TotalCount)
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "cloud_account")
 	c.Set("audit_resource_id", id)
 	c.Set("audit_detail", msg)
-	response.SuccessWithMessage(c, msg, nil)
+	response.SuccessWithMessage(c, msg, task)
 }
 
-// diffAsset 对比两个 Asset 的关键字段，返回变更列表。
-func diffAsset(old, new *model.Asset) []model.AssetChange {
-	var changes []model.AssetChange
-	check := func(field, oldVal, newVal string) {
-		if oldVal != newVal {
-			changes = append(changes, model.AssetChange{
-				Field:    field,
-				OldValue: oldVal,
-				NewValue: newVal,
-			})
-		}
+type UpdateSyncConfigRequest struct {
+	SyncEnabled  bool `json:"sync_enabled"`
+	SyncInterval int  `json:"sync_interval" example:"30"` // 分钟: 0/10/30/60/1440
+}
+
+// UpdateSyncConfig 更新云账号同步调度配置。
+// @Summary 更新同步调度配置
+// @Description 设置云账号的定时同步开关和周期
+// @Tags 云账号
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "云账号ID"
+// @Param body body UpdateSyncConfigRequest true "同步配置"
+// @Success 200 {object} response.Response "更新成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Router /cloud-accounts/{id}/sync-config [post]
+func (h *CloudAccountHandler) UpdateSyncConfig(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var req UpdateSyncConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
 	}
-	check("ip", old.IP, new.IP)
-	check("inner_ip", old.InnerIP, new.InnerIP)
-	check("os", old.OS, new.OS)
-	check("status", old.Status, new.Status)
-	check("hostname", old.Hostname, new.Hostname)
-	if old.CPUCores != new.CPUCores {
-		changes = append(changes, model.AssetChange{Field: "cpu_cores", OldValue: strconv.Itoa(old.CPUCores), NewValue: strconv.Itoa(new.CPUCores)})
+	validIntervals := map[int]bool{0: true, 10: true, 30: true, 60: true, 1440: true}
+	if !validIntervals[req.SyncInterval] {
+		response.BadRequest(c, "同步周期只支持 0/10/30/60/1440 分钟")
+		return
 	}
-	if old.MemoryMB != new.MemoryMB {
-		changes = append(changes, model.AssetChange{Field: "memory_mb", OldValue: strconv.Itoa(old.MemoryMB), NewValue: strconv.Itoa(new.MemoryMB)})
+	if err := h.svc.UpdateSyncConfig(id, req.SyncEnabled, req.SyncInterval); err != nil {
+		response.Error(c, 400, err.Error())
+		return
 	}
-	return changes
+	logger.Info("更新同步配置", zap.String("operator", getOperator(c)), zap.Int64("account_id", id),
+		zap.Bool("enabled", req.SyncEnabled), zap.Int("interval", req.SyncInterval))
+	c.Set("audit_action", "update")
+	c.Set("audit_resource", "cloud_account")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", fmt.Sprintf("更新同步配置: enabled=%v, interval=%d min", req.SyncEnabled, req.SyncInterval))
+	response.SuccessWithMessage(c, "更新成功", nil)
 }

@@ -103,6 +103,7 @@ func Setup(mode string) *gin.Engine {
 
 			// --- 云账号管理 ---
 			cloudAccountHandler := handler.NewCloudAccountHandler()
+			syncTaskHandler := handler.NewCloudSyncTaskHandler()
 			authGroup.GET("/cloud-accounts", cloudAccountHandler.List)
 			authGroup.GET("/cloud-accounts/:id", cloudAccountHandler.GetByID)
 			authGroup.POST("/cloud-accounts", cloudAccountHandler.Create)
@@ -110,6 +111,11 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/cloud-accounts/:id/keys", cloudAccountHandler.UpdateKeys)
 			authGroup.POST("/cloud-accounts/:id/delete", cloudAccountHandler.Delete)
 			authGroup.POST("/cloud-accounts/:id/sync", cloudAccountHandler.Sync)
+			authGroup.POST("/cloud-accounts/:id/sync-config", cloudAccountHandler.UpdateSyncConfig)
+			authGroup.GET("/cloud-accounts/:id/sync-tasks", syncTaskHandler.GetByAccountID)
+
+			// --- 同步日志 ---
+			authGroup.GET("/sync-tasks", syncTaskHandler.List)
 
 			// --- 资产管理 ---
 			assetHandler := handler.NewAssetHandler()

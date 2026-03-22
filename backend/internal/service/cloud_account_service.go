@@ -113,3 +113,19 @@ func (s *CloudAccountService) UpdateSyncStatus(id int64, status, message string,
 	account.LastSyncAt = syncTime
 	return s.repo.Update(account)
 }
+
+// UpdateSyncConfig 更新云账号的同步调度配置。
+func (s *CloudAccountService) UpdateSyncConfig(id int64, syncEnabled bool, syncInterval int) error {
+	account, err := s.repo.GetByID(id)
+	if err != nil {
+		return errors.New("云账号不存在")
+	}
+	account.SyncEnabled = syncEnabled
+	account.SyncInterval = syncInterval
+	return s.repo.Update(account)
+}
+
+// ListEnabled 获取所有启用定时同步的云账号。
+func (s *CloudAccountService) ListEnabled() ([]*model.CloudAccount, error) {
+	return s.repo.ListEnabled()
+}
