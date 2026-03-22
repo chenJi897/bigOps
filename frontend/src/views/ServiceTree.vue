@@ -55,8 +55,14 @@ function handleNodeClick(data: any) {
   fetchNodeAssets(data.id)
 }
 
-function getNodeCount(id: number): number {
-  return assetCounts.value[id] || 0
+function getNodeCount(node: any): number {
+  let count = assetCounts.value[node.id] || 0
+  if (node.children && node.children.length) {
+    for (const child of node.children) {
+      count += getNodeCount(child)
+    }
+  }
+  return count
 }
 
 function handleAdd(parentId = 0) {
@@ -132,6 +138,7 @@ onMounted(() => {
             :props="{ children: 'children', label: 'name' }"
             default-expand-all
             highlight-current
+            :expand-on-click-node="false"
             @node-click="handleNodeClick"
             v-loading="loading"
           >
@@ -139,7 +146,7 @@ onMounted(() => {
               <div class="tree-node">
                 <span>
                   {{ data.name }}
-                  <el-badge v-if="getNodeCount(data.id) > 0" :value="getNodeCount(data.id)" type="info" class="node-badge" />
+                  <el-badge v-if="getNodeCount(data) > 0" :value="getNodeCount(data)" type="info" class="node-badge" />
                 </span>
                 <span class="tree-actions">
                   <el-button link size="small" @click.stop="handleAdd(data.id)"><el-icon><Plus /></el-icon></el-button>
