@@ -21,7 +21,7 @@ func (s *CloudAccountService) getEncryptKey() string {
 	return config.Get().Encrypt.Key
 }
 
-func (s *CloudAccountService) Create(name, provider, accessKey, secretKey, region string) error {
+func (s *CloudAccountService) Create(name, provider, accessKey, secretKey, region string, serviceTreeID int64) error {
 	key := s.getEncryptKey()
 	encAK, err := crypto.AESEncrypt(accessKey, key)
 	if err != nil {
@@ -32,17 +32,18 @@ func (s *CloudAccountService) Create(name, provider, accessKey, secretKey, regio
 		return errors.New("加密 SecretKey 失败")
 	}
 	account := &model.CloudAccount{
-		Name:      name,
-		Provider:  provider,
-		AccessKey: encAK,
-		SecretKey: encSK,
-		Region:    region,
-		Status:    1,
+		Name:          name,
+		Provider:      provider,
+		AccessKey:     encAK,
+		SecretKey:     encSK,
+		Region:        region,
+		ServiceTreeID: serviceTreeID,
+		Status:        1,
 	}
 	return s.repo.Create(account)
 }
 
-func (s *CloudAccountService) Update(id int64, name, region string, status int8) error {
+func (s *CloudAccountService) Update(id int64, name, region string, status int8, serviceTreeID int64) error {
 	account, err := s.repo.GetByID(id)
 	if err != nil {
 		return errors.New("云账号不存在")
@@ -50,6 +51,7 @@ func (s *CloudAccountService) Update(id int64, name, region string, status int8)
 	account.Name = name
 	account.Region = region
 	account.Status = status
+	account.ServiceTreeID = serviceTreeID
 	return s.repo.Update(account)
 }
 

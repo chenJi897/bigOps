@@ -107,13 +107,13 @@ func RunSync(accountID int64, triggerType string, operatorID int64, operatorName
 	}
 
 	// Upsert 逻辑
-	result := upsertAssets(cloudAssets, accountID)
+	result := upsertAssets(cloudAssets, accountID, account.ServiceTreeID)
 
 	return finishTask(taskRepo, accountSvc, task, accountID, len(cloudAssets), result, nil)
 }
 
 // upsertAssets 执行资产 upsert + diff 变更记录。
-func upsertAssets(cloudAssets []*model.Asset, accountID int64) SyncResult {
+func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int64) SyncResult {
 	assetSvc := service.NewAssetService()
 	assetRepo := repository.NewAssetRepository()
 	changeRepo := repository.NewAssetChangeRepository()
@@ -121,6 +121,9 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64) SyncResult {
 	var result SyncResult
 	for _, ca := range cloudAssets {
 		ca.CloudAccountID = accountID
+		if serviceTreeID > 0 {
+			ca.ServiceTreeID = serviceTreeID
+		}
 		existing, err := assetRepo.GetByCloudInstanceID(ca.CloudInstanceID)
 		if err != nil {
 			// 新资产

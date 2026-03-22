@@ -25,17 +25,19 @@ func NewCloudAccountHandler() *CloudAccountHandler {
 }
 
 type CreateCloudAccountRequest struct {
-	Name      string `json:"name" binding:"required" example:"阿里云生产环境"`
-	Provider  string `json:"provider" binding:"required,oneof=aliyun tencent aws" example:"aliyun"`
-	AccessKey string `json:"access_key" binding:"required" example:"LTAI5t..."`
-	SecretKey string `json:"secret_key" binding:"required" example:"xxxxxxxx"`
-	Region    string `json:"region" example:"cn-hangzhou,cn-beijing"`
+	Name          string `json:"name" binding:"required" example:"阿里云生产环境"`
+	Provider      string `json:"provider" binding:"required,oneof=aliyun tencent aws" example:"aliyun"`
+	AccessKey     string `json:"access_key" binding:"required" example:"LTAI5t..."`
+	SecretKey     string `json:"secret_key" binding:"required" example:"xxxxxxxx"`
+	Region        string `json:"region" example:"cn-hangzhou,cn-beijing"`
+	ServiceTreeID int64  `json:"service_tree_id" example:"1"`
 }
 
 type UpdateCloudAccountRequest struct {
-	Name   string `json:"name" binding:"required" example:"阿里云生产环境"`
-	Region string `json:"region" example:"cn-hangzhou,cn-beijing"`
-	Status int8   `json:"status" binding:"oneof=0 1" example:"1"`
+	Name          string `json:"name" binding:"required" example:"阿里云生产环境"`
+	Region        string `json:"region" example:"cn-hangzhou,cn-beijing"`
+	Status        int8   `json:"status" binding:"oneof=0 1" example:"1"`
+	ServiceTreeID int64  `json:"service_tree_id" example:"1"`
 }
 
 type UpdateCloudAccountKeysRequest struct {
@@ -102,7 +104,7 @@ func (h *CloudAccountHandler) Create(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
-	if err := h.svc.Create(req.Name, req.Provider, req.AccessKey, req.SecretKey, req.Region); err != nil {
+	if err := h.svc.Create(req.Name, req.Provider, req.AccessKey, req.SecretKey, req.Region, req.ServiceTreeID); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
@@ -132,7 +134,7 @@ func (h *CloudAccountHandler) Update(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
-	if err := h.svc.Update(id, req.Name, req.Region, req.Status); err != nil {
+	if err := h.svc.Update(id, req.Name, req.Region, req.Status, req.ServiceTreeID); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
