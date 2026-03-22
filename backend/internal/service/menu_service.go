@@ -25,11 +25,25 @@ func (s *MenuService) Create(menu *model.Menu) error {
 
 // Update 更新菜单。
 func (s *MenuService) Update(menu *model.Menu) error {
-	_, err := s.menuRepo.GetByID(menu.ID)
+	existing, err := s.menuRepo.GetByID(menu.ID)
 	if err != nil {
 		return errors.New("菜单不存在")
 	}
-	return s.menuRepo.Update(menu)
+	existing.ParentID = menu.ParentID
+	existing.Name = menu.Name
+	existing.Title = menu.Title
+	existing.Icon = menu.Icon
+	existing.Path = menu.Path
+	existing.Component = menu.Component
+	existing.APIPath = menu.APIPath
+	existing.APIMethod = menu.APIMethod
+	existing.Type = menu.Type
+	existing.Sort = menu.Sort
+	existing.Visible = menu.Visible
+	if menu.Status != 0 {
+		existing.Status = menu.Status
+	}
+	return s.menuRepo.Update(existing)
 }
 
 // Delete 删除菜单。
