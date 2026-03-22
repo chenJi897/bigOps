@@ -196,7 +196,14 @@ onMounted(() => {
                 </template>
               </el-table-column>
               <el-table-column prop="source" label="来源" width="70" />
-              <el-table-column prop="service_tree_name" label="所属节点" width="100" show-overflow-tooltip />
+              <el-table-column prop="service_tree_name" label="所属节点" width="120">
+                <template #default="{ row }">
+                  <el-tooltip v-if="row.service_tree_path" :content="row.service_tree_path" placement="top">
+                    <span style="cursor: default;">{{ row.service_tree_name }}</span>
+                  </el-tooltip>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="idc" label="区域" width="100" show-overflow-tooltip />
             </el-table>
             <el-pagination

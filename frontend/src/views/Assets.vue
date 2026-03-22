@@ -203,8 +203,13 @@ onMounted(() => {
             <el-tag size="small" type="info">{{ row.source }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="service_tree_name" label="所属服务" width="120" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.service_tree_name || '-' }}</template>
+        <el-table-column prop="service_tree_name" label="所属服务" width="120">
+          <template #default="{ row }">
+            <el-tooltip v-if="row.service_tree_path" :content="row.service_tree_path" placement="top">
+              <span style="cursor: default;">{{ row.service_tree_name }}</span>
+            </el-tooltip>
+            <span v-else>-</span>
+          </template>
         </el-table-column>
         <el-table-column prop="idc" label="机房/区域" width="120" show-overflow-tooltip />
         <el-table-column label="操作" width="150" fixed="right">
@@ -240,7 +245,7 @@ onMounted(() => {
             <el-descriptions-item label="磁盘">{{ currentAsset.disk_gb }} GB</el-descriptions-item>
             <el-descriptions-item label="状态">{{ currentAsset.status }}</el-descriptions-item>
             <el-descriptions-item label="来源">{{ currentAsset.source }}</el-descriptions-item>
-            <el-descriptions-item label="所属服务">{{ currentAsset.service_tree_name || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="所属服务">{{ currentAsset.service_tree_path || currentAsset.service_tree_name || '-' }}</el-descriptions-item>
             <el-descriptions-item label="机房/区域">{{ currentAsset.idc }}</el-descriptions-item>
             <el-descriptions-item label="SN">{{ currentAsset.sn }}</el-descriptions-item>
             <el-descriptions-item label="云实例ID">{{ currentAsset.cloud_instance_id }}</el-descriptions-item>
