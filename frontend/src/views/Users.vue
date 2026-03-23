@@ -169,7 +169,7 @@ onMounted(() => {
         </el-form-item>
       </el-form>
 
-      <el-table :data="users" v-loading="loading" stripe>
+      <el-table :data="users" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="username" label="用户名" width="120" />
         <el-table-column prop="real_name" label="姓名" width="100">

@@ -74,7 +74,7 @@ onMounted(fetchData)
         </el-form-item>
       </el-form>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
+      <el-table :data="tableData" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="操作人" width="120" />
         <el-table-column prop="action" label="操作类型" width="100">
