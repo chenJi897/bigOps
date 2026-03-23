@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'AuditLogs' })
 import { ref, onMounted } from 'vue'
 import { auditLogApi } from '../api'
 

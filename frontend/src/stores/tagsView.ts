@@ -5,12 +5,13 @@ export interface TagView {
   path: string
   title: string
   name?: string
+  componentName?: string  // Vue 组件名，用于 keep-alive
   closable: boolean
 }
 
 export const useTagsViewStore = defineStore('tagsView', () => {
   const visitedViews = ref<TagView[]>([
-    { path: '/dashboard', title: '仪表盘', name: 'Dashboard', closable: false },
+    { path: '/dashboard', title: '仪表盘', name: 'Dashboard', componentName: 'Dashboard', closable: false },
   ])
   const activeView = ref('/dashboard')
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'CloudAccounts' })
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { cloudAccountApi, serviceTreeApi } from '../api'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'Roles' })
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { roleApi, menuApi } from '../api'

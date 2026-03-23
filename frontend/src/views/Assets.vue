@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'Assets' })
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'

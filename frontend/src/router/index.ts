@@ -44,7 +44,7 @@ const dashboardRoute: RouteRecordRaw = {
   path: 'dashboard',
   name: 'Dashboard',
   component: viewModules['Dashboard'],
-  meta: { title: '仪表盘', icon: 'Odometer' },
+  meta: { title: '仪表盘', icon: 'Odometer', componentName: 'Dashboard' },
 }
 
 const router = createRouter({
@@ -111,7 +111,7 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
     const route: RouteRecordRaw = {
       path: routePath,
       name: menu.name,
-      meta: { title: menu.title, icon: menu.icon },
+      meta: { title: menu.title, icon: menu.icon, componentName: menu.component || '' },
       component: undefined,
       children: [],
     }
