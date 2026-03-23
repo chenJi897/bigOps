@@ -103,6 +103,13 @@ func (r *AssetRepository) CountByServiceTreeID(serviceTreeID int64) (int64, erro
 	return count, err
 }
 
+// ListByCloudAccountID 查询指定云账号下所有云同步来源的资产（不含手工资产）。
+func (r *AssetRepository) ListByCloudAccountID(accountID int64) ([]*model.Asset, error) {
+	var assets []*model.Asset
+	err := database.GetDB().Where("cloud_account_id = ? AND source != 'manual'", accountID).Find(&assets).Error
+	return assets, err
+}
+
 // CountByServiceTreeIDs 批量统计多个 service_tree_id 的资产数量。
 func (r *AssetRepository) CountByServiceTreeIDs(ids []int64) (map[int64]int64, error) {
 	type Result struct {

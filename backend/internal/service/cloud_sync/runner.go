@@ -109,6 +109,10 @@ func RunSync(accountID int64, triggerType string, operatorID int64, operatorName
 	// Upsert 逻辑
 	result := upsertAssets(cloudAssets, accountID, account.ServiceTreeID)
 
+	// 离线收敛：本地有但云端未返回的资产标记为 offline
+	offlineCount := markOfflineAssets(cloudAssets, accountID)
+	result.Offline = offlineCount
+
 	return finishTask(taskRepo, accountSvc, task, accountID, len(cloudAssets), result, nil)
 }
 
@@ -121,6 +125,7 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int
 	var result SyncResult
 	for _, ca := range cloudAssets {
 		ca.CloudAccountID = accountID
+		ca.Status = "online" // 云端存在即在线
 		if serviceTreeID > 0 {
 			ca.ServiceTreeID = serviceTreeID
 		}
@@ -160,6 +165,59 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int
 		}
 	}
 	return result
+}
+
+// markOfflineAssets 离线收敛：对比本地云同步资产与本次云端实例集合，
+// 本地存在但本次未返回的资产标记为 offline。
+// 仅处理当前云账号下、来源为云同步的资产，不影响手工资产和其他云账号。
+func markOfflineAssets(cloudAssets []*model.Asset, accountID int64) int {
+	assetRepo := repository.NewAssetRepository()
+	changeRepo := repository.NewAssetChangeRepository()
+
+	// 构建本次云端返回的 cloud_instance_id 集合
+	cloudIDs := make(map[string]bool, len(cloudAssets))
+	for _, ca := range cloudAssets {
+		if ca.CloudInstanceID != "" {
+			cloudIDs[ca.CloudInstanceID] = true
+		}
+	}
+
+	// 查出该云账号下所有云同步资产
+	localAssets, err := assetRepo.ListByCloudAccountID(accountID)
+	if err != nil {
+		logger.Error("离线收敛: 查询本地资产失败", zap.Int64("account_id", accountID), zap.Error(err))
+		return 0
+	}
+
+	offlineCount := 0
+	for _, local := range localAssets {
+		if local.CloudInstanceID == "" {
+			continue
+		}
+		// 本次云端未返回 → 标记 offline
+		if !cloudIDs[local.CloudInstanceID] && local.Status != "offline" {
+			oldStatus := local.Status
+			local.Status = "offline"
+			if err := assetRepo.Update(local); err == nil {
+				offlineCount++
+				// 写入变更历史
+				changeRepo.Create(&model.AssetChange{
+					AssetID:      local.ID,
+					Field:        "status",
+					OldValue:     oldStatus,
+					NewValue:     "offline",
+					ChangeType:   "sync",
+					OperatorName: "system",
+				})
+				logger.Info("离线收敛: 资产标记为 offline",
+					zap.Int64("asset_id", local.ID),
+					zap.String("hostname", local.Hostname),
+					zap.String("cloud_instance_id", local.CloudInstanceID),
+				)
+			}
+		}
+	}
+	return offlineCount
 }
 
 // diffAsset 对比两个 Asset 的关键字段，返回变更列表。
@@ -219,8 +277,8 @@ func finishTask(
 	task.Status = "success"
 	taskRepo.Update(task)
 	now := model.LocalTime(time.Now())
-	msg := fmt.Sprintf("同步完成: 新增 %d, 更新 %d, 无变化 %d, 总计 %d",
-		result.Created, result.Updated, result.Unchanged, totalFromCloud)
+	msg := fmt.Sprintf("同步完成: 新增 %d, 更新 %d, 无变化 %d, 离线 %d, 总计 %d",
+		result.Created, result.Updated, result.Unchanged, result.Offline, totalFromCloud)
 	accountSvc.UpdateSyncStatus(accountID, "success", msg, &now)
 	logger.Info("同步任务完成",
 		zap.Int64("task_id", task.ID),
