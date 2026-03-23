@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { statsApi } from '../api'
+
+const router = useRouter()
 
 const summary = ref({
   asset_total: 0, asset_online: 0, asset_offline: 0,
@@ -50,7 +53,7 @@ onMounted(fetchData)
     <!-- 摘要卡片 -->
     <el-row :gutter="16" class="cards">
       <el-col :span="8">
-        <el-card shadow="hover" class="stat-card">
+        <el-card shadow="hover" class="stat-card clickable" @click="router.push('/assets')">
           <div class="stat-icon" style="background: #e8f4fd;"><el-icon size="28" color="#409EFF"><Monitor /></el-icon></div>
           <div class="stat-body">
             <div class="stat-value">{{ summary.asset_total }}</div>
@@ -64,7 +67,7 @@ onMounted(fetchData)
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card shadow="hover" class="stat-card">
+        <el-card shadow="hover" class="stat-card clickable" @click="router.push('/cloud-accounts')">
           <div class="stat-icon" style="background: #e8f8e8;"><el-icon size="28" color="#67C23A"><Connection /></el-icon></div>
           <div class="stat-body">
             <div class="stat-value">{{ summary.cloud_account_total }}</div>
@@ -77,7 +80,7 @@ onMounted(fetchData)
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card shadow="hover" class="stat-card">
+        <el-card shadow="hover" class="stat-card clickable" @click="router.push('/service-tree')">
           <div class="stat-icon" style="background: #fdf2e8;"><el-icon size="28" color="#E6A23C"><Share /></el-icon></div>
           <div class="stat-body">
             <div class="stat-value">{{ summary.service_tree_total }}</div>
@@ -89,7 +92,7 @@ onMounted(fetchData)
 
     <el-row :gutter="16" class="cards" style="margin-top: 16px;">
       <el-col :span="8">
-        <el-card shadow="hover" class="stat-card">
+        <el-card shadow="hover" class="stat-card clickable" @click="router.push('/users')">
           <div class="stat-icon" style="background: #f0e8fd;"><el-icon size="28" color="#9B59B6"><User /></el-icon></div>
           <div class="stat-body">
             <div class="stat-value">{{ summary.user_total }}</div>
@@ -98,7 +101,7 @@ onMounted(fetchData)
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card shadow="hover" class="stat-card alert-card" :class="{ 'has-alert': summary.asset_offline > 0 }">
+        <el-card shadow="hover" class="stat-card alert-card clickable" :class="{ 'has-alert': summary.asset_offline > 0 }" @click="router.push('/assets?status=offline')">
           <div class="stat-icon" style="background: #fde8e8;"><el-icon size="28" color="#F56C6C"><WarningFilled /></el-icon></div>
           <div class="stat-body">
             <div class="stat-value" :style="{ color: summary.asset_offline > 0 ? '#f56c6c' : '#909399' }">{{ summary.asset_offline }}</div>
@@ -107,7 +110,7 @@ onMounted(fetchData)
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card shadow="hover" class="stat-card alert-card" :class="{ 'has-alert': summary.cloud_account_failed > 0 }">
+        <el-card shadow="hover" class="stat-card alert-card clickable" :class="{ 'has-alert': summary.cloud_account_failed > 0 }" @click="router.push('/cloud-accounts')">
           <div class="stat-icon" style="background: #fde8e8;"><el-icon size="28" color="#F56C6C"><CircleCloseFilled /></el-icon></div>
           <div class="stat-body">
             <div class="stat-value" :style="{ color: summary.cloud_account_failed > 0 ? '#f56c6c' : '#909399' }">{{ summary.cloud_account_failed }}</div>
@@ -124,7 +127,7 @@ onMounted(fetchData)
         <el-card shadow="never">
           <template #header><span style="font-weight: 600;">资产来源分布</span></template>
           <div v-if="distribution.source_dist?.length">
-            <div v-for="item in distribution.source_dist" :key="item.label" class="dist-row">
+            <div v-for="item in distribution.source_dist" :key="item.label" class="dist-row clickable" @click="router.push('/assets?source=' + item.label)">
               <span class="dist-label">{{ sourceLabel(item.label) }}</span>
               <el-progress
                 :percentage="summary.asset_total ? Math.round(item.count / summary.asset_total * 100) : 0"
@@ -142,7 +145,7 @@ onMounted(fetchData)
         <el-card shadow="never">
           <template #header><span style="font-weight: 600;">服务树资产 Top 10</span></template>
           <div v-if="distribution.top_services?.length">
-            <div v-for="item in distribution.top_services" :key="item.id" class="dist-row">
+            <div v-for="item in distribution.top_services" :key="item.id" class="dist-row clickable" @click="router.push('/assets?service_tree_id=' + item.id)">
               <span class="dist-label" style="min-width: 140px;" :title="item.name">{{ item.name }}</span>
               <el-progress
                 :percentage="Math.round(item.count / maxServiceCount() * 100)"
@@ -188,6 +191,9 @@ onMounted(fetchData)
 .stat-sub { font-size: 12px; margin-top: 4px; }
 
 .alert-card.has-alert { border-color: #fde2e2; }
+
+.clickable { cursor: pointer; transition: transform 0.15s; }
+.clickable:hover { transform: translateY(-2px); }
 
 .dist-row {
   display: flex; align-items: center;

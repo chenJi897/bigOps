@@ -131,10 +131,16 @@ function handleChangesPage(p: number) {
 }
 
 onMounted(() => {
-  // 从 URL query 读取筛选参数（服务树页跳转过来）
+  // 从 URL query 读取筛选参数（首页/服务树页跳转过来）
   if (route.query.service_tree_id) {
     query.value.service_tree_id = Number(route.query.service_tree_id)
     query.value.recursive = route.query.recursive === 'true'
+  }
+  if (route.query.status) {
+    query.value.status = route.query.status as string
+  }
+  if (route.query.source) {
+    query.value.source = route.query.source as string
   }
   fetchData()
   fetchServiceTree()
