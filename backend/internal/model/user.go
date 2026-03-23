@@ -13,8 +13,10 @@ type User struct {
 	Email     *string        `gorm:"size:100;uniqueIndex" json:"email"`
 	Phone     string         `gorm:"size:20" json:"phone"`
 	RealName  string         `gorm:"size:50" json:"real_name"`
-	Avatar    string         `gorm:"size:255" json:"avatar"`
-	Status    int8           `gorm:"default:1;not null;index" json:"status"`
+	Avatar         string         `gorm:"size:255" json:"avatar"`
+	DepartmentID   int64          `gorm:"default:0;index" json:"department_id"`
+	DepartmentName string         `gorm:"-" json:"department_name,omitempty"` // 关联查询，不入库
+	Status         int8           `gorm:"default:1;not null;index" json:"status"`
 	CreatedAt LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	UpdatedAt LocalTime      `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

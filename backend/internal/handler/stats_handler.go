@@ -21,6 +21,7 @@ type SummaryResponse struct {
 	CloudAccountFailed int64 `json:"cloud_account_failed"` // last_sync_status=failed
 	ServiceTreeTotal   int64 `json:"service_tree_total"`
 	UserTotal          int64 `json:"user_total"`
+	DepartmentTotal    int64 `json:"department_total"`
 }
 
 // Summary 平台摘要统计。
@@ -42,6 +43,7 @@ func (h *StatsHandler) Summary(c *gin.Context) {
 	db.Table("cloud_accounts").Where("deleted_at IS NULL AND last_sync_status = 'failed'").Count(&s.CloudAccountFailed)
 	db.Table("service_trees").Where("deleted_at IS NULL").Count(&s.ServiceTreeTotal)
 	db.Table("users").Where("deleted_at IS NULL").Count(&s.UserTotal)
+	db.Table("departments").Where("deleted_at IS NULL").Count(&s.DepartmentTotal)
 
 	response.Success(c, s)
 }

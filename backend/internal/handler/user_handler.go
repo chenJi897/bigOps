@@ -46,6 +46,15 @@ func (h *UserHandler) List(c *gin.Context) {
 		response.InternalServerError(c, "查询失败")
 		return
 	}
+	// 填充部门名称
+	deptRepo := repository.NewDepartmentRepository()
+	for _, u := range users {
+		if u.DepartmentID > 0 {
+			if dept, err := deptRepo.GetByID(u.DepartmentID); err == nil {
+				u.DepartmentName = dept.Name
+			}
+		}
+	}
 	response.Page(c, users, total, page, size)
 }
 
@@ -132,4 +141,43 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	c.Set("audit_resource_id", id)
 	c.Set("audit_detail", "删除用户: "+username)
 	response.SuccessWithMessage(c, "删除成功", nil)
+}
+
+type SetDepartmentRequest struct {
+	DepartmentID int64 `json:"department_id" example:"1"`
+}
+
+// SetDepartment 设置用户部门。
+// @Summary 设置用户部门
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "用户ID"
+// @Param body body SetDepartmentRequest true "部门请求"
+// @Success 200 {object} response.Response
+// @Router /users/{id}/department [post]
+func (h *UserHandler) SetDepartment(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var req SetDepartmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+	user, err := h.userRepo.GetByID(id)
+	if err != nil {
+		response.Error(c, 404, "用户不存在")
+		return
+	}
+	user.DepartmentID = req.DepartmentID
+	if err := h.userRepo.Update(user); err != nil {
+		response.InternalServerError(c, "更新失败")
+		return
+	}
+	logger.Info("设置用户部门", zap.String("operator", getOperator(c)), zap.Int64("user_id", id), zap.Int64("dept_id", req.DepartmentID))
+	c.Set("audit_action", "update")
+	c.Set("audit_resource", "user")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", fmt.Sprintf("设置用户 %s 部门 ID: %d", user.Username, req.DepartmentID))
+	response.SuccessWithMessage(c, "设置成功", nil)
 }

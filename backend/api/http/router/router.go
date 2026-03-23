@@ -78,6 +78,7 @@ func Setup(mode string) *gin.Engine {
 			authGroup.GET("/users", userHandler.List)
 			authGroup.POST("/users/:id/status", userHandler.UpdateStatus)
 			authGroup.POST("/users/:id/delete", userHandler.Delete)
+			authGroup.POST("/users/:id/department", userHandler.SetDepartment)
 
 			// --- 用户角色管理 ---
 			authGroup.GET("/users/:id/roles", roleHandler.GetUserRoles)
@@ -129,6 +130,15 @@ func Setup(mode string) *gin.Engine {
 			// --- 审计日志 ---
 			auditLogHandler := handler.NewAuditLogHandler()
 			authGroup.GET("/audit-logs", auditLogHandler.List)
+
+			// --- 部门管理 ---
+			departmentHandler := handler.NewDepartmentHandler()
+			authGroup.GET("/departments", departmentHandler.List)
+			authGroup.GET("/departments/all", departmentHandler.GetAll)
+			authGroup.GET("/departments/:id", departmentHandler.GetByID)
+			authGroup.POST("/departments", departmentHandler.Create)
+			authGroup.POST("/departments/:id", departmentHandler.Update)
+			authGroup.POST("/departments/:id/delete", departmentHandler.Delete)
 
 			// --- 统计 ---
 			statsHandler := handler.NewStatsHandler()
