@@ -43,5 +43,24 @@ export const useTagsViewStore = defineStore('tagsView', () => {
     return activeView.value
   }
 
-  return { visitedViews, activeView, addView, removeView, closeOthers, closeAll }
+  function closeRight(path: string) {
+    const idx = visitedViews.value.findIndex(v => v.path === path)
+    if (idx === -1) return
+    visitedViews.value = visitedViews.value.filter((v, i) => i <= idx || !v.closable)
+    // 如果当前页在被关的范围内，跳到目标标签
+    if (!visitedViews.value.some(v => v.path === activeView.value)) {
+      activeView.value = path
+    }
+  }
+
+  function closeLeft(path: string) {
+    const idx = visitedViews.value.findIndex(v => v.path === path)
+    if (idx === -1) return
+    visitedViews.value = visitedViews.value.filter((v, i) => i >= idx || !v.closable)
+    if (!visitedViews.value.some(v => v.path === activeView.value)) {
+      activeView.value = path
+    }
+  }
+
+  return { visitedViews, activeView, addView, removeView, closeOthers, closeAll, closeRight, closeLeft }
 })
