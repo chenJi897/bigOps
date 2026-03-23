@@ -28,12 +28,13 @@ const menuTree = computed(() => permissionStore.menus)
 watch(() => route.path, (path) => {
   if (path === '/login' || path === '/404') return
   const title = (route.meta?.title as string) || route.name as string || path
-  tagsStore.addView({ path, title, name: route.name as string, closable: path !== '/dashboard' })
+  const componentName = (route.meta?.componentName as string) || ''
+  tagsStore.addView({ path, title, name: route.name as string, componentName, closable: path !== '/dashboard' })
 }, { immediate: true })
 
-// keep-alive 缓存列表：所有已打开标签的组件名
+// keep-alive 缓存列表：所有已打开标签的组件名（匹配 Vue 组件 name）
 const cachedViews = computed(() =>
-  tagsStore.visitedViews.map(v => v.name).filter(Boolean) as string[]
+  tagsStore.visitedViews.map(v => v.componentName).filter(Boolean) as string[]
 )
 
 // 右键菜单

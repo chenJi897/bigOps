@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'Dashboard' })
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { statsApi } from '../api'

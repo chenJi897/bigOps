@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'Departments' })
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { departmentApi } from '../api'

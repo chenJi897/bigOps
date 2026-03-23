@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ name: 'Users' })
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { userApi, roleApi, authApi, departmentApi } from '../api'
