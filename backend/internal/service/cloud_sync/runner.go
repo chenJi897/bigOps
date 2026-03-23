@@ -135,11 +135,27 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int
 		}
 		existing, err := assetRepo.GetByCloudInstanceID(ca.CloudInstanceID)
 		if err != nil {
-			// 新资产
-			if createErr := assetSvc.Create(ca); createErr == nil {
-				result.Created++
+			// 查不到活跃资产，检查是否有软删除的（用户界面删了又重新同步）
+			softDeleted, sdErr := assetRepo.GetByCloudInstanceIDUnscoped(ca.CloudInstanceID)
+			if sdErr == nil && softDeleted.DeletedAt.Valid {
+				// 恢复软删除的资产
+				assetRepo.RestoreSoftDeleted(softDeleted.ID)
+				softDeleted.DeletedAt.Valid = false
+				// 当作"已存在"处理，走更新逻辑
+				existing = softDeleted
+				logger.Info("恢复软删除资产", zap.Int64("asset_id", existing.ID), zap.String("cloud_instance_id", ca.CloudInstanceID))
+			} else {
+				// 真正的新资产
+				if createErr := assetSvc.Create(ca); createErr == nil {
+					result.Created++
+				} else {
+					logger.Warn("创建资产失败", zap.String("cloud_instance_id", ca.CloudInstanceID), zap.Error(createErr))
+				}
+				continue
 			}
-		} else {
+		}
+
+		{
 			// 已存在：更新同步时间（无论是否有 diff 都要更新）
 			existing.LastSyncAt = nowPtr
 			existing.LastSeenAt = nowPtr
@@ -265,6 +281,9 @@ func diffAsset(old, new *model.Asset) []model.AssetChange {
 	}
 	if old.MemoryMB != new.MemoryMB {
 		changes = append(changes, model.AssetChange{Field: "memory_mb", OldValue: strconv.Itoa(old.MemoryMB), NewValue: strconv.Itoa(new.MemoryMB)})
+	}
+	if old.DiskGB != new.DiskGB {
+		changes = append(changes, model.AssetChange{Field: "disk_gb", OldValue: strconv.Itoa(old.DiskGB), NewValue: strconv.Itoa(new.DiskGB)})
 	}
 	return changes
 }

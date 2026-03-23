@@ -40,6 +40,20 @@ func (r *AssetRepository) GetByCloudInstanceID(cloudInstanceID string) (*model.A
 	return &asset, nil
 }
 
+// GetByCloudInstanceIDUnscoped 查找含软删除的资产（用于同步恢复场景）。
+func (r *AssetRepository) GetByCloudInstanceIDUnscoped(cloudInstanceID string) (*model.Asset, error) {
+	var asset model.Asset
+	if err := database.GetDB().Unscoped().Where("cloud_instance_id = ?", cloudInstanceID).First(&asset).Error; err != nil {
+		return nil, err
+	}
+	return &asset, nil
+}
+
+// RestoreSoftDeleted 恢复软删除的资产。
+func (r *AssetRepository) RestoreSoftDeleted(id int64) error {
+	return database.GetDB().Unscoped().Model(&model.Asset{}).Where("id = ?", id).Update("deleted_at", nil).Error
+}
+
 func (r *AssetRepository) Update(asset *model.Asset) error {
 	return database.GetDB().Save(asset).Error
 }
