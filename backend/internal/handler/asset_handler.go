@@ -163,7 +163,10 @@ func (h *AssetHandler) Update(c *gin.Context) {
 		AssetType: req.AssetType, ServiceTreeID: req.ServiceTreeID,
 		IDC: req.IDC, SN: req.SN, Tags: req.Tags, Remark: req.Remark,
 	}
-	if err := h.svc.Update(asset); err != nil {
+	userID, _ := c.Get("userID")
+	operatorID, _ := userID.(int64)
+	operatorName := getOperator(c)
+	if err := h.svc.Update(asset, operatorID, operatorName); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}

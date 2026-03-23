@@ -3,6 +3,7 @@ package service
 
 import (
 	"errors"
+	"strconv"
 
 	"gorm.io/gorm"
 
@@ -42,11 +43,15 @@ func (s *AssetService) Create(asset *model.Asset) error {
 	return s.assetRepo.Create(asset)
 }
 
-func (s *AssetService) Update(asset *model.Asset) error {
+func (s *AssetService) Update(asset *model.Asset, operatorID int64, operatorName string) error {
 	existing, err := s.assetRepo.GetByID(asset.ID)
 	if err != nil {
 		return errors.New("资产不存在")
 	}
+
+	// diff 对比变更
+	changes := s.diffAsset(existing, asset)
+
 	existing.Hostname = asset.Hostname
 	existing.IP = asset.IP
 	existing.InnerIP = asset.InnerIP
@@ -62,7 +67,56 @@ func (s *AssetService) Update(asset *model.Asset) error {
 	existing.SN = asset.SN
 	existing.Tags = asset.Tags
 	existing.Remark = asset.Remark
-	return s.assetRepo.Update(existing)
+
+	if err := s.assetRepo.Update(existing); err != nil {
+		return err
+	}
+
+	// 记录变更历史
+	if len(changes) > 0 {
+		changeRepo := repository.NewAssetChangeRepository()
+		for i := range changes {
+			changes[i].AssetID = existing.ID
+			changes[i].ChangeType = "manual"
+			changes[i].OperatorID = operatorID
+			changes[i].OperatorName = operatorName
+			changeRepo.Create(&changes[i])
+		}
+	}
+	return nil
+}
+
+// diffAsset 对比资产关键字段，返回变更列表。
+func (s *AssetService) diffAsset(old, new *model.Asset) []model.AssetChange {
+	var changes []model.AssetChange
+	check := func(field, oldVal, newVal string) {
+		if oldVal != newVal {
+			changes = append(changes, model.AssetChange{Field: field, OldValue: oldVal, NewValue: newVal})
+		}
+	}
+	check("hostname", old.Hostname, new.Hostname)
+	check("ip", old.IP, new.IP)
+	check("inner_ip", old.InnerIP, new.InnerIP)
+	check("os", old.OS, new.OS)
+	check("os_version", old.OSVersion, new.OSVersion)
+	check("status", old.Status, new.Status)
+	check("asset_type", old.AssetType, new.AssetType)
+	check("idc", old.IDC, new.IDC)
+	check("sn", old.SN, new.SN)
+	check("remark", old.Remark, new.Remark)
+	if old.CPUCores != new.CPUCores {
+		changes = append(changes, model.AssetChange{Field: "cpu_cores", OldValue: strconv.Itoa(old.CPUCores), NewValue: strconv.Itoa(new.CPUCores)})
+	}
+	if old.MemoryMB != new.MemoryMB {
+		changes = append(changes, model.AssetChange{Field: "memory_mb", OldValue: strconv.Itoa(old.MemoryMB), NewValue: strconv.Itoa(new.MemoryMB)})
+	}
+	if old.DiskGB != new.DiskGB {
+		changes = append(changes, model.AssetChange{Field: "disk_gb", OldValue: strconv.Itoa(old.DiskGB), NewValue: strconv.Itoa(new.DiskGB)})
+	}
+	if old.ServiceTreeID != new.ServiceTreeID {
+		changes = append(changes, model.AssetChange{Field: "service_tree_id", OldValue: strconv.FormatInt(old.ServiceTreeID, 10), NewValue: strconv.FormatInt(new.ServiceTreeID, 10)})
+	}
+	return changes
 }
 
 func (s *AssetService) Delete(id int64) error {
