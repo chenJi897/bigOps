@@ -2,7 +2,7 @@
 defineOptions({ name: 'CloudAccounts' })
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { cloudAccountApi, serviceTreeApi } from '../api'
+import { cloudAccountApi, serviceTreeApi, userApi } from '../api'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
@@ -18,8 +18,11 @@ const serviceTreeMap = ref<Record<number, string>>({})
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增云账号')
 const editId = ref(0)
-const form = ref<any>({ name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', service_tree_id: 0, sync_enabled: false, sync_interval: 0 })
+const form = ref<any>({ name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', service_tree_id: 0, owner_ids: [] as number[], sync_enabled: false, sync_interval: 0 })
 const isCreate = ref(true)
+
+// 用户列表（负责人选择用）
+const allUsers = ref<any[]>([])
 
 // 更新密钥
 const keysDialogVisible = ref(false)
@@ -82,7 +85,7 @@ async function fetchData() {
 function handleAdd() {
   isCreate.value = true
   dialogTitle.value = '新增云账号'
-  form.value = { name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', service_tree_id: 0, sync_enabled: false, sync_interval: 0 }
+  form.value = { name: '', provider: 'aliyun', access_key: '', secret_key: '', region: '', service_tree_id: 0, owner_ids: [], sync_enabled: false, sync_interval: 0 }
   dialogVisible.value = true
 }
 
@@ -93,6 +96,7 @@ function handleEdit(row: any) {
   form.value = {
     name: row.name, provider: row.provider, access_key: '', secret_key: '',
     region: row.region || '', service_tree_id: row.service_tree_id || 0,
+    owner_ids: row.owner_ids ? (typeof row.owner_ids === 'string' ? JSON.parse(row.owner_ids) : row.owner_ids) : [],
     sync_enabled: row.sync_enabled || false, sync_interval: row.sync_interval || 0
   }
   dialogVisible.value = true
@@ -103,12 +107,13 @@ async function submitForm() {
   try {
     if (isCreate.value) {
       if (!form.value.access_key || !form.value.secret_key) { ElMessage.warning('请输入 AK/SK'); return }
-      await cloudAccountApi.create(form.value)
+      await cloudAccountApi.create({ ...form.value, owner_ids: JSON.stringify(form.value.owner_ids || []) })
       ElMessage.success('创建成功')
     } else {
       await cloudAccountApi.update(editId.value, {
         name: form.value.name, region: form.value.region, status: 1,
-        service_tree_id: form.value.service_tree_id
+        service_tree_id: form.value.service_tree_id,
+        owner_ids: JSON.stringify(form.value.owner_ids || [])
       })
       await cloudAccountApi.syncConfig(editId.value, form.value.sync_enabled, form.value.sync_interval)
       ElMessage.success('更新成功')
@@ -198,6 +203,7 @@ function formatDuration(ms: number) {
 onMounted(() => {
   fetchData()
   fetchServiceTree()
+  userApi.list(1, 200).then((res: any) => { allUsers.value = res.data?.list || [] }).catch(() => {})
 })
 </script>
 
@@ -226,6 +232,12 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="region" label="Region" min-width="130" show-overflow-tooltip />
+        <el-table-column label="负责人" min-width="120">
+          <template #default="{ row }">
+            <span v-if="row.owner_names?.length">{{ row.owner_names.join('、') }}</span>
+            <span v-else style="color: #999;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="定时同步" width="110">
           <template #default="{ row }">
             <el-tag v-if="row.sync_enabled" type="success" size="small">{{ row.sync_interval }}分钟</el-tag>
@@ -281,6 +293,11 @@ onMounted(() => {
             clearable check-strictly
             style="width: 100%;"
           />
+        </el-form-item>
+        <el-form-item label="负责人">
+          <el-select v-model="form.owner_ids" multiple placeholder="选择负责人" style="width: 100%;">
+            <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+          </el-select>
         </el-form-item>
         <el-form-item label="定时同步" v-if="!isCreate">
           <el-switch v-model="form.sync_enabled" />

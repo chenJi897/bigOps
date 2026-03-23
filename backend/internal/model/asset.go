@@ -24,6 +24,8 @@ type Asset struct {
 	CloudInstanceID string         `gorm:"size:100;index" json:"cloud_instance_id"`       // 云实例ID，用于同步 upsert
 	IDC             string         `gorm:"column:idc;size:100" json:"idc"`
 	SN              string         `gorm:"size:100" json:"sn"`
+	OwnerIDs        string         `gorm:"size:500;default:[]" json:"owner_ids"`              // 负责人ID列表 JSON [1,5]
+	OwnerNames      []string       `gorm:"-" json:"owner_names,omitempty"`                    // 关联查询
 	Tags            string         `gorm:"type:json;default:null" json:"tags"`               // JSON 数组 ["tag1","tag2"]
 	Remark          string         `gorm:"size:500" json:"remark"`
 	LastSyncAt      *LocalTime     `json:"last_sync_at" swaggertype:"string" example:"2024-01-01 00:00:00"`   // 最后同步时间
@@ -42,6 +44,9 @@ func (Asset) TableName() string {
 func (a *Asset) BeforeSave(tx *gorm.DB) error {
 	if a.Tags == "" {
 		a.Tags = "[]"
+	}
+	if a.OwnerIDs == "" {
+		a.OwnerIDs = "[]"
 	}
 	return nil
 }
