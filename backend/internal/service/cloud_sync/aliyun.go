@@ -57,6 +57,8 @@ func (p *AliyunProvider) SyncInstances(accessKey, secretKey string, regions []st
 			return nil, fmt.Errorf("创建阿里云客户端失败(%s): %w", region, err)
 		}
 
+		// 1. 获取所有实例
+		var instances []*ecs.DescribeInstancesResponseBodyInstancesInstance
 		pageCount := 0
 		nextToken := ""
 		for {
@@ -70,33 +72,24 @@ func (p *AliyunProvider) SyncInstances(accessKey, secretKey string, regions []st
 
 			resp, err := client.DescribeInstances(req)
 			if err != nil {
-				logger.Error("阿里云 DescribeInstances 调用失败",
-					zap.String("region", region),
-					zap.Error(err),
-				)
+				logger.Error("阿里云 DescribeInstances 调用失败", zap.String("region", region), zap.Error(err))
 				return nil, fmt.Errorf("查询实例失败(%s): %w", region, err)
 			}
 			pageCount++
 
 			if resp.Body == nil || resp.Body.Instances == nil {
-				logger.Info("阿里云返回空结果", zap.String("region", region), zap.Int("page", pageCount))
 				break
 			}
 
 			instanceCount := len(resp.Body.Instances.Instance)
-			totalCount := tea.Int32Value(resp.Body.TotalCount)
 			logger.Info("阿里云 DescribeInstances 返回",
 				zap.String("region", region),
 				zap.Int("page", pageCount),
 				zap.Int("instance_count", instanceCount),
-				zap.Int32("total_count", totalCount),
 				zap.String("request_id", tea.StringValue(resp.Body.RequestId)),
 			)
 
-			for _, inst := range resp.Body.Instances.Instance {
-				asset := p.mapToAsset(inst, region)
-				allAssets = append(allAssets, asset)
-			}
+			instances = append(instances, resp.Body.Instances.Instance...)
 
 			if resp.Body.NextToken == nil || *resp.Body.NextToken == "" {
 				break
@@ -104,11 +97,77 @@ func (p *AliyunProvider) SyncInstances(accessKey, secretKey string, regions []st
 			nextToken = *resp.Body.NextToken
 		}
 
-		logger.Info("Region 同步完成", zap.String("region", region), zap.Int("pages", pageCount))
+		// 2. 批量查询该 Region 所有磁盘，按 InstanceId 汇总
+		diskMap := p.fetchDiskSizes(client, region)
+
+		// 3. 转换为 Asset
+		for _, inst := range instances {
+			asset := p.mapToAsset(inst, region)
+			// 磁盘大小来自 DescribeDisks
+			instanceID := tea.StringValue(inst.InstanceId)
+			if diskGB, ok := diskMap[instanceID]; ok {
+				asset.DiskGB = diskGB
+			}
+
+			logger.Info("实例详情",
+				zap.String("instance_id", instanceID),
+				zap.String("hostname", asset.Hostname),
+				zap.String("ip", asset.IP),
+				zap.String("inner_ip", asset.InnerIP),
+				zap.String("os", asset.OS),
+				zap.Int("cpu", asset.CPUCores),
+				zap.Int("memory_mb", asset.MemoryMB),
+				zap.Int("disk_gb", asset.DiskGB),
+				zap.String("status", asset.Status),
+			)
+
+			allAssets = append(allAssets, asset)
+		}
+
+		logger.Info("Region 同步完成", zap.String("region", region), zap.Int("instances", len(instances)))
 	}
 
 	logger.Info("阿里云 ECS 同步完成", zap.Int("total_assets", len(allAssets)))
 	return allAssets, nil
+}
+
+// fetchDiskSizes 批量查询某 Region 的所有云盘，按 InstanceId 汇总磁盘总量(GB)。
+func (p *AliyunProvider) fetchDiskSizes(client *ecs.Client, region string) map[string]int {
+	diskMap := make(map[string]int)
+	pageNumber := int32(1)
+
+	for {
+		req := &ecs.DescribeDisksRequest{
+			RegionId:   tea.String(region),
+			PageSize:   tea.Int32(100),
+			PageNumber: tea.Int32(pageNumber),
+		}
+		resp, err := client.DescribeDisks(req)
+		if err != nil {
+			logger.Warn("阿里云 DescribeDisks 调用失败，磁盘信息将缺失",
+				zap.String("region", region), zap.Error(err))
+			return diskMap
+		}
+		if resp.Body == nil || resp.Body.Disks == nil || len(resp.Body.Disks.Disk) == 0 {
+			break
+		}
+
+		for _, disk := range resp.Body.Disks.Disk {
+			instID := tea.StringValue(disk.InstanceId)
+			if instID != "" {
+				diskMap[instID] += int(tea.Int32Value(disk.Size))
+			}
+		}
+
+		totalCount := tea.Int32Value(resp.Body.TotalCount)
+		if pageNumber*100 >= totalCount {
+			break
+		}
+		pageNumber++
+	}
+
+	logger.Info("DescribeDisks 完成", zap.String("region", region), zap.Int("disk_entries", len(diskMap)))
+	return diskMap
 }
 
 func (p *AliyunProvider) mapToAsset(inst *ecs.DescribeInstancesResponseBodyInstancesInstance, region string) *model.Asset {
