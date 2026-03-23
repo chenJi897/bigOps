@@ -225,8 +225,8 @@ func (h *CloudAccountHandler) Sync(c *gin.Context) {
 		return
 	}
 
-	msg := fmt.Sprintf("同步完成: 新增 %d, 更新 %d, 无变化 %d, 总计 %d",
-		task.CreatedCount, task.UpdatedCount, task.UnchangedCount, task.TotalCount)
+	msg := fmt.Sprintf("同步完成: 新增 %d, 更新 %d, 无变化 %d, 离线 %d, 总计 %d",
+		task.CreatedCount, task.UpdatedCount, task.UnchangedCount, task.OfflineCount, task.TotalCount)
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "cloud_account")
 	c.Set("audit_resource_id", id)
