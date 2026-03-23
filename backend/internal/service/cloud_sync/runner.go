@@ -121,11 +121,15 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int
 	assetSvc := service.NewAssetService()
 	assetRepo := repository.NewAssetRepository()
 	changeRepo := repository.NewAssetChangeRepository()
+	now := model.LocalTime(time.Now())
+	nowPtr := &now
 
 	var result SyncResult
 	for _, ca := range cloudAssets {
 		ca.CloudAccountID = accountID
 		ca.Status = "online" // 云端存在即在线
+		ca.LastSyncAt = nowPtr
+		ca.LastSeenAt = nowPtr
 		if serviceTreeID > 0 {
 			ca.ServiceTreeID = serviceTreeID
 		}
@@ -136,9 +140,30 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int
 				result.Created++
 			}
 		} else {
-			// 已存在：对比 diff
+			// 已存在：更新同步时间（无论是否有 diff 都要更新）
+			existing.LastSyncAt = nowPtr
+			existing.LastSeenAt = nowPtr
+
+			// 离线恢复：之前 offline 但云端又出现了
+			wasOffline := existing.Status == "offline"
+			if wasOffline {
+				existing.Status = "online"
+				existing.OfflineAt = nil
+				changeRepo.Create(&model.AssetChange{
+					AssetID:      existing.ID,
+					Field:        "status",
+					OldValue:     "offline",
+					NewValue:     "online",
+					ChangeType:   "sync",
+					OperatorName: "system",
+				})
+			}
+
+			// 对比其他字段 diff
 			changes := diffAsset(existing, ca)
-			if len(changes) == 0 {
+			if len(changes) == 0 && !wasOffline {
+				// 无 diff 且没恢复，仅更新时间
+				assetRepo.Update(existing)
 				result.Unchanged++
 				continue
 			}
@@ -150,7 +175,7 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int
 			existing.CPUCores = ca.CPUCores
 			existing.MemoryMB = ca.MemoryMB
 			existing.DiskGB = ca.DiskGB
-			existing.Status = ca.Status
+			existing.Status = "online"
 			existing.IDC = ca.IDC
 			existing.SN = ca.SN
 			existing.CloudAccountID = accountID
@@ -198,6 +223,8 @@ func markOfflineAssets(cloudAssets []*model.Asset, accountID int64) int {
 		if !cloudIDs[local.CloudInstanceID] && local.Status != "offline" {
 			oldStatus := local.Status
 			local.Status = "offline"
+			offlineAt := model.LocalTime(time.Now())
+			local.OfflineAt = &offlineAt
 			if err := assetRepo.Update(local); err == nil {
 				offlineCount++
 				// 写入变更历史
