@@ -31,23 +31,61 @@ watch(() => route.path, (path) => {
   tagsStore.addView({ path, title, name: route.name as string, closable: path !== '/dashboard' })
 }, { immediate: true })
 
-function handleTabClick(tab: any) {
-  const path = tab.props.name
-  if (path !== route.path) router.push(path)
+// keep-alive 缓存列表：所有已打开标签的组件名
+const cachedViews = computed(() =>
+  tagsStore.visitedViews.map(v => v.name).filter(Boolean) as string[]
+)
+
+// 右键菜单
+const ctxMenuVisible = ref(false)
+const ctxMenuX = ref(0)
+const ctxMenuY = ref(0)
+const ctxMenuPath = ref('')
+
+function onTagContextMenu(path: string, e: MouseEvent) {
+  e.preventDefault()
+  ctxMenuPath.value = path
+  ctxMenuX.value = e.clientX
+  ctxMenuY.value = e.clientY
+  ctxMenuVisible.value = true
+  document.addEventListener('click', closeCtxMenu, { once: true })
+}
+
+function closeCtxMenu() {
+  ctxMenuVisible.value = false
+}
+
+function ctxAction(action: string) {
+  const path = ctxMenuPath.value
+  ctxMenuVisible.value = false
+  let next: string | undefined
+  switch (action) {
+    case 'closeCurrent':
+      next = tagsStore.removeView(path)
+      if (next !== route.path) router.push(next)
+      break
+    case 'closeOthers':
+      tagsStore.closeOthers(path)
+      if (path !== route.path) router.push(path)
+      break
+    case 'closeRight':
+      tagsStore.closeRight(path)
+      if (!tagsStore.visitedViews.some(v => v.path === route.path)) router.push(path)
+      break
+    case 'closeLeft':
+      tagsStore.closeLeft(path)
+      if (!tagsStore.visitedViews.some(v => v.path === route.path)) router.push(path)
+      break
+    case 'closeAll':
+      next = tagsStore.closeAll()
+      if (next !== route.path) router.push(next!)
+      break
+  }
 }
 
 function handleTabRemove(path: string) {
   const next = tagsStore.removeView(path)
   if (next !== route.path) router.push(next)
-}
-
-function handleTabCommand(cmd: string) {
-  if (cmd === 'closeOthers') {
-    tagsStore.closeOthers(route.path)
-  } else if (cmd === 'closeAll') {
-    const next = tagsStore.closeAll()
-    if (next !== route.path) router.push(next)
-  }
 }
 
 onMounted(async () => {
@@ -163,33 +201,44 @@ async function submitPwd() {
 
       <!-- 标签页 -->
       <div class="tags-bar">
-        <el-tabs
-          v-model="tagsStore.activeView"
-          type="card"
-          closable
-          @tab-click="handleTabClick"
-          @tab-remove="handleTabRemove"
-        >
-          <el-tab-pane
+        <div class="tags-scroll">
+          <div
             v-for="tag in tagsStore.visitedViews"
             :key="tag.path"
-            :label="tag.title"
-            :name="tag.path"
-            :closable="tag.closable"
-          />
-        </el-tabs>
-        <el-dropdown trigger="click" @command="handleTabCommand" class="tags-action">
-          <el-icon size="16"><ArrowDown /></el-icon>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="closeOthers">关闭其他</el-dropdown-item>
-              <el-dropdown-item command="closeAll">关闭全部</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+            class="tag-item"
+            :class="{ active: tag.path === route.path }"
+            @click="router.push(tag.path)"
+            @contextmenu="onTagContextMenu(tag.path, $event)"
+          >
+            <span class="tag-dot" />
+            <span class="tag-title">{{ tag.title }}</span>
+            <el-icon v-if="tag.closable" class="tag-close" @click.stop="handleTabRemove(tag.path)"><Close /></el-icon>
+          </div>
+        </div>
       </div>
 
-      <el-main class="main"><router-view /></el-main>
+      <!-- 右键菜单 -->
+      <teleport to="body">
+        <div
+          v-if="ctxMenuVisible"
+          class="ctx-menu"
+          :style="{ left: ctxMenuX + 'px', top: ctxMenuY + 'px' }"
+        >
+          <div class="ctx-item" @click="ctxAction('closeCurrent')">关闭当前</div>
+          <div class="ctx-item" @click="ctxAction('closeOthers')">关闭其他</div>
+          <div class="ctx-item" @click="ctxAction('closeLeft')">关闭左侧</div>
+          <div class="ctx-item" @click="ctxAction('closeRight')">关闭右侧</div>
+          <div class="ctx-item" @click="ctxAction('closeAll')">关闭全部</div>
+        </div>
+      </teleport>
+
+      <el-main class="main">
+        <router-view v-slot="{ Component }">
+          <keep-alive :include="cachedViews">
+            <component :is="Component" :key="route.path" />
+          </keep-alive>
+        </router-view>
+      </el-main>
     </el-container>
 
     <el-dialog v-model="pwdVisible" title="修改密码" width="400px">
@@ -220,28 +269,52 @@ async function submitPwd() {
 
 /* 标签栏 */
 .tags-bar {
-  display: flex; align-items: center;
   background: #fff;
   border-bottom: 1px solid #e4e7ed;
-  padding: 0 8px;
-  height: 34px;
+  padding: 4px 8px;
 }
-.tags-bar :deep(.el-tabs) { flex: 1; }
-.tags-bar :deep(.el-tabs__header) { margin: 0; border: none; }
-.tags-bar :deep(.el-tabs__nav) { border: none; }
-.tags-bar :deep(.el-tabs__item) {
-  height: 28px; line-height: 28px;
-  font-size: 12px;
-  padding: 0 12px;
-  border: 1px solid #d8dce5 !important;
-  border-radius: 3px;
-  margin: 0 3px;
+.tags-scroll {
+  display: flex; align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tags-scroll::-webkit-scrollbar { display: none; }
+
+.tag-item {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 26px; padding: 0 10px;
+  border: 1px solid #d8dce5; border-radius: 3px;
+  font-size: 12px; color: #495060;
+  cursor: pointer; white-space: nowrap;
   transition: all 0.2s;
+  user-select: none;
 }
-.tags-bar :deep(.el-tabs__item.is-active) {
-  background: #409eff; color: #fff;
-  border-color: #409eff !important;
+.tag-item:hover { color: #409eff; border-color: #b3d8ff; }
+.tag-item.active { background: #409eff; color: #fff; border-color: #409eff; }
+.tag-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #e4e7ed;
 }
-.tags-bar :deep(.el-tabs__item.is-active .is-icon-close) { color: #fff; }
-.tags-action { cursor: pointer; margin-left: 8px; color: #606266; flex-shrink: 0; }
+.tag-item.active .tag-dot { background: #fff; }
+.tag-close { font-size: 12px; border-radius: 50%; transition: all 0.15s; }
+.tag-close:hover { background: rgba(0,0,0,0.15); color: #fff; }
+.tag-item.active .tag-close:hover { background: rgba(255,255,255,0.3); }
+
+/* 右键菜单 */
+.ctx-menu {
+  position: fixed; z-index: 9999;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  padding: 4px 0;
+  min-width: 120px;
+}
+.ctx-item {
+  padding: 6px 16px;
+  font-size: 13px; color: #606266;
+  cursor: pointer;
+}
+.ctx-item:hover { background: #ecf5ff; color: #409eff; }
 </style>
