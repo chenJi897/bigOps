@@ -109,6 +109,12 @@ export const syncTaskApi = {
     api.get('/sync-tasks', { params }),
 }
 
+// 统计
+export const statsApi = {
+  summary: () => api.get('/stats/summary'),
+  assetDistribution: () => api.get('/stats/asset-distribution'),
+}
+
 // 资产管理
 export const assetApi = {
   list: (params: { page?: number; size?: number; status?: string; source?: string; service_tree_id?: number; keyword?: string }) =>
