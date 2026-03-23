@@ -129,6 +129,11 @@ func Setup(mode string) *gin.Engine {
 			// --- 审计日志 ---
 			auditLogHandler := handler.NewAuditLogHandler()
 			authGroup.GET("/audit-logs", auditLogHandler.List)
+
+			// --- 统计 ---
+			statsHandler := handler.NewStatsHandler()
+			authGroup.GET("/stats/summary", statsHandler.Summary)
+			authGroup.GET("/stats/asset-distribution", statsHandler.AssetDistribution)
 		}
 	}
 
