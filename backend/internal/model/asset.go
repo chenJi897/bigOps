@@ -26,6 +26,9 @@ type Asset struct {
 	SN              string         `gorm:"size:100" json:"sn"`
 	Tags            string         `gorm:"type:json;default:null" json:"tags"`               // JSON 数组 ["tag1","tag2"]
 	Remark          string         `gorm:"size:500" json:"remark"`
+	LastSyncAt      *LocalTime     `json:"last_sync_at" swaggertype:"string" example:"2024-01-01 00:00:00"`   // 最后同步时间
+	LastSeenAt      *LocalTime     `json:"last_seen_at" swaggertype:"string" example:"2024-01-01 00:00:00"`   // 最后在云端被发现的时间
+	OfflineAt       *LocalTime     `json:"offline_at" swaggertype:"string" example:"2024-01-01 00:00:00"`     // 标记离线的时间
 	CreatedAt       LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	UpdatedAt       LocalTime      `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
