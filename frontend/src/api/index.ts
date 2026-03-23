@@ -46,6 +46,7 @@ export const authApi = {
 // 用户管理
 export const userApi = {
   list: (page = 1, size = 20, keyword = '') => api.get('/users', { params: { page, size, ...(keyword ? { keyword } : {}) } }),
+  update: (id: number, data: any) => api.post(`/users/${id}`, data),
   updateStatus: (id: number, status: number) => api.post(`/users/${id}/status`, { status }),
   delete: (id: number) => api.post(`/users/${id}/delete`),
   getRoles: (id: number) => api.get(`/users/${id}/roles`),

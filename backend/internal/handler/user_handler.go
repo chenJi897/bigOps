@@ -58,6 +58,54 @@ func (h *UserHandler) List(c *gin.Context) {
 	response.Page(c, users, total, page, size)
 }
 
+type UpdateUserRequest struct {
+	RealName     string `json:"real_name" example:"张三"`
+	Phone        string `json:"phone" example:"13800138000"`
+	Email        string `json:"email" example:"test@example.com"`
+	DepartmentID int64  `json:"department_id" example:"1"`
+}
+
+// Update 更新用户信息。
+// @Summary 更新用户信息
+// @Description 更新用户姓名、手机、邮箱、部门
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "用户ID"
+// @Param body body UpdateUserRequest true "更新请求"
+// @Success 200 {object} response.Response
+// @Router /users/{id} [post]
+func (h *UserHandler) Update(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var req UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+	user, err := h.userRepo.GetByID(id)
+	if err != nil {
+		response.Error(c, 404, "用户不存在")
+		return
+	}
+	user.RealName = req.RealName
+	user.Phone = req.Phone
+	if req.Email != "" {
+		user.Email = &req.Email
+	}
+	user.DepartmentID = req.DepartmentID
+	if err := h.userRepo.Update(user); err != nil {
+		response.InternalServerError(c, "更新失败")
+		return
+	}
+	logger.Info("更新用户信息", zap.String("operator", getOperator(c)), zap.Int64("user_id", id))
+	c.Set("audit_action", "update")
+	c.Set("audit_resource", "user")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", "更新用户信息: "+user.Username)
+	response.SuccessWithMessage(c, "更新成功", nil)
+}
+
 // UpdateUserStatusRequest 更新用户状态请求参数。
 type UpdateUserStatusRequest struct {
 	Status int8 `json:"status" binding:"oneof=0 1" example:"1" enums:"0,1"` // 0:禁用 1:启用
