@@ -3,7 +3,7 @@ defineOptions({ name: 'Assets' })
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { assetApi, serviceTreeApi } from '../api'
+import { assetApi, serviceTreeApi, userApi } from '../api'
 
 const route = useRoute()
 const loading = ref(false)
@@ -13,6 +13,8 @@ const query = ref({ page: 1, size: 20, status: '', source: '', service_tree_id: 
 
 // 服务树数据（供筛选和表单选择）
 const serviceTreeOptions = ref<any[]>([])
+// 用户列表（负责人选择用）
+const allUsers = ref<any[]>([])
 
 // 详情抽屉
 const drawerVisible = ref(false)
@@ -32,7 +34,7 @@ const form = ref({
   hostname: '', ip: '', inner_ip: '', os: '', os_version: '',
   cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online',
   asset_type: 'server', source: 'manual', service_tree_id: 0,
-  idc: '', sn: '', remark: '',
+  idc: '', sn: '', remark: '', owner_ids: [] as number[],
 })
 
 async function fetchServiceTree() {
@@ -66,7 +68,7 @@ function handlePageChange(p: number) {
 function handleAdd() {
   isCreate.value = true
   dialogTitle.value = '新增资产'
-  form.value = { hostname: '', ip: '', inner_ip: '', os: '', os_version: '', cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online', asset_type: 'server', source: 'manual', service_tree_id: 0, idc: '', sn: '', remark: '' }
+  form.value = { hostname: '', ip: '', inner_ip: '', os: '', os_version: '', cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online', asset_type: 'server', source: 'manual', service_tree_id: 0, idc: '', sn: '', remark: '', owner_ids: [] }
   dialogVisible.value = true
 }
 
@@ -80,18 +82,20 @@ function handleEdit(row: any) {
     status: row.status, asset_type: row.asset_type, source: row.source,
     service_tree_id: row.service_tree_id || 0,
     idc: row.idc || '', sn: row.sn || '', remark: row.remark || '',
+    owner_ids: row.owner_ids ? (typeof row.owner_ids === 'string' ? JSON.parse(row.owner_ids) : row.owner_ids) : [],
   }
   dialogVisible.value = true
 }
 
 async function submitForm() {
   if (!form.value.hostname || !form.value.ip) { ElMessage.warning('主机名和 IP 必填'); return }
+  const payload = { ...form.value, owner_ids: JSON.stringify(form.value.owner_ids || []) }
   try {
     if (isCreate.value) {
-      await assetApi.create(form.value)
+      await assetApi.create(payload)
       ElMessage.success('创建成功')
     } else {
-      await assetApi.update(editId.value, form.value)
+      await assetApi.update(editId.value, payload)
       ElMessage.success('更新成功')
     }
     dialogVisible.value = false
@@ -145,6 +149,7 @@ onMounted(() => {
   }
   fetchData()
   fetchServiceTree()
+  userApi.list(1, 200).then((res: any) => { allUsers.value = res.data?.list || [] }).catch(() => {})
 })
 </script>
 
@@ -208,6 +213,12 @@ onMounted(() => {
         <el-table-column prop="source" label="来源" width="80">
           <template #default="{ row }">
             <el-tag size="small" type="info">{{ row.source }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="负责人" min-width="100">
+          <template #default="{ row }">
+            <span v-if="row.owner_names?.length">{{ row.owner_names.join('、') }}</span>
+            <span v-else style="color: #999;">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="service_tree_name" label="所属服务" width="120">
@@ -308,6 +319,13 @@ onMounted(() => {
           </el-col>
           <el-col :span="12"><el-form-item label="SN"><el-input v-model="form.sn" /></el-form-item></el-col>
           <el-col :span="24"><el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item></el-col>
+          <el-col :span="24">
+            <el-form-item label="负责人">
+              <el-select v-model="form.owner_ids" multiple placeholder="选择负责人" style="width: 100%;">
+                <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
         </el-row>
       </el-form>
       <template #footer>

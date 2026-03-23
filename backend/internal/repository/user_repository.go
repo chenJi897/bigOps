@@ -78,3 +78,21 @@ func (r *UserRepository) List(page, size int, keyword string) ([]*model.User, in
 
 	return users, total, nil
 }
+
+// GetNamesByIDs 批量查询用户名称（优先 real_name，无则用 username）。
+func (r *UserRepository) GetNamesByIDs(ids []int64) map[int64]string {
+	result := make(map[int64]string)
+	if len(ids) == 0 {
+		return result
+	}
+	var users []*model.User
+	database.GetDB().Where("id IN ?", ids).Find(&users)
+	for _, u := range users {
+		name := u.RealName
+		if name == "" {
+			name = u.Username
+		}
+		result[u.ID] = name
+	}
+	return result
+}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/bigops/platform/internal/model"
@@ -79,11 +80,37 @@ func (s *CloudAccountService) Delete(id int64) error {
 }
 
 func (s *CloudAccountService) GetByID(id int64) (*model.CloudAccount, error) {
-	return s.repo.GetByID(id)
+	account, err := s.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	s.fillOwnerNames(account)
+	return account, nil
 }
 
 func (s *CloudAccountService) List(page, size int) ([]*model.CloudAccount, int64, error) {
-	return s.repo.List(page, size)
+	accounts, total, err := s.repo.List(page, size)
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, a := range accounts {
+		s.fillOwnerNames(a)
+	}
+	return accounts, total, nil
+}
+
+func (s *CloudAccountService) fillOwnerNames(account *model.CloudAccount) {
+	ids := parseIntIDs(account.OwnerIDs)
+	if len(ids) == 0 {
+		return
+	}
+	userRepo := repository.NewUserRepository()
+	nameMap := userRepo.GetNamesByIDs(ids)
+	for _, id := range ids {
+		if name, ok := nameMap[id]; ok {
+			account.OwnerNames = append(account.OwnerNames, name)
+		}
+	}
 }
 
 // GetDecryptedKeys 获取解密后的 AK/SK（仅内部同步使用，不暴露给前端）。
@@ -130,4 +157,14 @@ func (s *CloudAccountService) UpdateSyncConfig(id int64, syncEnabled bool, syncI
 // ListEnabled 获取所有启用定时同步的云账号。
 func (s *CloudAccountService) ListEnabled() ([]*model.CloudAccount, error) {
 	return s.repo.ListEnabled()
+}
+
+// parseIntIDs 解析 JSON 格式的 int64 数组，如 "[1,5,10]"。
+func parseIntIDs(jsonStr string) []int64 {
+	if jsonStr == "" || jsonStr == "[]" {
+		return nil
+	}
+	var ids []int64
+	json.Unmarshal([]byte(jsonStr), &ids)
+	return ids
 }

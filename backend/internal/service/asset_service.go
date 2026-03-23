@@ -2,6 +2,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 
@@ -129,6 +130,7 @@ func (s *AssetService) GetByID(id int64) (*model.Asset, error) {
 		return nil, err
 	}
 	s.fillServiceTreeName(asset)
+	s.fillOwnerNames(asset)
 	return asset, nil
 }
 
@@ -139,6 +141,7 @@ func (s *AssetService) List(q repository.AssetListQuery) ([]*model.Asset, int64,
 	}
 	for _, a := range assets {
 		s.fillServiceTreeName(a)
+		s.fillOwnerNames(a)
 	}
 	return assets, total, nil
 }
@@ -183,4 +186,22 @@ func joinPath(parts []string) string {
 		result += p
 	}
 	return result
+}
+
+func (s *AssetService) fillOwnerNames(asset *model.Asset) {
+	if asset.OwnerIDs == "" || asset.OwnerIDs == "[]" {
+		return
+	}
+	var ids []int64
+	json.Unmarshal([]byte(asset.OwnerIDs), &ids)
+	if len(ids) == 0 {
+		return
+	}
+	userRepo := repository.NewUserRepository()
+	nameMap := userRepo.GetNamesByIDs(ids)
+	for _, id := range ids {
+		if name, ok := nameMap[id]; ok {
+			asset.OwnerNames = append(asset.OwnerNames, name)
+		}
+	}
 }

@@ -11,6 +11,8 @@ type CloudAccount struct {
 	SecretKey       string         `gorm:"size:500;not null" json:"-"`                        // AES加密存储
 	Region          string         `gorm:"size:500" json:"region"`                            // 逗号分隔的地域列表
 	ServiceTreeID   int64          `gorm:"default:0;index" json:"service_tree_id"`            // 关联服务树节点
+	OwnerIDs        string         `gorm:"size:500;default:[]" json:"owner_ids"`              // 负责人ID列表 JSON [1,5]
+	OwnerNames      []string       `gorm:"-" json:"owner_names,omitempty"`                    // 关联查询
 	Status          int8           `gorm:"default:1;not null" json:"status"`                  // 1=启用 0=禁用
 	SyncEnabled     bool           `gorm:"default:false;not null" json:"sync_enabled"`        // 是否启用定时同步
 	SyncInterval    int            `gorm:"default:0;not null" json:"sync_interval"`           // 同步周期（分钟），0=不同步，10/30/60/1440
