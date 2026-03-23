@@ -62,6 +62,13 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "是否递归查子节点",
+                        "name": "recursive",
+                        "in": "query"
+                    },
+                    {
                         "enum": [
                             "manual",
                             "aliyun",
@@ -86,7 +93,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -94,7 +101,7 @@ const docTemplate = `{
                                         "data": {
                                             "allOf": [
                                                 {
-                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                    "$ref": "#/definitions/response.PageData"
                                                 },
                                                 {
                                                     "type": "object",
@@ -102,7 +109,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.Asset"
+                                                                "$ref": "#/definitions/model.Asset"
                                                             }
                                                         }
                                                     }
@@ -117,7 +124,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -146,7 +153,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.CreateAssetRequest"
+                            "$ref": "#/definitions/handler.CreateAssetRequest"
                         }
                     }
                 ],
@@ -154,13 +161,13 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误/主机名已存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -196,13 +203,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.Asset"
+                                            "$ref": "#/definitions/model.Asset"
                                         }
                                     }
                                 }
@@ -212,7 +219,7 @@ const docTemplate = `{
                     "404": {
                         "description": "资产不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -248,7 +255,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.CreateAssetRequest"
+                            "$ref": "#/definitions/handler.CreateAssetRequest"
                         }
                     }
                 ],
@@ -256,13 +263,13 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -312,7 +319,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -320,7 +327,7 @@ const docTemplate = `{
                                         "data": {
                                             "allOf": [
                                                 {
-                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                    "$ref": "#/definitions/response.PageData"
                                                 },
                                                 {
                                                     "type": "object",
@@ -328,7 +335,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.AssetChange"
+                                                                "$ref": "#/definitions/model.AssetChange"
                                                             }
                                                         }
                                                     }
@@ -343,7 +350,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -377,13 +384,13 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "删除失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -444,7 +451,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -452,7 +459,7 @@ const docTemplate = `{
                                         "data": {
                                             "allOf": [
                                                 {
-                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                    "$ref": "#/definitions/response.PageData"
                                                 },
                                                 {
                                                     "type": "object",
@@ -460,7 +467,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.AuditLog"
+                                                                "$ref": "#/definitions/model.AuditLog"
                                                             }
                                                         }
                                                     }
@@ -475,7 +482,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -502,13 +509,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.User"
+                                            "$ref": "#/definitions/model.User"
                                         }
                                     }
                                 }
@@ -518,13 +525,13 @@ const docTemplate = `{
                     "401": {
                         "description": "用户未认证",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "用户不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -550,7 +557,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.LoginRequest"
+                            "$ref": "#/definitions/handler.LoginRequest"
                         }
                     }
                 ],
@@ -560,13 +567,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_bigops_platform_internal_service.LoginResult"
+                                            "$ref": "#/definitions/service.LoginResult"
                                         }
                                     }
                                 }
@@ -576,7 +583,7 @@ const docTemplate = `{
                     "401": {
                         "description": "用户名或密码错误/账号已被禁用",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -601,13 +608,13 @@ const docTemplate = `{
                     "200": {
                         "description": "登出成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "token 格式错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -638,7 +645,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ChangePasswordRequest"
+                            "$ref": "#/definitions/handler.ChangePasswordRequest"
                         }
                     }
                 ],
@@ -646,13 +653,13 @@ const docTemplate = `{
                     "200": {
                         "description": "密码修改成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误/原密码错误/密码复杂度不够",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -678,7 +685,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.RegisterRequest"
+                            "$ref": "#/definitions/handler.RegisterRequest"
                         }
                     }
                 ],
@@ -686,13 +693,13 @@ const docTemplate = `{
                     "200": {
                         "description": "注册成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误/用户名已存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -735,7 +742,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -743,7 +750,7 @@ const docTemplate = `{
                                         "data": {
                                             "allOf": [
                                                 {
-                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                    "$ref": "#/definitions/response.PageData"
                                                 },
                                                 {
                                                     "type": "object",
@@ -751,7 +758,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.CloudAccount"
+                                                                "$ref": "#/definitions/model.CloudAccount"
                                                             }
                                                         }
                                                     }
@@ -766,7 +773,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -795,7 +802,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.CreateCloudAccountRequest"
+                            "$ref": "#/definitions/handler.CreateCloudAccountRequest"
                         }
                     }
                 ],
@@ -803,13 +810,13 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -845,13 +852,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.CloudAccount"
+                                            "$ref": "#/definitions/model.CloudAccount"
                                         }
                                     }
                                 }
@@ -861,7 +868,7 @@ const docTemplate = `{
                     "404": {
                         "description": "云账号不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -897,7 +904,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.UpdateCloudAccountRequest"
+                            "$ref": "#/definitions/handler.UpdateCloudAccountRequest"
                         }
                     }
                 ],
@@ -905,13 +912,13 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -945,13 +952,13 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "删除失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -989,7 +996,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.UpdateCloudAccountKeysRequest"
+                            "$ref": "#/definitions/handler.UpdateCloudAccountKeysRequest"
                         }
                     }
                 ],
@@ -997,13 +1004,13 @@ const docTemplate = `{
                     "200": {
                         "description": "密钥更新成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1037,13 +1044,403 @@ const docTemplate = `{
                     "200": {
                         "description": "同步完成",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "同步失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud-accounts/{id}/sync-config": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "设置云账号的定时同步开关和周期",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "云账号"
+                ],
+                "summary": "更新同步调度配置",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "同步配置",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateSyncConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cloud-accounts/{id}/sync-tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "查询指定云账号的同步任务记录",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "同步日志"
+                ],
+                "summary": "云账号同步历史",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "同步历史",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/model.CloudSyncTask"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/departments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "部门列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/model.Department"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "创建部门",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateDepartmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/departments/all": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "全量部门列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Department"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/departments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "部门详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "部门ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Department"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "更新部门",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "部门ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateDepartmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/departments/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "部门管理"
+                ],
+                "summary": "删除部门",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "部门ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1070,7 +1467,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1078,7 +1475,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.Menu"
+                                                "$ref": "#/definitions/model.Menu"
                                             }
                                         }
                                     }
@@ -1089,7 +1486,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1118,7 +1515,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.CreateMenuRequest"
+                            "$ref": "#/definitions/handler.CreateMenuRequest"
                         }
                     }
                 ],
@@ -1126,13 +1523,13 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1159,7 +1556,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1167,7 +1564,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.Menu"
+                                                "$ref": "#/definitions/model.Menu"
                                             }
                                         }
                                     }
@@ -1178,13 +1575,13 @@ const docTemplate = `{
                     "401": {
                         "description": "用户未认证",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1222,7 +1619,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.CreateMenuRequest"
+                            "$ref": "#/definitions/handler.CreateMenuRequest"
                         }
                     }
                 ],
@@ -1230,13 +1627,13 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1270,13 +1667,13 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "删除失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1319,7 +1716,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1327,7 +1724,7 @@ const docTemplate = `{
                                         "data": {
                                             "allOf": [
                                                 {
-                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                    "$ref": "#/definitions/response.PageData"
                                                 },
                                                 {
                                                     "type": "object",
@@ -1335,7 +1732,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.Role"
+                                                                "$ref": "#/definitions/model.Role"
                                                             }
                                                         }
                                                     }
@@ -1350,7 +1747,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1379,7 +1776,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.CreateRoleRequest"
+                            "$ref": "#/definitions/handler.CreateRoleRequest"
                         }
                     }
                 ],
@@ -1387,13 +1784,13 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误/角色名已存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1429,13 +1826,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.Role"
+                                            "$ref": "#/definitions/model.Role"
                                         }
                                     }
                                 }
@@ -1445,7 +1842,7 @@ const docTemplate = `{
                     "404": {
                         "description": "角色不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1481,7 +1878,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.UpdateRoleRequest"
+                            "$ref": "#/definitions/handler.UpdateRoleRequest"
                         }
                     }
                 ],
@@ -1489,19 +1886,19 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "角色不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1535,13 +1932,13 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "不允许删除管理员角色",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1579,7 +1976,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.SetMenusRequest"
+                            "$ref": "#/definitions/handler.SetMenusRequest"
                         }
                     }
                 ],
@@ -1587,13 +1984,13 @@ const docTemplate = `{
                     "200": {
                         "description": "设置成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1631,7 +2028,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.UpdateRoleStatusRequest"
+                            "$ref": "#/definitions/handler.UpdateRoleStatusRequest"
                         }
                     }
                 ],
@@ -1639,19 +2036,19 @@ const docTemplate = `{
                     "200": {
                         "description": "启用/禁用成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "不允许禁用管理员角色",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "角色不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1678,7 +2075,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1686,7 +2083,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.ServiceTree"
+                                                "$ref": "#/definitions/model.ServiceTree"
                                             }
                                         }
                                     }
@@ -1697,7 +2094,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1726,7 +2123,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.CreateServiceTreeRequest"
+                            "$ref": "#/definitions/handler.CreateServiceTreeRequest"
                         }
                     }
                 ],
@@ -1734,13 +2131,38 @@ const docTemplate = `{
                     "200": {
                         "description": "创建成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/service-trees/asset-counts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回每个服务树节点的直接资产数量（map: node_id → count）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "服务树"
+                ],
+                "summary": "服务树资产数量统计",
+                "responses": {
+                    "200": {
+                        "description": "资产数量统计",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1776,13 +2198,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_bigops_platform_internal_model.ServiceTree"
+                                            "$ref": "#/definitions/model.ServiceTree"
                                         }
                                     }
                                 }
@@ -1792,7 +2214,7 @@ const docTemplate = `{
                     "404": {
                         "description": "节点不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1828,7 +2250,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.UpdateServiceTreeRequest"
+                            "$ref": "#/definitions/handler.UpdateServiceTreeRequest"
                         }
                     }
                 ],
@@ -1836,13 +2258,13 @@ const docTemplate = `{
                     "200": {
                         "description": "更新成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1876,13 +2298,13 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "存在子节点",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1920,7 +2342,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.MoveServiceTreeRequest"
+                            "$ref": "#/definitions/handler.MoveServiceTreeRequest"
                         }
                     }
                 ],
@@ -1928,13 +2350,188 @@ const docTemplate = `{
                     "200": {
                         "description": "移动成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "移动失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/stats/asset-distribution": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "资产状态分布、来源分布、服务树资产 Top 10",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "统计"
+                ],
+                "summary": "资产分布",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handler.AssetDistributionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/stats/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "一次返回首页所需的所有统计数字",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "统计"
+                ],
+                "summary": "平台摘要",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handler.SummaryResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/sync-tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询云同步任务记录，支持按状态/触发类型/云账号筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "同步日志"
+                ],
+                "summary": "同步任务日志列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "running",
+                            "success",
+                            "failed"
+                        ],
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "manual",
+                            "schedule"
+                        ],
+                        "type": "string",
+                        "description": "触发类型",
+                        "name": "trigger_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "云账号ID",
+                        "name": "cloud_account_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "同步日志列表",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/model.CloudSyncTask"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -1947,7 +2544,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "分页获取用户列表",
+                "description": "分页获取用户列表，支持关键字模糊搜索（用户名/邮箱/姓名）",
                 "produces": [
                     "application/json"
                 ],
@@ -1969,6 +2566,12 @@ const docTemplate = `{
                         "description": "每页条数",
                         "name": "size",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键字（用户名/邮箱/姓名）",
+                        "name": "keyword",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1977,7 +2580,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -1985,7 +2588,7 @@ const docTemplate = `{
                                         "data": {
                                             "allOf": [
                                                 {
-                                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.PageData"
+                                                    "$ref": "#/definitions/response.PageData"
                                                 },
                                                 {
                                                     "type": "object",
@@ -1993,7 +2596,7 @@ const docTemplate = `{
                                                         "list": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.User"
+                                                                "$ref": "#/definitions/model.User"
                                                             }
                                                         }
                                                     }
@@ -2008,7 +2611,53 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新用户姓名、手机、邮箱、部门",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "更新用户信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2042,19 +2691,64 @@ const docTemplate = `{
                     "200": {
                         "description": "删除成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "不允许删除管理员",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "500": {
                         "description": "删除失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}/department": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "设置用户部门",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "用户ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "部门请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SetDepartmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2090,7 +2784,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                                    "$ref": "#/definitions/response.Response"
                                 },
                                 {
                                     "type": "object",
@@ -2098,7 +2792,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/github_com_bigops_platform_internal_model.Role"
+                                                "$ref": "#/definitions/model.Role"
                                             }
                                         }
                                     }
@@ -2109,7 +2803,7 @@ const docTemplate = `{
                     "500": {
                         "description": "查询失败",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2145,7 +2839,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.SetUserRolesRequest"
+                            "$ref": "#/definitions/handler.SetUserRolesRequest"
                         }
                     }
                 ],
@@ -2153,19 +2847,19 @@ const docTemplate = `{
                     "200": {
                         "description": "设置成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "参数错误",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "用户不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2203,7 +2897,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.UpdateUserStatusRequest"
+                            "$ref": "#/definitions/handler.UpdateUserStatusRequest"
                         }
                     }
                 ],
@@ -2211,19 +2905,19 @@ const docTemplate = `{
                     "200": {
                         "description": "启用/禁用成功",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "400": {
                         "description": "不允许禁用管理员",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     },
                     "404": {
                         "description": "用户不存在",
                         "schema": {
-                            "$ref": "#/definitions/github_com_bigops_platform_internal_pkg_response.Response"
+                            "$ref": "#/definitions/response.Response"
                         }
                     }
                 }
@@ -2231,414 +2925,30 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_bigops_platform_internal_model.Asset": {
+        "handler.AssetDistributionResponse": {
             "type": "object",
             "properties": {
-                "asset_type": {
-                    "description": "server/network",
-                    "type": "string"
-                },
-                "cloud_account_id": {
-                    "type": "integer"
-                },
-                "cloud_instance_id": {
-                    "description": "云实例ID，用于同步 upsert",
-                    "type": "string"
-                },
-                "cpu_cores": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "disk_gb": {
-                    "type": "integer"
-                },
-                "hostname": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "idc": {
-                    "type": "string"
-                },
-                "inner_ip": {
-                    "type": "string"
-                },
-                "ip": {
-                    "type": "string"
-                },
-                "memory_mb": {
-                    "type": "integer"
-                },
-                "os": {
-                    "type": "string"
-                },
-                "os_version": {
-                    "type": "string"
-                },
-                "remark": {
-                    "type": "string"
-                },
-                "service_tree_id": {
-                    "type": "integer"
-                },
-                "service_tree_name": {
-                    "description": "关联查询，不入库",
-                    "type": "string"
-                },
-                "sn": {
-                    "type": "string"
-                },
-                "source": {
-                    "description": "manual/aliyun/tencent/aws",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "online/offline",
-                    "type": "string"
-                },
-                "tags": {
-                    "description": "JSON 数组 [\"tag1\",\"tag2\"]",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_model.AssetChange": {
-            "type": "object",
-            "properties": {
-                "asset_id": {
-                    "type": "integer"
-                },
-                "change_type": {
-                    "description": "create/update/sync/delete",
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "field": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "new_value": {
-                    "type": "string"
-                },
-                "old_value": {
-                    "type": "string"
-                },
-                "operator_id": {
-                    "type": "integer"
-                },
-                "operator_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_model.AuditLog": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "description": "create/update/delete/login/logout",
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "detail": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "ip": {
-                    "type": "string"
-                },
-                "resource": {
-                    "description": "user/role/menu",
-                    "type": "string"
-                },
-                "resource_id": {
-                    "type": "integer"
-                },
-                "status_code": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_model.CloudAccount": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "last_sync_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "last_sync_message": {
-                    "type": "string"
-                },
-                "last_sync_status": {
-                    "description": "success/failed/syncing",
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "provider": {
-                    "description": "aliyun/tencent/aws",
-                    "type": "string"
-                },
-                "region": {
-                    "description": "逗号分隔的地域列表",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "1=启用 0=禁用",
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_model.Menu": {
-            "type": "object",
-            "properties": {
-                "api_method": {
-                    "type": "string"
-                },
-                "api_path": {
-                    "type": "string"
-                },
-                "children": {
+                "source_dist": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_bigops_platform_internal_model.Menu"
+                        "$ref": "#/definitions/handler.DistItem"
                     }
                 },
-                "component": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "parent_id": {
-                    "type": "integer"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "sort": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "visible": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_model.Role": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "display_name": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "menus": {
+                "status_dist": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_bigops_platform_internal_model.Menu"
+                        "$ref": "#/definitions/handler.DistItem"
                     }
                 },
-                "name": {
-                    "type": "string"
-                },
-                "sort": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_model.ServiceTree": {
-            "type": "object",
-            "properties": {
-                "children": {
+                "top_services": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_bigops_platform_internal_model.ServiceTree"
+                        "$ref": "#/definitions/handler.TopItem"
                     }
-                },
-                "code": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "level": {
-                    "description": "1=业务线 2=产品 3=模块（不硬限制，支持N层）",
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "owner_id": {
-                    "type": "integer"
-                },
-                "parent_id": {
-                    "type": "integer"
-                },
-                "sort": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
                 }
             }
         },
-        "github_com_bigops_platform_internal_model.User": {
-            "type": "object",
-            "properties": {
-                "avatar": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "real_name": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2024-01-01 00:00:00"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_pkg_response.PageData": {
-            "type": "object",
-            "properties": {
-                "list": {},
-                "page": {
-                    "description": "当前页码",
-                    "type": "integer"
-                },
-                "size": {
-                    "description": "每页条数",
-                    "type": "integer"
-                },
-                "total": {
-                    "description": "总记录数",
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_pkg_response.Response": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer"
-                },
-                "data": {},
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_bigops_platform_internal_service.LoginResult": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string"
-                },
-                "user": {
-                    "$ref": "#/definitions/github_com_bigops_platform_internal_model.User"
-                }
-            }
-        },
-        "internal_handler.ChangePasswordRequest": {
+        "handler.ChangePasswordRequest": {
             "type": "object",
             "required": [
                 "new_password",
@@ -2657,7 +2967,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.CreateAssetRequest": {
+        "handler.CreateAssetRequest": {
             "type": "object",
             "required": [
                 "hostname",
@@ -2734,7 +3044,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.CreateCloudAccountRequest": {
+        "handler.CreateCloudAccountRequest": {
             "type": "object",
             "required": [
                 "access_key",
@@ -2767,10 +3077,42 @@ const docTemplate = `{
                 "secret_key": {
                     "type": "string",
                     "example": "xxxxxxxx"
+                },
+                "service_tree_id": {
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
-        "internal_handler.CreateMenuRequest": {
+        "handler.CreateDepartmentRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "ops"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "负责基础设施运维"
+                },
+                "manager_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "运维部"
+                },
+                "sort": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handler.CreateMenuRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -2835,7 +3177,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.CreateRoleRequest": {
+        "handler.CreateRoleRequest": {
             "type": "object",
             "required": [
                 "display_name",
@@ -2862,7 +3204,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.CreateServiceTreeRequest": {
+        "handler.CreateServiceTreeRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -2894,7 +3236,18 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.LoginRequest": {
+        "handler.DistItem": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.LoginRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -2911,7 +3264,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.MoveServiceTreeRequest": {
+        "handler.MoveServiceTreeRequest": {
             "type": "object",
             "properties": {
                 "parent_id": {
@@ -2920,7 +3273,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.RegisterRequest": {
+        "handler.RegisterRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -2945,7 +3298,16 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.SetMenusRequest": {
+        "handler.SetDepartmentRequest": {
+            "type": "object",
+            "properties": {
+                "department_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handler.SetMenusRequest": {
             "type": "object",
             "properties": {
                 "menu_ids": {
@@ -2961,7 +3323,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.SetUserRolesRequest": {
+        "handler.SetUserRolesRequest": {
             "type": "object",
             "properties": {
                 "role_ids": {
@@ -2976,7 +3338,51 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.UpdateCloudAccountKeysRequest": {
+        "handler.SummaryResponse": {
+            "type": "object",
+            "properties": {
+                "asset_offline": {
+                    "type": "integer"
+                },
+                "asset_online": {
+                    "type": "integer"
+                },
+                "asset_total": {
+                    "type": "integer"
+                },
+                "cloud_account_failed": {
+                    "description": "last_sync_status=failed",
+                    "type": "integer"
+                },
+                "cloud_account_total": {
+                    "type": "integer"
+                },
+                "department_total": {
+                    "type": "integer"
+                },
+                "service_tree_total": {
+                    "type": "integer"
+                },
+                "user_total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.TopItem": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.UpdateCloudAccountKeysRequest": {
             "type": "object",
             "required": [
                 "access_key",
@@ -2993,7 +3399,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.UpdateCloudAccountRequest": {
+        "handler.UpdateCloudAccountRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -3007,6 +3413,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "cn-hangzhou,cn-beijing"
                 },
+                "service_tree_id": {
+                    "type": "integer",
+                    "example": 1
+                },
                 "status": {
                     "type": "integer",
                     "enum": [
@@ -3017,7 +3427,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.UpdateRoleRequest": {
+        "handler.UpdateRoleRequest": {
             "type": "object",
             "required": [
                 "display_name"
@@ -3037,7 +3447,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.UpdateRoleStatusRequest": {
+        "handler.UpdateRoleStatusRequest": {
             "type": "object",
             "properties": {
                 "status": {
@@ -3051,7 +3461,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.UpdateServiceTreeRequest": {
+        "handler.UpdateServiceTreeRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -3079,7 +3489,41 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_handler.UpdateUserStatusRequest": {
+        "handler.UpdateSyncConfigRequest": {
+            "type": "object",
+            "properties": {
+                "sync_enabled": {
+                    "type": "boolean"
+                },
+                "sync_interval": {
+                    "description": "分钟: 0/10/30/60/1440",
+                    "type": "integer",
+                    "example": 30
+                }
+            }
+        },
+        "handler.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "department_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "email": {
+                    "type": "string",
+                    "example": "test@example.com"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "13800138000"
+                },
+                "real_name": {
+                    "type": "string",
+                    "example": "张三"
+                }
+            }
+        },
+        "handler.UpdateUserStatusRequest": {
             "type": "object",
             "properties": {
                 "status": {
@@ -3090,6 +3534,575 @@ const docTemplate = `{
                         1
                     ],
                     "example": 1
+                }
+            }
+        },
+        "model.Asset": {
+            "type": "object",
+            "properties": {
+                "asset_type": {
+                    "description": "server/network",
+                    "type": "string"
+                },
+                "cloud_account_id": {
+                    "type": "integer"
+                },
+                "cloud_instance_id": {
+                    "description": "云实例ID，用于同步 upsert",
+                    "type": "string"
+                },
+                "cpu_cores": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "disk_gb": {
+                    "type": "integer"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "idc": {
+                    "type": "string"
+                },
+                "inner_ip": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "last_seen_at": {
+                    "description": "最后在云端被发现的时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "last_sync_at": {
+                    "description": "最后同步时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "memory_mb": {
+                    "type": "integer"
+                },
+                "offline_at": {
+                    "description": "标记离线的时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "os": {
+                    "type": "string"
+                },
+                "os_version": {
+                    "type": "string"
+                },
+                "remark": {
+                    "type": "string"
+                },
+                "service_tree_id": {
+                    "type": "integer"
+                },
+                "service_tree_name": {
+                    "description": "关联查询，不入库",
+                    "type": "string"
+                },
+                "service_tree_path": {
+                    "description": "完整路径，如 \"阿里云 / 北京 / xxx\"",
+                    "type": "string"
+                },
+                "sn": {
+                    "type": "string"
+                },
+                "source": {
+                    "description": "manual/aliyun/tencent/aws",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "online/offline",
+                    "type": "string"
+                },
+                "tags": {
+                    "description": "JSON 数组 [\"tag1\",\"tag2\"]",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "model.AssetChange": {
+            "type": "object",
+            "properties": {
+                "asset_id": {
+                    "type": "integer"
+                },
+                "change_type": {
+                    "description": "create/update/sync/delete",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "field": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "new_value": {
+                    "type": "string"
+                },
+                "old_value": {
+                    "type": "string"
+                },
+                "operator_id": {
+                    "type": "integer"
+                },
+                "operator_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.AuditLog": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "create/update/delete/login/logout",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "resource": {
+                    "description": "user/role/menu",
+                    "type": "string"
+                },
+                "resource_id": {
+                    "type": "integer"
+                },
+                "status_code": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CloudAccount": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_sync_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "last_sync_message": {
+                    "type": "string"
+                },
+                "last_sync_status": {
+                    "description": "success/failed/syncing",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "provider": {
+                    "description": "aliyun/tencent/aws",
+                    "type": "string"
+                },
+                "region": {
+                    "description": "逗号分隔的地域列表",
+                    "type": "string"
+                },
+                "service_tree_id": {
+                    "description": "关联服务树节点",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "1=启用 0=禁用",
+                    "type": "integer"
+                },
+                "sync_enabled": {
+                    "description": "是否启用定时同步",
+                    "type": "boolean"
+                },
+                "sync_interval": {
+                    "description": "同步周期（分钟），0=不同步，10/30/60/1440",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "model.CloudSyncTask": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "description": "冗余，方便查询展示",
+                    "type": "string"
+                },
+                "cloud_account_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "created_count": {
+                    "description": "新增数",
+                    "type": "integer"
+                },
+                "duration_ms": {
+                    "description": "耗时毫秒",
+                    "type": "integer"
+                },
+                "error_message": {
+                    "description": "失败原因",
+                    "type": "string"
+                },
+                "finished_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "offline_count": {
+                    "description": "下线数（云端消失）",
+                    "type": "integer"
+                },
+                "operator_id": {
+                    "description": "手动触发时的操作人",
+                    "type": "integer"
+                },
+                "operator_name": {
+                    "description": "操作人用户名",
+                    "type": "string"
+                },
+                "provider": {
+                    "description": "aliyun/tencent/aws",
+                    "type": "string"
+                },
+                "regions": {
+                    "description": "本次同步的 region 列表",
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "status": {
+                    "description": "running / success / failed",
+                    "type": "string"
+                },
+                "total_count": {
+                    "description": "云端返回的实例总数",
+                    "type": "integer"
+                },
+                "trigger_type": {
+                    "description": "manual / schedule",
+                    "type": "string"
+                },
+                "unchanged_count": {
+                    "description": "无变化数",
+                    "type": "integer"
+                },
+                "updated_count": {
+                    "description": "更新数",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Department": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "部门编码，如 dev/ops/qa",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "manager_id": {
+                    "description": "部门负责人 user_id",
+                    "type": "integer"
+                },
+                "manager_name": {
+                    "description": "关联查询，不入库",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "1=启用 0=禁用",
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "user_count": {
+                    "description": "关联统计，不入库",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Menu": {
+            "type": "object",
+            "properties": {
+                "api_method": {
+                    "type": "string"
+                },
+                "api_path": {
+                    "type": "string"
+                },
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Menu"
+                    }
+                },
+                "component": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "visible": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.Role": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "menus": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Menu"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "model.ServiceTree": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ServiceTree"
+                    }
+                },
+                "code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "level": {
+                    "description": "1=业务线 2=产品 3=模块（不硬限制，支持N层）",
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "integer"
+                },
+                "parent_id": {
+                    "type": "integer"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "model.User": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "department_id": {
+                    "type": "integer"
+                },
+                "department_name": {
+                    "description": "关联查询，不入库",
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "real_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.PageData": {
+            "type": "object",
+            "properties": {
+                "list": {},
+                "page": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "size": {
+                    "description": "每页条数",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总记录数",
+                    "type": "integer"
+                }
+            }
+        },
+        "response.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.LoginResult": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/model.User"
                 }
             }
         }
