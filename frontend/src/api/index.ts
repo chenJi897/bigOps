@@ -50,6 +50,7 @@ export const userApi = {
   delete: (id: number) => api.post(`/users/${id}/delete`),
   getRoles: (id: number) => api.get(`/users/${id}/roles`),
   setRoles: (id: number, role_ids: number[]) => api.post(`/users/${id}/roles`, { role_ids }),
+  setDepartment: (id: number, department_id: number) => api.post(`/users/${id}/department`, { department_id }),
 }
 
 // 角色管理
@@ -113,6 +114,16 @@ export const syncTaskApi = {
 export const statsApi = {
   summary: () => api.get('/stats/summary'),
   assetDistribution: () => api.get('/stats/asset-distribution'),
+}
+
+// 部门管理
+export const departmentApi = {
+  list: (page = 1, size = 20) => api.get('/departments', { params: { page, size } }),
+  all: () => api.get('/departments/all'),
+  getById: (id: number) => api.get(`/departments/${id}`),
+  create: (data: any) => api.post('/departments', data),
+  update: (id: number, data: any) => api.post(`/departments/${id}`, data),
+  delete: (id: number) => api.post(`/departments/${id}/delete`),
 }
 
 // 资产管理
