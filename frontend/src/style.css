@@ -1,2 +1,16 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: system-ui, -apple-system, sans-serif; background: #f5f7fa; }
+
+/* 全局表格优化 */
+.el-table th.el-table__cell > .cell,
+.el-table td.el-table__cell > .cell {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.el-table--border .el-table__cell {
+  border-right: 1px solid #ebeef5;
+}
+/* 拖拽列宽时的视觉反馈 */
+.el-table th.el-table__cell .el-table__column-resize-proxy {
+  border-left: 1px solid #409eff;
+}

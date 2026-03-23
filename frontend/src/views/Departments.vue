@@ -83,7 +83,7 @@ onMounted(fetchData)
         </div>
       </template>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
+      <el-table :data="tableData" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="部门名称" min-width="150" />
         <el-table-column prop="code" label="编码" width="120" />
@@ -94,7 +94,7 @@ onMounted(fetchData)
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
         <el-table-column prop="sort" label="排序" width="80" />
         <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" min-width="160" fixed="right">
           <template #default="{ row }">
             <el-button link size="small" @click="handleEdit(row)"><el-icon><Edit /></el-icon> 编辑</el-button>
             <el-button link size="small" type="danger" @click="handleDelete(row)"><el-icon><Delete /></el-icon> 删除</el-button>

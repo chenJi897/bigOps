@@ -218,7 +218,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="idc" label="机房/区域" width="120" show-overflow-tooltip />
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" min-width="150" fixed="right">
           <template #default="{ row }">
             <el-button link size="small" @click.stop="handleEdit(row)"><el-icon><Edit /></el-icon></el-button>
             <el-button link size="small" type="danger" @click.stop="handleDelete(row)"><el-icon><Delete /></el-icon></el-button>
@@ -261,7 +261,7 @@ onMounted(() => {
         </el-tab-pane>
 
         <el-tab-pane label="变更历史" name="changes">
-          <el-table :data="changes" v-loading="changesLoading" stripe>
+          <el-table :data="changes" v-loading="changesLoading" stripe border>
             <el-table-column prop="field" label="字段" width="120" />
             <el-table-column prop="old_value" label="旧值" min-width="150" show-overflow-tooltip />
             <el-table-column prop="new_value" label="新值" min-width="150" show-overflow-tooltip />

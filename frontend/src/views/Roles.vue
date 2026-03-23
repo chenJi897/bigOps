@@ -105,7 +105,7 @@ onMounted(loadRoles)
           <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 新增角色</el-button>
         </div>
       </template>
-      <el-table :data="roles" v-loading="loading" stripe>
+      <el-table :data="roles" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="name" label="标识" width="140" />
         <el-table-column prop="display_name" label="名称" width="160" />
@@ -118,7 +118,7 @@ onMounted(loadRoles)
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" width="220">
+        <el-table-column label="操作" fixed="right" min-width="220">
           <template #default="{ row }">
             <el-button size="small" @click="openMenuDialog(row)">菜单权限</el-button>
             <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>

@@ -210,7 +210,7 @@ onMounted(() => {
         </div>
       </template>
 
-      <el-table :data="tableData" v-loading="loading" stripe>
+      <el-table :data="tableData" v-loading="loading" stripe border>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="名称" min-width="120" />
         <el-table-column prop="provider" label="云厂商" width="100">
@@ -239,7 +239,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="last_sync_at" label="最后同步" width="170" />
-        <el-table-column label="操作" width="340" fixed="right">
+        <el-table-column label="操作" min-width="340" fixed="right">
           <template #default="{ row }">
             <el-button link size="small" @click="handleSync(row)"><el-icon><Refresh /></el-icon> 同步</el-button>
             <el-button link size="small" @click="openSyncLogs(row)"><el-icon><Document /></el-icon> 记录</el-button>
