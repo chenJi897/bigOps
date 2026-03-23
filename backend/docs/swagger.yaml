@@ -1,285 +1,21 @@
 basePath: /api/v1
 definitions:
-  github_com_bigops_platform_internal_model.Asset:
+  handler.AssetDistributionResponse:
     properties:
-      asset_type:
-        description: server/network
-        type: string
-      cloud_account_id:
-        type: integer
-      cloud_instance_id:
-        description: 云实例ID，用于同步 upsert
-        type: string
-      cpu_cores:
-        type: integer
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      disk_gb:
-        type: integer
-      hostname:
-        type: string
-      id:
-        type: integer
-      idc:
-        type: string
-      inner_ip:
-        type: string
-      ip:
-        type: string
-      memory_mb:
-        type: integer
-      os:
-        type: string
-      os_version:
-        type: string
-      remark:
-        type: string
-      service_tree_id:
-        type: integer
-      service_tree_name:
-        description: 关联查询，不入库
-        type: string
-      sn:
-        type: string
-      source:
-        description: manual/aliyun/tencent/aws
-        type: string
-      status:
-        description: online/offline
-        type: string
-      tags:
-        description: JSON 数组 ["tag1","tag2"]
-        type: string
-      updated_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-    type: object
-  github_com_bigops_platform_internal_model.AssetChange:
-    properties:
-      asset_id:
-        type: integer
-      change_type:
-        description: create/update/sync/delete
-        type: string
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      field:
-        type: string
-      id:
-        type: integer
-      new_value:
-        type: string
-      old_value:
-        type: string
-      operator_id:
-        type: integer
-      operator_name:
-        type: string
-    type: object
-  github_com_bigops_platform_internal_model.AuditLog:
-    properties:
-      action:
-        description: create/update/delete/login/logout
-        type: string
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      detail:
-        type: string
-      id:
-        type: integer
-      ip:
-        type: string
-      resource:
-        description: user/role/menu
-        type: string
-      resource_id:
-        type: integer
-      status_code:
-        type: integer
-      user_id:
-        type: integer
-      username:
-        type: string
-    type: object
-  github_com_bigops_platform_internal_model.CloudAccount:
-    properties:
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      id:
-        type: integer
-      last_sync_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      last_sync_message:
-        type: string
-      last_sync_status:
-        description: success/failed/syncing
-        type: string
-      name:
-        type: string
-      provider:
-        description: aliyun/tencent/aws
-        type: string
-      region:
-        description: 逗号分隔的地域列表
-        type: string
-      status:
-        description: 1=启用 0=禁用
-        type: integer
-      updated_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-    type: object
-  github_com_bigops_platform_internal_model.Menu:
-    properties:
-      api_method:
-        type: string
-      api_path:
-        type: string
-      children:
+      source_dist:
         items:
-          $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+          $ref: '#/definitions/handler.DistItem'
         type: array
-      component:
-        type: string
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      icon:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      parent_id:
-        type: integer
-      path:
-        type: string
-      sort:
-        type: integer
-      status:
-        type: integer
-      title:
-        type: string
-      type:
-        type: integer
-      updated_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      visible:
-        type: integer
-    type: object
-  github_com_bigops_platform_internal_model.Role:
-    properties:
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      description:
-        type: string
-      display_name:
-        type: string
-      id:
-        type: integer
-      menus:
+      status_dist:
         items:
-          $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+          $ref: '#/definitions/handler.DistItem'
         type: array
-      name:
-        type: string
-      sort:
-        type: integer
-      status:
-        type: integer
-      updated_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-    type: object
-  github_com_bigops_platform_internal_model.ServiceTree:
-    properties:
-      children:
+      top_services:
         items:
-          $ref: '#/definitions/github_com_bigops_platform_internal_model.ServiceTree'
+          $ref: '#/definitions/handler.TopItem'
         type: array
-      code:
-        type: string
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      description:
-        type: string
-      id:
-        type: integer
-      level:
-        description: 1=业务线 2=产品 3=模块（不硬限制，支持N层）
-        type: integer
-      name:
-        type: string
-      owner_id:
-        type: integer
-      parent_id:
-        type: integer
-      sort:
-        type: integer
-      updated_at:
-        example: "2024-01-01 00:00:00"
-        type: string
     type: object
-  github_com_bigops_platform_internal_model.User:
-    properties:
-      avatar:
-        type: string
-      created_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      email:
-        type: string
-      id:
-        type: integer
-      phone:
-        type: string
-      real_name:
-        type: string
-      status:
-        type: integer
-      updated_at:
-        example: "2024-01-01 00:00:00"
-        type: string
-      username:
-        type: string
-    type: object
-  github_com_bigops_platform_internal_pkg_response.PageData:
-    properties:
-      list: {}
-      page:
-        description: 当前页码
-        type: integer
-      size:
-        description: 每页条数
-        type: integer
-      total:
-        description: 总记录数
-        type: integer
-    type: object
-  github_com_bigops_platform_internal_pkg_response.Response:
-    properties:
-      code:
-        type: integer
-      data: {}
-      message:
-        type: string
-    type: object
-  github_com_bigops_platform_internal_service.LoginResult:
-    properties:
-      token:
-        type: string
-      user:
-        $ref: '#/definitions/github_com_bigops_platform_internal_model.User'
-    type: object
-  internal_handler.ChangePasswordRequest:
+  handler.ChangePasswordRequest:
     properties:
       new_password:
         example: NewPass456
@@ -293,7 +29,7 @@ definitions:
     - new_password
     - old_password
     type: object
-  internal_handler.CreateAssetRequest:
+  handler.CreateAssetRequest:
     properties:
       asset_type:
         enum:
@@ -350,7 +86,7 @@ definitions:
     - hostname
     - ip
     type: object
-  internal_handler.CreateCloudAccountRequest:
+  handler.CreateCloudAccountRequest:
     properties:
       access_key:
         example: LTAI5t...
@@ -371,13 +107,36 @@ definitions:
       secret_key:
         example: xxxxxxxx
         type: string
+      service_tree_id:
+        example: 1
+        type: integer
     required:
     - access_key
     - name
     - provider
     - secret_key
     type: object
-  internal_handler.CreateMenuRequest:
+  handler.CreateDepartmentRequest:
+    properties:
+      code:
+        example: ops
+        type: string
+      description:
+        example: 负责基础设施运维
+        type: string
+      manager_id:
+        example: 1
+        type: integer
+      name:
+        example: 运维部
+        type: string
+      sort:
+        example: 1
+        type: integer
+    required:
+    - name
+    type: object
+  handler.CreateMenuRequest:
     properties:
       api_method:
         example: GET
@@ -426,7 +185,7 @@ definitions:
     - title
     - type
     type: object
-  internal_handler.CreateRoleRequest:
+  handler.CreateRoleRequest:
     properties:
       description:
         example: 内容编辑角色
@@ -446,7 +205,7 @@ definitions:
     - display_name
     - name
     type: object
-  internal_handler.CreateServiceTreeRequest:
+  handler.CreateServiceTreeRequest:
     properties:
       code:
         example: infra
@@ -469,7 +228,14 @@ definitions:
     required:
     - name
     type: object
-  internal_handler.LoginRequest:
+  handler.DistItem:
+    properties:
+      count:
+        type: integer
+      label:
+        type: string
+    type: object
+  handler.LoginRequest:
     properties:
       password:
         example: Admin123
@@ -481,13 +247,13 @@ definitions:
     - password
     - username
     type: object
-  internal_handler.MoveServiceTreeRequest:
+  handler.MoveServiceTreeRequest:
     properties:
       parent_id:
         example: 0
         type: integer
     type: object
-  internal_handler.RegisterRequest:
+  handler.RegisterRequest:
     properties:
       email:
         example: john@example.com
@@ -506,7 +272,13 @@ definitions:
     - password
     - username
     type: object
-  internal_handler.SetMenusRequest:
+  handler.SetDepartmentRequest:
+    properties:
+      department_id:
+        example: 1
+        type: integer
+    type: object
+  handler.SetMenusRequest:
     properties:
       menu_ids:
         example:
@@ -517,7 +289,7 @@ definitions:
           type: integer
         type: array
     type: object
-  internal_handler.SetUserRolesRequest:
+  handler.SetUserRolesRequest:
     properties:
       role_ids:
         example:
@@ -527,7 +299,36 @@ definitions:
           type: integer
         type: array
     type: object
-  internal_handler.UpdateCloudAccountKeysRequest:
+  handler.SummaryResponse:
+    properties:
+      asset_offline:
+        type: integer
+      asset_online:
+        type: integer
+      asset_total:
+        type: integer
+      cloud_account_failed:
+        description: last_sync_status=failed
+        type: integer
+      cloud_account_total:
+        type: integer
+      department_total:
+        type: integer
+      service_tree_total:
+        type: integer
+      user_total:
+        type: integer
+    type: object
+  handler.TopItem:
+    properties:
+      count:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  handler.UpdateCloudAccountKeysRequest:
     properties:
       access_key:
         example: LTAI5t...
@@ -539,7 +340,7 @@ definitions:
     - access_key
     - secret_key
     type: object
-  internal_handler.UpdateCloudAccountRequest:
+  handler.UpdateCloudAccountRequest:
     properties:
       name:
         example: 阿里云生产环境
@@ -547,6 +348,9 @@ definitions:
       region:
         example: cn-hangzhou,cn-beijing
         type: string
+      service_tree_id:
+        example: 1
+        type: integer
       status:
         enum:
         - 0
@@ -556,7 +360,7 @@ definitions:
     required:
     - name
     type: object
-  internal_handler.UpdateRoleRequest:
+  handler.UpdateRoleRequest:
     properties:
       description:
         example: 内容编辑角色
@@ -570,7 +374,7 @@ definitions:
     required:
     - display_name
     type: object
-  internal_handler.UpdateRoleStatusRequest:
+  handler.UpdateRoleStatusRequest:
     properties:
       status:
         description: 0:禁用 1:启用
@@ -580,7 +384,7 @@ definitions:
         example: 1
         type: integer
     type: object
-  internal_handler.UpdateServiceTreeRequest:
+  handler.UpdateServiceTreeRequest:
     properties:
       code:
         example: infra
@@ -600,7 +404,31 @@ definitions:
     required:
     - name
     type: object
-  internal_handler.UpdateUserStatusRequest:
+  handler.UpdateSyncConfigRequest:
+    properties:
+      sync_enabled:
+        type: boolean
+      sync_interval:
+        description: '分钟: 0/10/30/60/1440'
+        example: 30
+        type: integer
+    type: object
+  handler.UpdateUserRequest:
+    properties:
+      department_id:
+        example: 1
+        type: integer
+      email:
+        example: test@example.com
+        type: string
+      phone:
+        example: "13800138000"
+        type: string
+      real_name:
+        example: 张三
+        type: string
+    type: object
+  handler.UpdateUserStatusRequest:
     properties:
       status:
         description: 0:禁用 1:启用
@@ -609,6 +437,404 @@ definitions:
         - 1
         example: 1
         type: integer
+    type: object
+  model.Asset:
+    properties:
+      asset_type:
+        description: server/network
+        type: string
+      cloud_account_id:
+        type: integer
+      cloud_instance_id:
+        description: 云实例ID，用于同步 upsert
+        type: string
+      cpu_cores:
+        type: integer
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      disk_gb:
+        type: integer
+      hostname:
+        type: string
+      id:
+        type: integer
+      idc:
+        type: string
+      inner_ip:
+        type: string
+      ip:
+        type: string
+      last_seen_at:
+        description: 最后在云端被发现的时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      last_sync_at:
+        description: 最后同步时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      memory_mb:
+        type: integer
+      offline_at:
+        description: 标记离线的时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      os:
+        type: string
+      os_version:
+        type: string
+      remark:
+        type: string
+      service_tree_id:
+        type: integer
+      service_tree_name:
+        description: 关联查询，不入库
+        type: string
+      service_tree_path:
+        description: 完整路径，如 "阿里云 / 北京 / xxx"
+        type: string
+      sn:
+        type: string
+      source:
+        description: manual/aliyun/tencent/aws
+        type: string
+      status:
+        description: online/offline
+        type: string
+      tags:
+        description: JSON 数组 ["tag1","tag2"]
+        type: string
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.AssetChange:
+    properties:
+      asset_id:
+        type: integer
+      change_type:
+        description: create/update/sync/delete
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      field:
+        type: string
+      id:
+        type: integer
+      new_value:
+        type: string
+      old_value:
+        type: string
+      operator_id:
+        type: integer
+      operator_name:
+        type: string
+    type: object
+  model.AuditLog:
+    properties:
+      action:
+        description: create/update/delete/login/logout
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      detail:
+        type: string
+      id:
+        type: integer
+      ip:
+        type: string
+      resource:
+        description: user/role/menu
+        type: string
+      resource_id:
+        type: integer
+      status_code:
+        type: integer
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  model.CloudAccount:
+    properties:
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        type: integer
+      last_sync_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      last_sync_message:
+        type: string
+      last_sync_status:
+        description: success/failed/syncing
+        type: string
+      name:
+        type: string
+      provider:
+        description: aliyun/tencent/aws
+        type: string
+      region:
+        description: 逗号分隔的地域列表
+        type: string
+      service_tree_id:
+        description: 关联服务树节点
+        type: integer
+      status:
+        description: 1=启用 0=禁用
+        type: integer
+      sync_enabled:
+        description: 是否启用定时同步
+        type: boolean
+      sync_interval:
+        description: 同步周期（分钟），0=不同步，10/30/60/1440
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.CloudSyncTask:
+    properties:
+      account_name:
+        description: 冗余，方便查询展示
+        type: string
+      cloud_account_id:
+        type: integer
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      created_count:
+        description: 新增数
+        type: integer
+      duration_ms:
+        description: 耗时毫秒
+        type: integer
+      error_message:
+        description: 失败原因
+        type: string
+      finished_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        type: integer
+      offline_count:
+        description: 下线数（云端消失）
+        type: integer
+      operator_id:
+        description: 手动触发时的操作人
+        type: integer
+      operator_name:
+        description: 操作人用户名
+        type: string
+      provider:
+        description: aliyun/tencent/aws
+        type: string
+      regions:
+        description: 本次同步的 region 列表
+        type: string
+      started_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      status:
+        description: running / success / failed
+        type: string
+      total_count:
+        description: 云端返回的实例总数
+        type: integer
+      trigger_type:
+        description: manual / schedule
+        type: string
+      unchanged_count:
+        description: 无变化数
+        type: integer
+      updated_count:
+        description: 更新数
+        type: integer
+    type: object
+  model.Department:
+    properties:
+      code:
+        description: 部门编码，如 dev/ops/qa
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      manager_id:
+        description: 部门负责人 user_id
+        type: integer
+      manager_name:
+        description: 关联查询，不入库
+        type: string
+      name:
+        type: string
+      sort:
+        type: integer
+      status:
+        description: 1=启用 0=禁用
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      user_count:
+        description: 关联统计，不入库
+        type: integer
+    type: object
+  model.Menu:
+    properties:
+      api_method:
+        type: string
+      api_path:
+        type: string
+      children:
+        items:
+          $ref: '#/definitions/model.Menu'
+        type: array
+      component:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: integer
+      path:
+        type: string
+      sort:
+        type: integer
+      status:
+        type: integer
+      title:
+        type: string
+      type:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      visible:
+        type: integer
+    type: object
+  model.Role:
+    properties:
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      menus:
+        items:
+          $ref: '#/definitions/model.Menu'
+        type: array
+      name:
+        type: string
+      sort:
+        type: integer
+      status:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.ServiceTree:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/model.ServiceTree'
+        type: array
+      code:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      level:
+        description: 1=业务线 2=产品 3=模块（不硬限制，支持N层）
+        type: integer
+      name:
+        type: string
+      owner_id:
+        type: integer
+      parent_id:
+        type: integer
+      sort:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.User:
+    properties:
+      avatar:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      department_id:
+        type: integer
+      department_name:
+        description: 关联查询，不入库
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      phone:
+        type: string
+      real_name:
+        type: string
+      status:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      username:
+        type: string
+    type: object
+  response.PageData:
+    properties:
+      list: {}
+      page:
+        description: 当前页码
+        type: integer
+      size:
+        description: 每页条数
+        type: integer
+      total:
+        description: 总记录数
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+  service.LoginResult:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/model.User'
     type: object
 host: localhost:8080
 info:
@@ -642,6 +868,11 @@ paths:
         in: query
         name: service_tree_id
         type: integer
+      - default: false
+        description: 是否递归查子节点
+        in: query
+        name: recursive
+        type: boolean
       - description: 来源
         enum:
         - manual
@@ -662,22 +893,22 @@ paths:
           description: 资产列表
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   allOf:
-                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - $ref: '#/definitions/response.PageData'
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/github_com_bigops_platform_internal_model.Asset'
+                          $ref: '#/definitions/model.Asset'
                         type: array
                     type: object
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 资产列表
@@ -693,18 +924,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.CreateAssetRequest'
+          $ref: '#/definitions/handler.CreateAssetRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误/主机名已存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 创建资产
@@ -726,15 +957,15 @@ paths:
           description: 资产详情
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_bigops_platform_internal_model.Asset'
+                  $ref: '#/definitions/model.Asset'
               type: object
         "404":
           description: 资产不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 资产详情
@@ -755,18 +986,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.CreateAssetRequest'
+          $ref: '#/definitions/handler.CreateAssetRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 更新资产
@@ -798,22 +1029,22 @@ paths:
           description: 变更历史
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   allOf:
-                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - $ref: '#/definitions/response.PageData'
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/github_com_bigops_platform_internal_model.AssetChange'
+                          $ref: '#/definitions/model.AssetChange'
                         type: array
                     type: object
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 资产变更历史
@@ -834,11 +1065,11 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 删除失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 删除资产
@@ -877,22 +1108,22 @@ paths:
           description: 审计日志列表
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   allOf:
-                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - $ref: '#/definitions/response.PageData'
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/github_com_bigops_platform_internal_model.AuditLog'
+                          $ref: '#/definitions/model.AuditLog'
                         type: array
                     type: object
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 审计日志列表
@@ -908,19 +1139,19 @@ paths:
           description: 用户信息
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_bigops_platform_internal_model.User'
+                  $ref: '#/definitions/model.User'
               type: object
         "401":
           description: 用户未认证
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: 用户不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 获取当前登录用户信息
@@ -937,7 +1168,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.LoginRequest'
+          $ref: '#/definitions/handler.LoginRequest'
       produces:
       - application/json
       responses:
@@ -945,15 +1176,15 @@ paths:
           description: 登录成功
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_bigops_platform_internal_service.LoginResult'
+                  $ref: '#/definitions/service.LoginResult'
               type: object
         "401":
           description: 用户名或密码错误/账号已被禁用
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: 用户登录
       tags:
       - 认证
@@ -966,11 +1197,11 @@ paths:
         "200":
           description: 登出成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: token 格式错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 用户登出
@@ -987,18 +1218,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.ChangePasswordRequest'
+          $ref: '#/definitions/handler.ChangePasswordRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 密码修改成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误/原密码错误/密码复杂度不够
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 修改当前用户密码
@@ -1015,18 +1246,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.RegisterRequest'
+          $ref: '#/definitions/handler.RegisterRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 注册成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误/用户名已存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: 用户注册
       tags:
       - 认证
@@ -1051,22 +1282,22 @@ paths:
           description: 云账号列表
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   allOf:
-                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - $ref: '#/definitions/response.PageData'
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/github_com_bigops_platform_internal_model.CloudAccount'
+                          $ref: '#/definitions/model.CloudAccount'
                         type: array
                     type: object
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 云账号列表
@@ -1082,18 +1313,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.CreateCloudAccountRequest'
+          $ref: '#/definitions/handler.CreateCloudAccountRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 创建云账号
@@ -1115,15 +1346,15 @@ paths:
           description: 云账号详情
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_bigops_platform_internal_model.CloudAccount'
+                  $ref: '#/definitions/model.CloudAccount'
               type: object
         "404":
           description: 云账号不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 云账号详情
@@ -1144,18 +1375,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.UpdateCloudAccountRequest'
+          $ref: '#/definitions/handler.UpdateCloudAccountRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 更新云账号
@@ -1176,11 +1407,11 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 删除失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 删除云账号
@@ -1202,18 +1433,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.UpdateCloudAccountKeysRequest'
+          $ref: '#/definitions/handler.UpdateCloudAccountKeysRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 密钥更新成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 更新云账号密钥
@@ -1234,16 +1465,244 @@ paths:
         "200":
           description: 同步完成
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 同步失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 触发云资产同步
       tags:
       - 云账号
+  /cloud-accounts/{id}/sync-config:
+    post:
+      consumes:
+      - application/json
+      description: 设置云账号的定时同步开关和周期
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 同步配置
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateSyncConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新同步调度配置
+      tags:
+      - 云账号
+  /cloud-accounts/{id}/sync-tasks:
+    get:
+      description: 查询指定云账号的同步任务记录
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 同步历史
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.CloudSyncTask'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 云账号同步历史
+      tags:
+      - 同步日志
+  /departments:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.Department'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 部门列表
+      tags:
+      - 部门管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建部门
+      tags:
+      - 部门管理
+  /departments/{id}:
+    get:
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Department'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 部门详情
+      tags:
+      - 部门管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新部门
+      tags:
+      - 部门管理
+  /departments/{id}/delete:
+    post:
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除部门
+      tags:
+      - 部门管理
+  /departments/all:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Department'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 全量部门列表
+      tags:
+      - 部门管理
   /menus:
     get:
       description: 获取所有菜单的树形结构
@@ -1254,17 +1713,17 @@ paths:
           description: 菜单树
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+                    $ref: '#/definitions/model.Menu'
                   type: array
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 获取完整菜单树
@@ -1280,18 +1739,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.CreateMenuRequest'
+          $ref: '#/definitions/handler.CreateMenuRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 创建菜单
@@ -1313,18 +1772,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.CreateMenuRequest'
+          $ref: '#/definitions/handler.CreateMenuRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 更新菜单
@@ -1345,11 +1804,11 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 删除失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 删除菜单
@@ -1365,21 +1824,21 @@ paths:
           description: 用户菜单树
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/github_com_bigops_platform_internal_model.Menu'
+                    $ref: '#/definitions/model.Menu'
                   type: array
               type: object
         "401":
           description: 用户未认证
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 获取当前用户菜单
@@ -1406,22 +1865,22 @@ paths:
           description: 角色列表
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   allOf:
-                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - $ref: '#/definitions/response.PageData'
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/github_com_bigops_platform_internal_model.Role'
+                          $ref: '#/definitions/model.Role'
                         type: array
                     type: object
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 角色列表
@@ -1437,18 +1896,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.CreateRoleRequest'
+          $ref: '#/definitions/handler.CreateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误/角色名已存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 创建角色
@@ -1470,15 +1929,15 @@ paths:
           description: 角色详情
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_bigops_platform_internal_model.Role'
+                  $ref: '#/definitions/model.Role'
               type: object
         "404":
           description: 角色不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 获取角色详情
@@ -1499,22 +1958,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.UpdateRoleRequest'
+          $ref: '#/definitions/handler.UpdateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: 角色不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 更新角色
@@ -1535,11 +1994,11 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 不允许删除管理员角色
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 删除角色
@@ -1561,18 +2020,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.SetMenusRequest'
+          $ref: '#/definitions/handler.SetMenusRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 设置成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 设置角色菜单权限
@@ -1594,22 +2053,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.UpdateRoleStatusRequest'
+          $ref: '#/definitions/handler.UpdateRoleStatusRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 启用/禁用成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 不允许禁用管理员角色
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: 角色不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 启用/禁用角色
@@ -1625,17 +2084,17 @@ paths:
           description: 服务树
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/github_com_bigops_platform_internal_model.ServiceTree'
+                    $ref: '#/definitions/model.ServiceTree'
                   type: array
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 获取服务树
@@ -1651,18 +2110,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.CreateServiceTreeRequest'
+          $ref: '#/definitions/handler.CreateServiceTreeRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 创建成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 创建服务树节点
@@ -1684,15 +2143,15 @@ paths:
           description: 节点详情
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_bigops_platform_internal_model.ServiceTree'
+                  $ref: '#/definitions/model.ServiceTree'
               type: object
         "404":
           description: 节点不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 获取服务树节点详情
@@ -1713,18 +2172,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.UpdateServiceTreeRequest'
+          $ref: '#/definitions/handler.UpdateServiceTreeRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 更新成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 更新服务树节点
@@ -1745,11 +2204,11 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 存在子节点
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 删除服务树节点
@@ -1771,26 +2230,81 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.MoveServiceTreeRequest'
+          $ref: '#/definitions/handler.MoveServiceTreeRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 移动成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 移动失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 移动服务树节点
       tags:
       - 服务树
-  /users:
+  /service-trees/asset-counts:
     get:
-      description: 分页获取用户列表
+      description: '返回每个服务树节点的直接资产数量（map: node_id → count）'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 资产数量统计
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 服务树资产数量统计
+      tags:
+      - 服务树
+  /stats/asset-distribution:
+    get:
+      description: 资产状态分布、来源分布、服务树资产 Top 10
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.AssetDistributionResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 资产分布
+      tags:
+      - 统计
+  /stats/summary:
+    get:
+      description: 一次返回首页所需的所有统计数字
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.SummaryResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 平台摘要
+      tags:
+      - 统计
+  /sync-tasks:
+    get:
+      description: 分页查询云同步任务记录，支持按状态/触发类型/云账号筛选
       parameters:
       - default: 1
         description: 页码
@@ -1802,6 +2316,71 @@ paths:
         in: query
         name: size
         type: integer
+      - description: 状态
+        enum:
+        - running
+        - success
+        - failed
+        in: query
+        name: status
+        type: string
+      - description: 触发类型
+        enum:
+        - manual
+        - schedule
+        in: query
+        name: trigger_type
+        type: string
+      - description: 云账号ID
+        in: query
+        name: cloud_account_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 同步日志列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.CloudSyncTask'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 同步任务日志列表
+      tags:
+      - 同步日志
+  /users:
+    get:
+      description: 分页获取用户列表，支持关键字模糊搜索（用户名/邮箱/姓名）
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 关键字（用户名/邮箱/姓名）
+        in: query
+        name: keyword
+        type: string
       produces:
       - application/json
       responses:
@@ -1809,25 +2388,54 @@ paths:
           description: 用户列表
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   allOf:
-                  - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.PageData'
+                  - $ref: '#/definitions/response.PageData'
                   - properties:
                       list:
                         items:
-                          $ref: '#/definitions/github_com_bigops_platform_internal_model.User'
+                          $ref: '#/definitions/model.User'
                         type: array
                     type: object
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 用户列表
+      tags:
+      - 用户管理
+  /users/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 更新用户姓名、手机、邮箱、部门
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新用户信息
       tags:
       - 用户管理
   /users/{id}/delete:
@@ -1845,18 +2453,46 @@ paths:
         "200":
           description: 删除成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 不允许删除管理员
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: 删除失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 删除用户
+      tags:
+      - 用户管理
+  /users/{id}/department:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 部门请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SetDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置用户部门
       tags:
       - 用户管理
   /users/{id}/roles:
@@ -1875,17 +2511,17 @@ paths:
           description: 角色列表
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/github_com_bigops_platform_internal_model.Role'
+                    $ref: '#/definitions/model.Role'
                   type: array
               type: object
         "500":
           description: 查询失败
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 获取用户角色
@@ -1906,22 +2542,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.SetUserRolesRequest'
+          $ref: '#/definitions/handler.SetUserRolesRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 设置成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 参数错误
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: 用户不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 设置用户角色
@@ -1943,22 +2579,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.UpdateUserStatusRequest'
+          $ref: '#/definitions/handler.UpdateUserStatusRequest'
       produces:
       - application/json
       responses:
         "200":
           description: 启用/禁用成功
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: 不允许禁用管理员
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: 用户不存在
           schema:
-            $ref: '#/definitions/github_com_bigops_platform_internal_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: 启用/禁用用户
