@@ -106,6 +106,16 @@ func (s *ServiceTreeService) Move(id, newParentID int64) error {
 			return errors.New("目标父节点不存在")
 		}
 		newLevel = parent.Level + 1
+
+		// 防环校验：目标父节点不能是当前节点的后代
+		descendants, err := s.repo.GetAllDescendantIDs(id)
+		if err == nil {
+			for _, did := range descendants {
+				if did == newParentID {
+					return errors.New("不能移动到自身的子节点下，会形成环")
+				}
+			}
+		}
 	}
 	node.ParentID = newParentID
 	node.Level = newLevel
