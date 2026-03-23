@@ -76,6 +76,7 @@ func Setup(mode string) *gin.Engine {
 			// --- 用户管理 ---
 			userHandler := handler.NewUserHandler()
 			authGroup.GET("/users", userHandler.List)
+			authGroup.POST("/users/:id", userHandler.Update)
 			authGroup.POST("/users/:id/status", userHandler.UpdateStatus)
 			authGroup.POST("/users/:id/delete", userHandler.Delete)
 			authGroup.POST("/users/:id/department", userHandler.SetDepartment)
