@@ -2,8 +2,8 @@
 
 **项目**: BigOps 大运维平台
 **启动日期**: 2026-03-17
-**当前状态**: Phase 3 完成（含定时同步系统）
-**最后更新**: 2026-03-22
+**当前状态**: Module 01 97% / Module 02 97% / 部门功能完成
+**最后更新**: 2026-03-23
 
 ---
 
@@ -79,15 +79,25 @@
 - [x] 用户列表分页 `GET /api/v1/users`
 - [x] 用户启禁用 `POST /api/v1/users/:id/status`
 - [x] 用户删除 `POST /api/v1/users/:id/delete`
+- [x] 用户编辑（姓名/手机/邮箱/部门）`POST /api/v1/users/:id` `64ffdbc`
+- [x] 新建用户时选部门 + 角色 `64ffdbc`
 - [x] 前端用户管理页 (`views/Users.vue`)
 
-### 2.5 基础布局 `partial`
+### 2.45 部门管理 `complete`
+- [x] Department 模型 + Repository + Service + Handler `1d0006a`
+- [x] 部门 CRUD 6 个 API (list/all/getById/create/update/delete)
+- [x] 删除校验：有关联用户时禁止删除
+- [x] User 模型新增 department_id
+- [x] 前端 Departments.vue + 部门菜单
+
+### 2.5 基础布局 `complete`
 - [x] 侧边栏导航 (`views/Layout.vue`)
 - [x] 顶部导航栏 + 用户下拉菜单
 - [x] 修改密码弹窗
 - [x] 面包屑导航
-- [ ] **标签页 (Tabs)** - 多页签导航
-- [ ] **主题切换** (暗色模式)
+- [x] 标签页多页签 + 右键菜单 `e2b28bc` `88606eb`
+- [x] keep-alive 状态保留 `d11b25a`
+- [x] 表格体验优化（border 拖拽列宽 + 全局 padding）`e2b28bc`
 
 ### 2.6 操作审计日志 `complete`
 - [x] 操作日志模型 (AuditLog) `audit_log.go`
@@ -155,11 +165,22 @@
 - [x] 同步接口 POST /api/v1/cloud-accounts/:id/sync
 - [x] 按 cloud_instance_id upsert + diff 变更记录
 - [x] MockProvider 集成测试 (4 场景通过) `60ff9d1`
+- [x] DescribeDisks API 获取磁盘信息 `19cbf0a`
+- [x] 离线收敛（云端未返回 → offline）`c5a1954`
+- [x] 离线恢复（云端再次返回 → online + 变更历史）`31b575b`
+- [x] 软删除资产恢复（界面删后再同步）`a0e6507`
 
 ### 3.5 资产变更历史 `complete`
 - [x] AssetChange 模型 + 查询接口 `f6dc0af`
 - [x] 云同步时自动 diff 并记录
+- [x] 手动编辑时自动 diff 并记录 `6c5b79e`
 - [x] 前端变更历史 tab (资产详情抽屉内)
+
+### 3.6 统计接口 + 首页 `complete`
+- [x] /stats/summary 平台摘要（资产/云账号/服务树/用户/部门）`f1b1144`
+- [x] /stats/asset-distribution 资产分布（状态/来源/Top 10）`f1b1144`
+- [x] 首页改版平台总览（摘要卡片 + 分布条形图）`3b027c4`
+- [x] 首页卡片点击跳转对应功能页 `0d5c605`
 
 ---
 
@@ -212,12 +233,11 @@
 
 | 优先级 | 任务 | 原因 |
 |--------|------|------|
-| P1 | 标签页多页签 (2.5) | 布局增强，用户体验 |
-| P1 | 主题切换 (2.5) | 暗色模式 |
+| P1 | Module 03 工单系统 (Phase 4) | 平台最缺的运维流程能力 |
 | P2 | 资产导入/导出 Excel (3.3) | CMDB 数据迁移必备 |
 | P2 | 资产批量操作 (3.3) | 运维效率 |
-| P3 | 工单系统 (Phase 4) | 运维流程管理 |
-| P4 | 任务执行中心 (Phase 5) | 自动化运维 |
+| P2 | 腾讯云/AWS 同步 | 多云支持 |
+| P3 | Module 04 任务执行中心 (Phase 5) | 自动化运维 |
 
 ---
 
@@ -240,3 +260,9 @@
 | 菜单更新排序 Error 1292 | handler 构造新 Menu{} 零值 CreatedAt | service 层先查 existing 再更新字段 |
 | LocalTime 零值 0000-00-00 | 数据库 NULL → Scan 零值 → Value 输出 0000-00-00 | Value() 零值返回 nil |
 | 系统管理菜单权限失效 | Layout.vue 硬编码菜单 + 静态路由 | 移除硬编码，全部走动态路由 |
+| 同步不更新磁盘 | diffAsset 没对比 DiskGB | 补 disk_gb 对比 |
+| 删除后重新同步资产丢失 | hostname uniqueIndex + 软删除冲突 | Unscoped 查找 + RestoreSoftDeleted |
+| 首页跳转 404 | 路径写 /assets 但实际是 /cmdb/assets | 修正为数据库实际菜单路径 |
+| 部门菜单不显示 | SQL 查 system_dir 但实际是 system | 修正 parent name |
+| keep-alive 缓存失效 | include 用路由名而非组件名 | componentName + defineOptions |
+| 阿里云 DescribeDisks 磁盘为 0 | DescribeInstances 不返回磁盘 | 新增 DescribeDisks API 调用 |
