@@ -111,6 +111,9 @@ func main() {
 	}
 	logger.Info("Database migration completed")
 
+	// 初始化任务中心菜单（幂等）
+	seedTaskMenus()
+
 	// 初始化 Casbin 权限引擎
 	if err := casbinPkg.Init(database.GetDB()); err != nil {
 		logger.Fatal("Failed to initialize Casbin", zap.Error(err))
@@ -169,4 +172,36 @@ func main() {
 	<-quit
 
 	logger.Info("Server shutting down...")
+}
+
+// seedTaskMenus 幂等插入任务中心菜单（4 条）。
+func seedTaskMenus() {
+	db := database.GetDB()
+	var count int64
+	db.Model(&model.Menu{}).Where("name = ?", "task_dir").Count(&count)
+	if count > 0 {
+		return // 已存在，跳过
+	}
+
+	dir := model.Menu{
+		ParentID: 0, Name: "task_dir", Title: "任务中心",
+		Icon: "Operation", Type: 1, Sort: 60, Visible: 1, Status: 1,
+	}
+	if err := db.Create(&dir).Error; err != nil {
+		logger.Warn("seed task_dir menu failed", zap.Error(err))
+		return
+	}
+
+	children := []model.Menu{
+		{ParentID: dir.ID, Name: "task_list", Title: "任务管理", Icon: "List", Path: "/task/list", Component: "TaskList", Type: 2, Sort: 1, Visible: 1, Status: 1},
+		{ParentID: dir.ID, Name: "task_create", Title: "创建任务", Path: "/task/create", Component: "TaskCreate", Type: 2, Sort: 2, Visible: 0, Status: 1},
+		{ParentID: dir.ID, Name: "task_execution", Title: "执行详情", Path: "/task/execution", Component: "TaskExecution", Type: 2, Sort: 3, Visible: 0, Status: 1},
+		{ParentID: dir.ID, Name: "agent_list", Title: "Agent 管理", Icon: "Monitor", Path: "/task/agents", Component: "AgentList", Type: 2, Sort: 4, Visible: 1, Status: 1},
+	}
+	for _, m := range children {
+		if err := db.Create(&m).Error; err != nil {
+			logger.Warn("seed task menu failed", zap.String("name", m.Name), zap.Error(err))
+		}
+	}
+	logger.Info("Task center menus seeded")
 }
