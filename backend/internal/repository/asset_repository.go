@@ -2,6 +2,8 @@
 package repository
 
 import (
+	"fmt"
+
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/database"
 )
@@ -70,6 +72,7 @@ type AssetListQuery struct {
 	Recursive     bool   // 是否递归查询子节点下的资产
 	Source        string
 	Keyword       string // 搜索 hostname 或 ip
+	OwnerID       int64  // 按负责人筛选
 }
 
 func (r *AssetRepository) List(q AssetListQuery) ([]*model.Asset, int64, error) {
@@ -99,6 +102,10 @@ func (r *AssetRepository) List(q AssetListQuery) ([]*model.Asset, int64, error) 
 	}
 	if q.Keyword != "" {
 		db = db.Where("hostname LIKE ? OR ip LIKE ?", "%"+q.Keyword+"%", "%"+q.Keyword+"%")
+	}
+	if q.OwnerID > 0 {
+		// JSON 数组搜索: owner_ids 包含该 ID
+		db = db.Where("JSON_CONTAINS(owner_ids, ?)", fmt.Sprintf("%d", q.OwnerID))
 	}
 
 	if err := db.Count(&total).Error; err != nil {

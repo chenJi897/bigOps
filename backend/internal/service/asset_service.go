@@ -68,6 +68,7 @@ func (s *AssetService) Update(asset *model.Asset, operatorID int64, operatorName
 	existing.SN = asset.SN
 	existing.Tags = asset.Tags
 	existing.Remark = asset.Remark
+	existing.OwnerIDs = asset.OwnerIDs
 
 	if err := s.assetRepo.Update(existing); err != nil {
 		return err
