@@ -193,4 +193,24 @@ export const notificationApi = {
   retryEvent: (id: number) => api.post(`/notifications/events/${id}/retry`),
 }
 
+// 任务管理
+export const taskApi = {
+  list: (params: { page?: number; size?: number; keyword?: string; task_type?: string }) =>
+    api.get('/tasks', { params }),
+  getById: (id: number) => api.get(`/tasks/${id}`),
+  create: (data: any) => api.post('/tasks', data),
+  update: (id: number, data: any) => api.post(`/tasks/${id}`, data),
+  delete: (id: number) => api.post(`/tasks/${id}/delete`),
+  execute: (id: number, data: { host_ips: string[] }) => api.post(`/tasks/${id}/execute`, data),
+  executions: (params: { task_id?: number; page?: number; size?: number }) =>
+    api.get('/task-executions', { params }),
+  getExecution: (id: number) => api.get(`/task-executions/${id}`),
+}
+
+// Agent 管理
+export const agentApi = {
+  list: (params: { page?: number; size?: number; status?: string }) =>
+    api.get('/agents', { params }),
+}
+
 export default api

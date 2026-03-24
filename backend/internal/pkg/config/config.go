@@ -18,6 +18,12 @@ type Config struct {
 	Encrypt  EncryptConfig  `mapstructure:"encrypt"`
 	Aliyun   AliyunConfig   `mapstructure:"aliyun"`
 	Notification NotificationConfig `mapstructure:"notification"`
+	GRPC     GRPCConfig     `mapstructure:"grpc"`
+}
+
+// GRPCConfig gRPC 服务器配置。
+type GRPCConfig struct {
+	Port int `mapstructure:"port"`
 }
 
 // EncryptConfig 加密配置。

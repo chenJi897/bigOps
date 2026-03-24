@@ -1,0 +1,70 @@
+syntax = "proto3";
+package agent;
+option go_package = "github.com/bigops/platform/proto/gen/agent";
+
+service AgentService {
+    // Heartbeat 双向流：Agent 发送心跳 + 执行结果，Server 返回确认 + 任务下发
+    rpc Heartbeat(stream HeartbeatRequest) returns (stream HeartbeatResponse);
+    // Execute 由 Agent 调用，上报任务执行的流式输出
+    rpc ReportOutput(stream ExecuteResponse) returns (ExecuteAck);
+    // FileTransfer Agent 上传文件块
+    rpc FileTransfer(stream FileChunk) returns (TransferResult);
+}
+
+message HeartbeatRequest {
+    string agent_id = 1;
+    string hostname = 2;
+    string ip = 3;
+    string version = 4;
+    string os = 5;
+    int32 cpu_count = 6;
+    int64 memory_total = 7;
+    map<string, string> labels = 8;
+    int64 timestamp = 9;
+}
+
+message HeartbeatResponse {
+    bool accepted = 1;
+    int64 server_time = 2;
+    // 可选：Server 下发任务
+    ExecuteRequest task = 3;
+}
+
+message ExecuteRequest {
+    string task_id = 1;
+    int64 execution_id = 2;
+    int64 host_result_id = 3;
+    string script_type = 4;       // bash / python / powershell
+    string script_content = 5;
+    int32 timeout_seconds = 6;
+    map<string, string> env = 7;
+    string work_dir = 8;
+    string run_as_user = 9;
+}
+
+message ExecuteResponse {
+    int64 host_result_id = 1;
+    string output_line = 2;
+    bool is_stderr = 3;
+    int32 exit_code = 4;
+    string phase = 5;              // running / finished / error
+    int64 timestamp = 6;
+}
+
+message ExecuteAck {
+    bool received = 1;
+}
+
+message FileChunk {
+    string task_id = 1;
+    string filename = 2;
+    bytes chunk_data = 3;
+    int64 offset = 4;
+    bool is_last = 5;
+}
+
+message TransferResult {
+    bool success = 1;
+    string message = 2;
+    int64 bytes_received = 3;
+}

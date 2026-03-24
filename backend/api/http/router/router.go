@@ -198,6 +198,27 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/tickets/:id/comment", ticketHandler.Comment)
 			authGroup.POST("/tickets/:id/transfer", ticketHandler.Transfer)
 			authGroup.GET("/tickets/:id/activities", ticketHandler.Activities)
+
+			// --- 任务管理 ---
+			taskHandler := handler.NewTaskHandler()
+			authGroup.GET("/tasks", taskHandler.List)
+			authGroup.GET("/tasks/:id", taskHandler.GetByID)
+			authGroup.POST("/tasks", taskHandler.Create)
+			authGroup.POST("/tasks/:id", taskHandler.Update)
+			authGroup.POST("/tasks/:id/delete", taskHandler.Delete)
+			authGroup.POST("/tasks/:id/execute", taskHandler.Execute)
+			authGroup.GET("/task-executions/:id", taskHandler.GetExecution)
+			authGroup.GET("/task-executions", taskHandler.ListExecutions)
+			authGroup.GET("/agents", taskHandler.ListAgents)
+
+		}
+
+		// WebSocket 路由（认证但不审计）
+		wsGroup := v1.Group("")
+		wsGroup.Use(middleware.AuthMiddleware())
+		{
+			taskHandler := handler.NewTaskHandler()
+			wsGroup.GET("/ws/task-executions/:id/logs", taskHandler.WSLogs)
 		}
 	}
 

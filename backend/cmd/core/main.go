@@ -13,6 +13,7 @@ import (
 	_ "github.com/bigops/platform/docs"
 
 	"github.com/bigops/platform/api/http/router"
+	grpcserver "github.com/bigops/platform/internal/grpc"
 	"github.com/bigops/platform/internal/model"
 	casbinPkg "github.com/bigops/platform/internal/pkg/casbin"
 	"github.com/bigops/platform/internal/pkg/config"
@@ -101,6 +102,10 @@ func main() {
 		&model.NotificationEvent{},
 		&model.NotificationDelivery{},
 		&model.InAppNotification{},
+		&model.Task{},
+		&model.TaskExecution{},
+		&model.TaskHostResult{},
+		&model.AgentInfo{},
 	); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
@@ -124,7 +129,19 @@ func main() {
 	}
 	defer database.CloseRedis()
 
-	// 5. 初始化 HTTP 路由并启动服务
+	// 5. 启动 gRPC Server
+	grpcPort := cfg.GRPC.Port
+	if grpcPort == 0 {
+		grpcPort = 9090
+	}
+	grpcSrv, err := grpcserver.StartGRPCServer(grpcPort)
+	if err != nil {
+		logger.Fatal("Failed to start gRPC server", zap.Error(err))
+	}
+	defer grpcSrv.GracefulStop()
+	logger.Info(fmt.Sprintf("gRPC server started on :%d", grpcPort))
+
+	// 6. 初始化 HTTP 路由并启动服务
 	r := router.Setup(cfg.Server.Mode)
 
 	go func() {
