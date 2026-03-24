@@ -1,1 +1,8 @@
 .ace-tool/
+
+# Go 编译产物
+backend/main
+backend/agent
+backend/cmd/core
+backend/cmd/agent/agent
+backend/bin/
