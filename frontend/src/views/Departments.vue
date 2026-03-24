@@ -2,13 +2,14 @@
 defineOptions({ name: 'Departments' })
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { departmentApi } from '../api'
+import { departmentApi, userApi } from '../api'
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(20)
+const allUsers = ref<any[]>([])
 
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增部门')
@@ -71,7 +72,10 @@ function handlePageChange(p: number) {
   fetchData()
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  fetchData()
+  userApi.list(1, 200).then((res: any) => { allUsers.value = res.data?.list || [] }).catch(() => {})
+})
 </script>
 
 <template>
@@ -117,6 +121,12 @@ onMounted(fetchData)
         <el-form-item label="名称"><el-input v-model="form.name" placeholder="如：运维部" /></el-form-item>
         <el-form-item label="编码"><el-input v-model="form.code" placeholder="如：ops" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="负责人">
+          <el-select v-model="form.manager_id" placeholder="选择负责人" clearable style="width: 100%;">
+            <el-option label="无" :value="0" />
+            <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="排序"><el-input-number v-model="form.sort" :min="0" /></el-form-item>
       </el-form>
       <template #footer>
