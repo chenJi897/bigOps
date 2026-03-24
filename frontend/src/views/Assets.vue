@@ -142,6 +142,27 @@ function isExpiringSoon(dateStr: string) {
   return diff > 0 && diff < 30 * 24 * 3600 * 1000 // 30天内到期标红
 }
 
+const fieldLabels: Record<string, string> = {
+  hostname: '主机名', ip: 'IP', inner_ip: '内网IP', os: '系统', os_version: '系统版本',
+  status: '状态', asset_type: '类型', idc: '机房', sn: '序列号', remark: '备注',
+  cpu_cores: 'CPU核数', memory_mb: '内存(MB)', disk_gb: '磁盘(GB)',
+  service_tree_id: '服务树', owner_ids: '负责人',
+}
+function fieldLabel(field: string) { return fieldLabels[field] || field }
+function formatChangeValue(field: string, value: string) {
+  if (field === 'owner_ids') {
+    if (!value || value === '[]') return '无'
+    try {
+      const ids = JSON.parse(value) as number[]
+      return ids.map(id => {
+        const u = allUsers.value.find((u: any) => u.id === id)
+        return u ? (u.real_name || u.username) : `用户${id}`
+      }).join('、')
+    } catch { return value }
+  }
+  return value || '-'
+}
+
 onMounted(() => {
   // 从 URL query 读取筛选参数（首页/服务树页跳转过来）
   if (route.query.service_tree_id) {
@@ -290,10 +311,17 @@ onMounted(() => {
 
         <el-tab-pane label="变更历史" name="changes">
           <el-table :data="changes" v-loading="changesLoading" stripe border>
-            <el-table-column prop="field" label="字段" width="120" />
-            <el-table-column prop="old_value" label="旧值" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="new_value" label="新值" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="field" label="字段" width="120">
+              <template #default="{ row }">{{ fieldLabel(row.field) }}</template>
+            </el-table-column>
+            <el-table-column label="旧值" min-width="150" show-overflow-tooltip>
+              <template #default="{ row }">{{ formatChangeValue(row.field, row.old_value) }}</template>
+            </el-table-column>
+            <el-table-column label="新值" min-width="150" show-overflow-tooltip>
+              <template #default="{ row }">{{ formatChangeValue(row.field, row.new_value) }}</template>
+            </el-table-column>
             <el-table-column prop="change_type" label="类型" width="80" />
+            <el-table-column prop="operator_name" label="操作人" width="80" />
             <el-table-column prop="created_at" label="变更时间" width="180" />
           </el-table>
           <el-pagination
