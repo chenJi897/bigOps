@@ -3,6 +3,7 @@ package cloudsync
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	ecs "github.com/alibabacloud-go/ecs-20140526/v4/client"
@@ -205,6 +206,14 @@ func (p *AliyunProvider) mapToAsset(inst *ecs.DescribeInstancesResponseBodyInsta
 	}
 	if asset.Hostname == "" {
 		asset.Hostname = asset.CloudInstanceID
+	}
+
+	// 到期时间
+	if expiredTime := tea.StringValue(inst.ExpiredTime); expiredTime != "" {
+		if t, err := time.Parse("2006-01-02T15:04Z", expiredTime); err == nil {
+			lt := model.LocalTime(t)
+			asset.ExpiredAt = &lt
+		}
 	}
 
 	return asset

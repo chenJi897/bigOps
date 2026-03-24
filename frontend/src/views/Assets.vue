@@ -9,7 +9,7 @@ const route = useRoute()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
-const query = ref({ page: 1, size: 20, status: '', source: '', service_tree_id: undefined as number | undefined, recursive: false, keyword: '' })
+const query = ref({ page: 1, size: 20, status: '', source: '', service_tree_id: undefined as number | undefined, recursive: false, keyword: '', owner_id: undefined as number | undefined })
 
 // 服务树数据（供筛选和表单选择）
 const serviceTreeOptions = ref<any[]>([])
@@ -135,6 +135,13 @@ function handleChangesPage(p: number) {
   if (currentAsset.value) fetchChanges(currentAsset.value.id)
 }
 
+function isExpiringSoon(dateStr: string) {
+  if (!dateStr) return false
+  const d = new Date(dateStr)
+  const diff = d.getTime() - Date.now()
+  return diff > 0 && diff < 30 * 24 * 3600 * 1000 // 30天内到期标红
+}
+
 onMounted(() => {
   // 从 URL query 读取筛选参数（首页/服务树页跳转过来）
   if (route.query.service_tree_id) {
@@ -190,6 +197,11 @@ onMounted(() => {
             check-strictly
             style="width: 160px;"
           />
+        </el-form-item>
+        <el-form-item>
+          <el-select v-model="query.owner_id" placeholder="负责人" clearable style="width: 140px;">
+            <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -268,6 +280,10 @@ onMounted(() => {
             <el-descriptions-item label="SN">{{ currentAsset.sn }}</el-descriptions-item>
             <el-descriptions-item label="云实例ID">{{ currentAsset.cloud_instance_id }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ currentAsset.created_at }}</el-descriptions-item>
+            <el-descriptions-item label="到期时间">
+              <span v-if="currentAsset.expired_at" :style="{ color: isExpiringSoon(currentAsset.expired_at) ? '#f56c6c' : '' }">{{ currentAsset.expired_at }}</span>
+              <span v-else style="color: #999;">-</span>
+            </el-descriptions-item>
             <el-descriptions-item label="更新时间">{{ currentAsset.updated_at }}</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>

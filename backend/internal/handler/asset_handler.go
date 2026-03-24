@@ -63,6 +63,7 @@ func (h *AssetHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
 	serviceTreeID, _ := strconv.ParseInt(c.Query("service_tree_id"), 10, 64)
+	ownerID, _ := strconv.ParseInt(c.Query("owner_id"), 10, 64)
 
 	q := repository.AssetListQuery{
 		Page:          page,
@@ -72,6 +73,7 @@ func (h *AssetHandler) List(c *gin.Context) {
 		Recursive:     c.Query("recursive") == "true",
 		Source:        c.Query("source"),
 		Keyword:       c.Query("keyword"),
+		OwnerID:       ownerID,
 	}
 	assets, total, err := h.svc.List(q)
 	if err != nil {

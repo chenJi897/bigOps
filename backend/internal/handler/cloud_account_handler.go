@@ -31,6 +31,7 @@ type CreateCloudAccountRequest struct {
 	SecretKey     string `json:"secret_key" binding:"required" example:"xxxxxxxx"`
 	Region        string `json:"region" example:"cn-hangzhou,cn-beijing"`
 	ServiceTreeID int64  `json:"service_tree_id" example:"1"`
+	OwnerIDs      string `json:"owner_ids" example:"[1,5]"`
 }
 
 type UpdateCloudAccountRequest struct {
@@ -38,6 +39,7 @@ type UpdateCloudAccountRequest struct {
 	Region        string `json:"region" example:"cn-hangzhou,cn-beijing"`
 	Status        int8   `json:"status" binding:"oneof=0 1" example:"1"`
 	ServiceTreeID int64  `json:"service_tree_id" example:"1"`
+	OwnerIDs      string `json:"owner_ids" example:"[1,5]"`
 }
 
 type UpdateCloudAccountKeysRequest struct {
@@ -104,7 +106,7 @@ func (h *CloudAccountHandler) Create(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
-	if err := h.svc.Create(req.Name, req.Provider, req.AccessKey, req.SecretKey, req.Region, req.ServiceTreeID); err != nil {
+	if err := h.svc.Create(req.Name, req.Provider, req.AccessKey, req.SecretKey, req.Region, req.ServiceTreeID, req.OwnerIDs); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
@@ -134,7 +136,7 @@ func (h *CloudAccountHandler) Update(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
-	if err := h.svc.Update(id, req.Name, req.Region, req.Status, req.ServiceTreeID); err != nil {
+	if err := h.svc.Update(id, req.Name, req.Region, req.Status, req.ServiceTreeID, req.OwnerIDs); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}

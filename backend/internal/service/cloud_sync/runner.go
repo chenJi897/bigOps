@@ -195,6 +195,7 @@ func upsertAssets(cloudAssets []*model.Asset, accountID int64, serviceTreeID int
 			existing.IDC = ca.IDC
 			existing.SN = ca.SN
 			existing.CloudAccountID = accountID
+			existing.ExpiredAt = ca.ExpiredAt
 			if updateErr := assetRepo.Update(existing); updateErr == nil {
 				result.Updated++
 				for i := range changes {
