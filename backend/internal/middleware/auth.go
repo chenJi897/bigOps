@@ -18,20 +18,23 @@ func AuthMiddleware() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		// 从 Header 提取 token（格式：Bearer <token>）
+		// WebSocket 无法设置自定义 Header，降级从 query param 读取
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		var tokenString string
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
+		}
+		if tokenString == "" {
+			tokenString = c.Query("token")
+		}
+		if tokenString == "" {
 			response.Unauthorized(c, "请求未携带 token")
 			c.Abort()
 			return
 		}
-
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			response.Unauthorized(c, "token 格式错误，应为 Bearer <token>")
-			c.Abort()
-			return
-		}
-		tokenString := parts[1]
 
 		// 检查 token 是否在黑名单中（已登出）
 		if authService.IsTokenBlacklisted(tokenString) {

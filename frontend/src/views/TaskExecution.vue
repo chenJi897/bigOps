@@ -14,6 +14,8 @@ const selectedHostIP = ref('')
 const logLines = ref<any[]>([])
 const logContainerRef = ref<HTMLElement | null>(null)
 let ws: WebSocket | null = null
+let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null
+let destroyed = false
 
 const execStatusMap: Record<string, { label: string; type: string }> = {
   pending: { label: '等待中', type: 'info' },
@@ -65,7 +67,7 @@ async function fetchExecution() {
 }
 
 function connectWebSocket() {
-  if (!execId.value) return
+  if (!execId.value || destroyed) return
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   const token = localStorage.getItem('token') || ''
   const url = `${proto}://${location.host}/api/v1/ws/task-executions/${execId.value}/logs?token=${token}`
@@ -86,8 +88,17 @@ function connectWebSocket() {
     } catch {}
   }
   ws.onclose = () => {
-    // 连接关闭时刷新一次状态
-    setTimeout(() => fetchExecution(), 1000)
+    ws = null
+    if (destroyed) return
+    // 刷新状态，如果仍在运行则重连
+    fetchExecution().then(() => {
+      if (isRunning.value && !destroyed) {
+        wsReconnectTimer = setTimeout(() => connectWebSocket(), 3000)
+      }
+    })
+  }
+  ws.onerror = () => {
+    // onclose will fire after onerror
   }
 }
 
@@ -127,7 +138,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  destroyed = true
   if (ws) { ws.close(); ws = null }
+  if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null }
   if (timer) { clearInterval(timer); timer = null }
 })
 </script>
