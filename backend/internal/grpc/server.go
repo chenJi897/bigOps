@@ -10,10 +10,12 @@ import (
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"gorm.io/gorm"
 
 	pb "github.com/bigops/platform/proto/gen/agent"
 
 	"github.com/bigops/platform/internal/model"
+	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/repository"
 )
@@ -142,18 +144,20 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 		switch phase {
 		case "running":
 			// Mark as running if still pending
+			updates := map[string]interface{}{}
 			if hr.Status == "pending" {
-				hr.Status = "running"
+				updates["status"] = "running"
 				now := model.LocalTime(time.Now())
-				hr.StartedAt = &now
+				updates["started_at"] = &now
 			}
-			// Append output
+			// Atomic append output using CONCAT to avoid race conditions
+			appendLine := outputLine + "\n"
 			if isStderr {
-				hr.Stderr += outputLine + "\n"
+				updates["stderr"] = gorm.Expr("CONCAT(COALESCE(stderr,''), ?)", appendLine)
 			} else {
-				hr.Stdout += outputLine + "\n"
+				updates["stdout"] = gorm.Expr("CONCAT(COALESCE(stdout,''), ?)", appendLine)
 			}
-			_ = s.execRepo.UpdateHostResult(hr)
+			database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hr.ID).Updates(updates)
 
 			// Publish to WebSocket subscribers
 			mgr.PublishLog(hr.ExecutionID, &LogLine{
@@ -168,24 +172,25 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 		case "finished", "error":
 			// Final update
 			now := model.LocalTime(time.Now())
-			hr.FinishedAt = &now
-			hr.ExitCode = int(msg.GetExitCode())
-
-			if phase == "finished" && msg.GetExitCode() == 0 {
-				hr.Status = "success"
-			} else {
-				hr.Status = "failed"
+			finalUpdates := map[string]interface{}{
+				"finished_at": &now,
+				"exit_code":   int(msg.GetExitCode()),
 			}
-
+			if phase == "finished" && msg.GetExitCode() == 0 {
+				finalUpdates["status"] = "success"
+			} else {
+				finalUpdates["status"] = "failed"
+			}
 			// Append any remaining output
 			if outputLine != "" {
+				appendLine := outputLine + "\n"
 				if isStderr {
-					hr.Stderr += outputLine + "\n"
+					finalUpdates["stderr"] = gorm.Expr("CONCAT(COALESCE(stderr,''), ?)", appendLine)
 				} else {
-					hr.Stdout += outputLine + "\n"
+					finalUpdates["stdout"] = gorm.Expr("CONCAT(COALESCE(stdout,''), ?)", appendLine)
 				}
 			}
-			_ = s.execRepo.UpdateHostResult(hr)
+			database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hr.ID).Updates(finalUpdates)
 
 			// Publish finish event to WebSocket
 			mgr.PublishLog(hr.ExecutionID, &LogLine{

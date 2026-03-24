@@ -30,7 +30,10 @@ func (r *TaskExecutionRepository) GetByID(id int64) (*model.TaskExecution, error
 func (r *TaskExecutionRepository) ListByTaskID(taskID int64, page, size int) ([]*model.TaskExecution, int64, error) {
 	var items []*model.TaskExecution
 	var total int64
-	db := database.GetDB().Model(&model.TaskExecution{}).Where("task_id = ?", taskID)
+	db := database.GetDB().Model(&model.TaskExecution{})
+	if taskID > 0 {
+		db = db.Where("task_id = ?", taskID)
+	}
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
