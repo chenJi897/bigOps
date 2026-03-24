@@ -118,6 +118,7 @@ func (s *AssetService) diffAsset(old, new *model.Asset) []model.AssetChange {
 	if old.ServiceTreeID != new.ServiceTreeID {
 		changes = append(changes, model.AssetChange{Field: "service_tree_id", OldValue: strconv.FormatInt(old.ServiceTreeID, 10), NewValue: strconv.FormatInt(new.ServiceTreeID, 10)})
 	}
+	check("owner_ids", old.OwnerIDs, new.OwnerIDs)
 	return changes
 }
 
