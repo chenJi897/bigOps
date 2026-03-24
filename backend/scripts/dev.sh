@@ -3,6 +3,10 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# 强制将 Go 构建缓存和临时目录落到仓库所在的 /data 下，避免写入 /tmp。
+source "$SCRIPT_DIR/go-env.sh"
+
 CMD=${1:-help}
 
 case "$CMD" in

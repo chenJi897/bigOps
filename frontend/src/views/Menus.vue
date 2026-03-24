@@ -22,6 +22,7 @@ const typeOptions = [
 const componentOptions = [
   'Dashboard', 'Users', 'Roles', 'Menus', 'AuditLogs',
   'ServiceTree', 'CloudAccounts', 'Assets',
+  'ApprovalInbox', 'RequestTemplates', 'ApprovalPolicies', 'NotificationConsole',
 ]
 
 async function loadMenus() {

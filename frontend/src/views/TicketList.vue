@@ -1,16 +1,22 @@
 <script setup lang="ts">
 defineOptions({ name: 'TicketList' })
-import { ref, onMounted } from 'vue'
+import { computed, ref, onActivated, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ticketApi, ticketTypeApi } from '../api'
+import { ticketApi, ticketTypeApi, userApi } from '../api'
+import { useViewStateStore } from '../stores/viewState'
+import { useUserStore } from '../stores/user'
 
 const router = useRouter()
+const viewStateStore = useViewStateStore()
+const userStore = useUserStore()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
 const query = ref<any>({ page: 1, size: 20, status: '', priority: '', type_id: '', source: '', keyword: '', scope: 'all' })
 
 const allTypes = ref<any[]>([])
+const isAdmin = ref(false)
+const seenTicketTypeVersion = ref(0)
 
 const statusMap: Record<string, { label: string; type: string }> = {
   open: { label: '待处理', type: 'info' },
@@ -31,12 +37,20 @@ const sourceMap: Record<string, string> = {
   manual: '手动', monitor: '监控', sync: '同步', system: '系统', cicd: 'CICD',
 }
 
-const scopeTabs = [
-  { label: '全部工单', value: 'all' },
-  { label: '我创建的', value: 'my_created' },
-  { label: '我处理的', value: 'my_assigned' },
-  { label: '本部门', value: 'my_dept' },
-]
+const scopeTabs = computed(() => {
+  if (isAdmin.value) {
+    return [
+      { label: '全部工单', value: 'all' },
+      { label: '我创建的', value: 'my_created' },
+      { label: '我处理的', value: 'my_assigned' },
+      { label: '本部门', value: 'my_dept' },
+    ]
+  }
+  return [
+    { label: '我创建的', value: 'my_created' },
+    { label: '我处理的', value: 'my_assigned' },
+  ]
+})
 
 async function fetchData() {
   loading.value = true
@@ -70,9 +84,40 @@ function openCreate() {
   router.push('/ticket/create')
 }
 
+function openApprovalInbox() {
+  router.push('/approval/inbox')
+}
+
 onMounted(() => {
-  fetchData()
+  const currentUserID = userStore.userInfo?.id
+  if (currentUserID) {
+    userApi.getRoles(currentUserID).then((res: any) => {
+      const roles = res.data || []
+      isAdmin.value = roles.some((role: any) => role.name === 'admin')
+      if (!isAdmin.value && !['my_created', 'my_assigned'].includes(query.value.scope)) {
+        query.value.scope = 'my_created'
+      }
+      fetchData()
+    }).catch(() => {
+      query.value.scope = 'my_created'
+      fetchData()
+    })
+  } else {
+    query.value.scope = 'my_created'
+    fetchData()
+  }
   ticketTypeApi.all().then((res: any) => { allTypes.value = res.data || [] }).catch(() => {})
+  seenTicketTypeVersion.value = viewStateStore.ticketTypeVersion
+})
+
+onActivated(() => {
+  if (viewStateStore.consumeTicketListDirty()) {
+    fetchData()
+  }
+  if (seenTicketTypeVersion.value !== viewStateStore.ticketTypeVersion) {
+    seenTicketTypeVersion.value = viewStateStore.ticketTypeVersion
+    ticketTypeApi.all().then((res: any) => { allTypes.value = res.data || [] }).catch(() => {})
+  }
 })
 </script>
 
@@ -82,7 +127,10 @@ onMounted(() => {
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>工单中心</span>
-          <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 创建工单</el-button>
+          <div style="display: flex; gap: 8px;">
+            <el-button plain @click="openApprovalInbox">审批待办</el-button>
+            <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 创建工单</el-button>
+          </div>
         </div>
       </template>
 

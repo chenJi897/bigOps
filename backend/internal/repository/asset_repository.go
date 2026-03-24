@@ -26,6 +26,17 @@ func (r *AssetRepository) GetByID(id int64) (*model.Asset, error) {
 	return &asset, nil
 }
 
+func (r *AssetRepository) GetByIDs(ids []int64) ([]*model.Asset, error) {
+	var assets []*model.Asset
+	if len(ids) == 0 {
+		return assets, nil
+	}
+	if err := database.GetDB().Where("id IN ?", ids).Find(&assets).Error; err != nil {
+		return nil, err
+	}
+	return assets, nil
+}
+
 func (r *AssetRepository) GetByHostname(hostname string) (*model.Asset, error) {
 	var asset model.Asset
 	if err := database.GetDB().Where("hostname = ?", hostname).First(&asset).Error; err != nil {

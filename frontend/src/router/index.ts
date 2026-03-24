@@ -41,6 +41,10 @@ const viewModules: Record<string, () => Promise<any>> = {
   'TicketList': () => import('../views/TicketList.vue'),
   'TicketCreate': () => import('../views/TicketCreate.vue'),
   'TicketDetail': () => import('../views/TicketDetail.vue'),
+  'ApprovalInbox': () => import('../views/ApprovalInbox.vue'),
+  'RequestTemplates': () => import('../views/RequestTemplates.vue'),
+  'ApprovalPolicies': () => import('../views/ApprovalPolicies.vue'),
+  'NotificationConsole': () => import('../views/NotificationConsole.vue'),
 }
 
 // 系统管理静态路由（仪表盘始终可访问）
@@ -58,6 +62,8 @@ const router = createRouter({
 
 // 路由守卫：登录检查 + 动态路由加载
 let routesAdded = false
+const dynamicRouteNames = new Set<string>()
+const dynamicFallbackRouteName = 'DynamicFallback404'
 
 router.beforeEach(async (to) => {
   const token = localStorage.getItem('token')
@@ -78,7 +84,9 @@ router.beforeEach(async (to) => {
       if (!userStore.userInfo) await userStore.fetchUserInfo()
 
       // 仪表盘始终可访问
-      router.addRoute('Layout', dashboardRoute)
+      if (!router.hasRoute('Dashboard')) {
+        router.addRoute('Layout', dashboardRoute)
+      }
 
       // 加载后端动态菜单路由
       const menus = await permissionStore.fetchMenus()
@@ -86,11 +94,14 @@ router.beforeEach(async (to) => {
       dynamicChildren.forEach(route => {
         if (route.name && route.name !== 'Dashboard' && !router.hasRoute(route.name)) {
           router.addRoute('Layout', route)
+          dynamicRouteNames.add(String(route.name))
         }
       })
 
       // 兜底 404
-      router.addRoute({ path: '/:pathMatch(.*)*', redirect: '/404' })
+      if (!router.hasRoute(dynamicFallbackRouteName)) {
+        router.addRoute({ name: dynamicFallbackRouteName, path: '/:pathMatch(.*)*', redirect: '/404' })
+      }
       routesAdded = true
       return to.fullPath // 重新导航
     } catch {
@@ -109,13 +120,17 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
     if (menu.type === 3) continue // 按钮权限，不生成路由
     if (!menu.path) continue
 
-    // 子路由 path 不能以 / 开头，去掉前导斜杠
-    const routePath = menu.path.startsWith('/') ? menu.path.slice(1) : menu.path
+    const routePath = normalizeRoutePath(menu)
 
     const route: RouteRecordRaw = {
       path: routePath,
       name: menu.name,
-      meta: { title: menu.title, icon: menu.icon, componentName: menu.component || '' },
+      meta: {
+        title: menu.title,
+        icon: menu.icon,
+        componentName: menu.component || '',
+        activeMenu: menu.component === 'TicketDetail' ? '/tickets' : menu.path,
+      },
       component: undefined,
       children: [],
     }
@@ -138,13 +153,149 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
       routes.push(route)
     }
   }
-  return routes
+  return ensureCompanionRoutes(routes)
+}
+
+function ensureCompanionRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
+  const nextRoutes = [...routes]
+  const ticketListRoute = nextRoutes.find(route =>
+    route.meta?.componentName === 'TicketList' || route.name === 'TicketList'
+  )
+
+  if (!ticketListRoute) {
+    return nextRoutes
+  }
+
+  const ticketActiveMenu = (ticketListRoute.meta?.activeMenu as string) || `/${String(ticketListRoute.path)}`
+  const hasTicketCreateRoute = nextRoutes.some(route =>
+    route.meta?.componentName === 'TicketCreate' || route.name === 'TicketCreate'
+  )
+  const hasTicketDetailRoute = nextRoutes.some(route =>
+    route.meta?.componentName === 'TicketDetail' || route.name === 'TicketDetail'
+  )
+  const hasApprovalInboxRoute = nextRoutes.some(route =>
+    route.meta?.componentName === 'ApprovalInbox' || route.name === 'ApprovalInbox'
+  )
+
+  if (!hasTicketCreateRoute) {
+    nextRoutes.push({
+      path: 'ticket/create',
+      name: 'TicketCreate',
+      component: viewModules['TicketCreate'],
+      meta: {
+        title: '创建工单',
+        componentName: 'TicketCreate',
+        activeMenu: ticketActiveMenu,
+      },
+    })
+  }
+
+  if (!hasTicketDetailRoute) {
+    nextRoutes.push({
+      path: 'ticket/detail/:id?',
+      name: 'TicketDetail',
+      component: viewModules['TicketDetail'],
+      meta: {
+        title: '工单详情',
+        componentName: 'TicketDetail',
+        activeMenu: ticketActiveMenu,
+      },
+    })
+  }
+
+  if (!hasApprovalInboxRoute) {
+    nextRoutes.push({
+      path: 'approval/inbox',
+      name: 'ApprovalInbox',
+      component: viewModules['ApprovalInbox'],
+      meta: {
+        title: '审批待办',
+        componentName: 'ApprovalInbox',
+        activeMenu: ticketActiveMenu,
+      },
+    })
+  }
+
+  const ticketTypeRoute = nextRoutes.find(route =>
+    route.meta?.componentName === 'TicketTypes' || route.name === 'TicketTypes'
+  )
+  if (ticketTypeRoute) {
+    const configActiveMenu = (ticketTypeRoute.meta?.activeMenu as string) || `/${String(ticketTypeRoute.path)}`
+    const hasRequestTemplatesRoute = nextRoutes.some(route =>
+      route.meta?.componentName === 'RequestTemplates' || route.name === 'RequestTemplates'
+    )
+    const hasApprovalPoliciesRoute = nextRoutes.some(route =>
+      route.meta?.componentName === 'ApprovalPolicies' || route.name === 'ApprovalPolicies'
+    )
+    const hasNotificationConsoleRoute = nextRoutes.some(route =>
+      route.meta?.componentName === 'NotificationConsole' || route.name === 'NotificationConsole'
+    )
+    if (!hasRequestTemplatesRoute) {
+      nextRoutes.push({
+        path: 'request/templates',
+        name: 'RequestTemplates',
+        component: viewModules['RequestTemplates'],
+        meta: {
+          title: '请求模板',
+          componentName: 'RequestTemplates',
+          activeMenu: configActiveMenu,
+        },
+      })
+    }
+    if (!hasApprovalPoliciesRoute) {
+      nextRoutes.push({
+        path: 'approval/policies',
+        name: 'ApprovalPolicies',
+        component: viewModules['ApprovalPolicies'],
+        meta: {
+          title: '审批策略',
+          componentName: 'ApprovalPolicies',
+          activeMenu: configActiveMenu,
+        },
+      })
+    }
+    if (!hasNotificationConsoleRoute) {
+      nextRoutes.push({
+        path: 'notification/console',
+        name: 'NotificationConsole',
+        component: viewModules['NotificationConsole'],
+        meta: {
+          title: '通知联调',
+          componentName: 'NotificationConsole',
+          activeMenu: configActiveMenu,
+        },
+      })
+    }
+  }
+
+  return nextRoutes
+}
+
+function normalizeRoutePath(menu: any): string {
+  const rawPath = menu.path.startsWith('/') ? menu.path.slice(1) : menu.path
+  const normalizedPath = rawPath.replace(/\/+$/, '')
+
+  // 详情页菜单通常存的是固定路径，但页面实际需要带 ID 参数。
+  if (menu.component === 'TicketDetail' && !normalizedPath.includes('/:id')) {
+    return `${normalizedPath}/:id?`
+  }
+
+  return normalizedPath
 }
 
 // 供登出时重置路由状态
 export function resetRouter() {
   routesAdded = false
   layoutRoute.children = []
+  for (const name of dynamicRouteNames) {
+    if (router.hasRoute(name)) {
+      router.removeRoute(name)
+    }
+  }
+  dynamicRouteNames.clear()
+  if (router.hasRoute(dynamicFallbackRouteName)) {
+    router.removeRoute(dynamicFallbackRouteName)
+  }
 }
 
 export default router

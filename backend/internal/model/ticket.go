@@ -9,10 +9,16 @@ type Ticket struct {
 	TicketNo       string         `gorm:"size:50;uniqueIndex;not null" json:"ticket_no"` // TK-20260324-0001
 	TypeID         int64          `gorm:"index;not null" json:"type_id"`
 	TypeName       string         `gorm:"-" json:"type_name,omitempty"`
+	TicketKind     string         `gorm:"size:20;index;default:incident" json:"ticket_kind"` // incident/request/change
+	RequestTemplateID   int64     `gorm:"index" json:"request_template_id"`
+	RequestTemplateName string    `gorm:"-" json:"request_template_name,omitempty"`
 
 	// 状态
 	Status   string `gorm:"size:20;not null;index;default:open" json:"status"`  // open/processing/resolved/closed/rejected
 	Priority string `gorm:"size:20;not null;default:medium" json:"priority"`    // low/medium/high/urgent
+	ApprovalStatus    string `gorm:"size:20;index;default:not_required" json:"approval_status"` // not_required/pending/in_progress/approved/rejected/canceled
+	ApprovalInstanceID int64 `gorm:"index" json:"approval_instance_id"`
+	ExecutionStatus   string `gorm:"size:20;index;default:not_started" json:"execution_status"` // not_started/pending/running/succeeded/failed/canceled
 
 	// 内容
 	Description string `gorm:"type:text" json:"description"`

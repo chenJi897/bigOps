@@ -18,6 +18,7 @@ import (
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/service"
 	cloudsync "github.com/bigops/platform/internal/service/cloud_sync"
 )
 
@@ -76,7 +77,31 @@ func main() {
 	defer database.Close()
 
 	// 自动迁移数据库表结构（开发阶段使用，生产环境建议使用 SQL 迁移脚本）
-	if err := database.GetDB().AutoMigrate(&model.User{}, &model.Role{}, &model.Menu{}, &model.UserRole{}, &model.AuditLog{}, &model.ServiceTree{}, &model.CloudAccount{}, &model.Asset{}, &model.AssetChange{}, &model.CloudSyncTask{}, &model.Department{}, &model.Ticket{}, &model.TicketType{}, &model.TicketActivity{}); err != nil {
+	if err := database.GetDB().AutoMigrate(
+		&model.User{},
+		&model.Role{},
+		&model.Menu{},
+		&model.UserRole{},
+		&model.AuditLog{},
+		&model.ServiceTree{},
+		&model.CloudAccount{},
+		&model.Asset{},
+		&model.AssetChange{},
+		&model.CloudSyncTask{},
+		&model.Department{},
+		&model.Ticket{},
+		&model.TicketType{},
+		&model.TicketActivity{},
+		&model.RequestTemplate{},
+		&model.ApprovalPolicy{},
+		&model.ApprovalPolicyStage{},
+		&model.ApprovalInstance{},
+		&model.ApprovalRecord{},
+		&model.ExecutionOrder{},
+		&model.NotificationEvent{},
+		&model.NotificationDelivery{},
+		&model.InAppNotification{},
+	); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
 	logger.Info("Database migration completed")
@@ -115,6 +140,11 @@ func main() {
 	syncScheduler.Start()
 	defer syncScheduler.Stop()
 	logger.Info("Cloud sync scheduler started")
+
+	notificationScheduler := service.NewNotificationScheduler()
+	notificationScheduler.Start()
+	defer notificationScheduler.Stop()
+	logger.Info("Notification scheduler started")
 
 	// 6. 优雅关闭：等待中断信号
 	quit := make(chan os.Signal, 1)

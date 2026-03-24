@@ -17,7 +17,29 @@
       "Bash(curl:*)",
       "Bash(go build:*)",
       "Bash(go test:*)",
-      "mcp__augment-context-engine__codebase-retrieval"
+      "mcp__augment-context-engine__codebase-retrieval",
+      "Bash(mysql:*)",
+      "Bash(ls /root/bigOps/frontend/src/views/*.vue)",
+      "Bash(grep -l func.*User /root/bigOps/backend/internal/service/*.go)",
+      "Bash(for f:*)",
+      "Bash(do sed:*)",
+      "Bash(echo \"Updated $f\")",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(sed -i 's/label=\"\"操作\"\" width=\"\"\\\\\\([0-9]*\\\\\\)\"\" fixed=\"\"right\"\"/label=\"\"操作\"\" min-width=\"\"\\\\1\"\" fixed=\"\"right\"\"/g' Assets.vue CloudAccounts.vue Departments.vue Users.vue)",
+      "Bash(sed -i 's/label=\"\"操作\"\" fixed=\"\"right\"\" width=\"\"\\\\\\([0-9]*\\\\\\)\"\"/label=\"\"操作\"\" fixed=\"\"right\"\" min-width=\"\"\\\\1\"\"/g' Menus.vue Roles.vue)",
+      "mcp__exa__get_code_context_exa",
+      "Bash(ls frontend/src/views/*.vue)",
+      "Bash(swag init:*)",
+      "mcp__tavily__tavily_research",
+      "mcp__exa__web_search_exa",
+      "mcp__tavily__tavily_search",
+      "Bash(npx vite:*)",
+      "Bash(xargs -I{} basename {} .go)",
+      "Bash(ls backend/internal/handler/*.go)",
+      "Bash(xargs -I{} basename {} .vue)",
+      "Bash(ls frontend/src/stores/*.ts)",
+      "Bash(xargs -I{} basename {} .ts)"
     ]
   }
 }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { authApi } from '../api'
+import { authApi, notificationApi } from '../api'
 import { useUserStore } from '../stores/user'
 import { usePermissionStore } from '../stores/permission'
 import { useTagsViewStore } from '../stores/tagsView'
@@ -14,15 +14,36 @@ const userStore = useUserStore()
 const permissionStore = usePermissionStore()
 const tagsStore = useTagsViewStore()
 const isCollapse = ref(false)
+const notificationVisible = ref(false)
+const notificationLoading = ref(false)
+const notifications = ref<any[]>([])
+const unreadCount = ref(0)
+let notificationTimer: number | undefined
 
 // 修改密码
 const pwdVisible = ref(false)
 const pwdForm = ref({ old_password: '', new_password: '', confirm_password: '' })
 
-const activeMenu = computed(() => route.path)
+const activeMenu = computed(() => (route.meta?.activeMenu as string) || route.path)
 
-// 从 permissionStore 获取菜单树
-const menuTree = computed(() => permissionStore.menus)
+function filterSidebarMenus(items: any[]): any[] {
+  const result: any[] = []
+  for (const item of items || []) {
+    if (item.type === 3 || item.visible === 0 || item.component === 'TicketDetail') continue
+    const children = item.children?.length ? filterSidebarMenus(item.children) : []
+    if (children.length > 0) {
+      result.push({ ...item, children })
+      continue
+    }
+    if (item.path) {
+      result.push({ ...item, children: [] })
+    }
+  }
+  return result
+}
+
+// 从 permissionStore 获取菜单树，并过滤掉不应该出现在侧边栏的路由入口。
+const menuTree = computed(() => filterSidebarMenus(permissionStore.menus))
 
 // 标签页：路由变化时自动添加
 watch(() => route.path, (path) => {
@@ -97,6 +118,16 @@ onMounted(async () => {
       router.push('/login')
     }
   }
+  fetchUnreadCount()
+  notificationTimer = window.setInterval(() => {
+    fetchUnreadCount()
+  }, 30000)
+})
+
+onBeforeUnmount(() => {
+  if (notificationTimer) {
+    window.clearInterval(notificationTimer)
+  }
 })
 
 async function handleLogout() {
@@ -104,8 +135,37 @@ async function handleLogout() {
     await ElMessageBox.confirm('确定退出登录？', '提示', { type: 'warning' })
     await userStore.logout()
     permissionStore.reset()
+    tagsStore.reset()
     resetRouter()
     router.push('/login')
+  } catch {}
+}
+
+async function fetchUnreadCount() {
+  try {
+    const res: any = await notificationApi.unreadCount()
+    unreadCount.value = res.data?.count || 0
+  } catch {}
+}
+
+async function openNotifications() {
+  notificationVisible.value = true
+  notificationLoading.value = true
+  try {
+    const res: any = await notificationApi.inApp()
+    notifications.value = res.data || []
+  } finally {
+    notificationLoading.value = false
+    fetchUnreadCount()
+  }
+}
+
+async function markNotificationRead(item: any) {
+  if (item.read_at) return
+  try {
+    await notificationApi.markRead(item.id)
+    item.read_at = new Date().toISOString()
+    fetchUnreadCount()
   } catch {}
 }
 
@@ -124,6 +184,7 @@ async function submitPwd() {
     pwdVisible.value = false
     userStore.clearToken()
     permissionStore.reset()
+    tagsStore.reset()
     resetRouter()
     router.push('/login')
   } catch {}
@@ -184,6 +245,11 @@ async function submitPwd() {
           </el-breadcrumb>
         </div>
         <div class="header-right">
+          <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="notice-badge">
+            <el-button circle text @click="openNotifications">
+              <el-icon><Bell /></el-icon>
+            </el-button>
+          </el-badge>
           <el-dropdown trigger="click">
             <span class="user-drop">
               <el-icon><User /></el-icon>
@@ -253,6 +319,29 @@ async function submitPwd() {
         <el-button type="primary" @click="submitPwd">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-drawer v-model="notificationVisible" title="站内通知" size="420px">
+      <div class="notification-list" v-loading="notificationLoading">
+        <div
+          v-for="item in notifications"
+          :key="item.id"
+          class="notification-item"
+          :class="{ unread: !item.read_at }"
+          @click="markNotificationRead(item)"
+        >
+          <div class="notification-title-row">
+            <span class="notification-title">{{ item.title }}</span>
+            <el-tag v-if="!item.read_at" size="small" type="danger">未读</el-tag>
+          </div>
+          <div class="notification-content">{{ item.content }}</div>
+          <div class="notification-meta">
+            <span>{{ item.created_at }}</span>
+            <span>{{ item.level }}</span>
+          </div>
+        </div>
+        <el-empty v-if="!notificationLoading && notifications.length === 0" description="暂无通知" />
+      </div>
+    </el-drawer>
   </el-container>
 </template>
 
@@ -264,9 +353,11 @@ async function submitPwd() {
 .header-left { display: flex; align-items: center; gap: 12px; }
 .collapse-btn { font-size: 20px; cursor: pointer; }
 .breadcrumb { margin-left: 4px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
 .user-drop { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 14px; color: #606266; }
 .main { background: #f0f2f5; }
 .el-menu { border-right: none; }
+.notice-badge :deep(.el-badge__content) { top: 6px; right: 6px; }
 
 /* 标签栏 */
 .tags-bar {
@@ -318,4 +409,50 @@ async function submitPwd() {
   cursor: pointer;
 }
 .ctx-item:hover { background: #ecf5ff; color: #409eff; }
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notification-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.notification-item.unread {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.notification-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.notification-title {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.notification-content {
+  margin-top: 6px;
+  color: #4b5563;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.notification-meta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  color: #9ca3af;
+  font-size: 12px;
+}
 </style>

@@ -33,3 +33,29 @@ log:
   max_backups: 10
   max_age: 30
   compress: true
+
+notification:
+  default_channels:
+    - in_app
+  max_retries: 3
+  retry_interval_seconds: 60
+  retry_scan_interval_seconds: 60
+  webhook:
+    enabled: false
+    url: ""
+    secret: ""
+    timeout_seconds: 10
+  email:
+    enabled: false
+    host: ""
+    port: 25
+    username: ""
+    password: ""
+    from: ""
+  message_pusher:
+    enabled: false
+    server: ""
+    username: ""
+    token: ""
+    channel: ""
+    timeout_seconds: 10
