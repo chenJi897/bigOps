@@ -2537,6 +2537,805 @@ const docTemplate = `{
                 }
             }
         },
+        "/ticket-types": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单类型"
+                ],
+                "summary": "工单类型列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/model.TicketType"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单类型"
+                ],
+                "summary": "创建工单类型",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateTicketTypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ticket-types/all": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单类型"
+                ],
+                "summary": "全量工单类型",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.TicketType"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/ticket-types/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单类型"
+                ],
+                "summary": "更新工单类型",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateTicketTypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/ticket-types/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单类型"
+                ],
+                "summary": "删除工单类型",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "工单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "优先级",
+                        "name": "priority",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "工单类型ID",
+                        "name": "type_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "来源",
+                        "name": "source",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "my_created",
+                            "my_assigned",
+                            "my_dept",
+                            "all"
+                        ],
+                        "type": "string",
+                        "description": "范围",
+                        "name": "scope",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键字",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/model.Ticket"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "创建工单",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Ticket"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "工单详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Ticket"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/activities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "工单活动流",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/model.TicketActivity"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/approval-instance": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "工单审批链",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/assign": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "分配处理人",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "分配请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AssignTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "关闭工单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "关闭请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CloseTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/comment": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "添加评论",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "评论",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/process": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "处理工单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "处理请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ProcessTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/reopen": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "重新打开工单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "重开原因",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/tickets/{id}/transfer": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "工单管理"
+                ],
+                "summary": "转交工单",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "工单ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "转交请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.TransferTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "security": [
@@ -2948,6 +3747,18 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.AssignTicketRequest": {
+            "type": "object",
+            "required": [
+                "assignee_id"
+            ],
+            "properties": {
+                "assignee_id": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
         "handler.ChangePasswordRequest": {
             "type": "object",
             "required": [
@@ -2964,6 +3775,35 @@ const docTemplate = `{
                 "old_password": {
                     "type": "string",
                     "example": "OldPass123"
+                }
+            }
+        },
+        "handler.CloseTicketRequest": {
+            "type": "object",
+            "required": [
+                "resolution"
+            ],
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "example": "清理了日志文件"
+                },
+                "resolution": {
+                    "description": "fixed/wontfix/duplicate/invalid/workaround",
+                    "type": "string",
+                    "example": "fixed"
+                }
+            }
+        },
+        "handler.CommentRequest": {
+            "type": "object",
+            "required": [
+                "content"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "example": "已定位问题"
                 }
             }
         },
@@ -3018,6 +3858,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "7.9"
                 },
+                "owner_ids": {
+                    "type": "string",
+                    "example": "[1,5]"
+                },
                 "remark": {
                     "type": "string",
                     "example": "Web 前端服务器"
@@ -3060,6 +3904,10 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "阿里云生产环境"
+                },
+                "owner_ids": {
+                    "type": "string",
+                    "example": "[1,5]"
                 },
                 "provider": {
                     "type": "string",
@@ -3236,6 +4084,101 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.CreateTicketRequest": {
+            "type": "object",
+            "required": [
+                "title",
+                "type_id"
+            ],
+            "properties": {
+                "assignee_id": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "磁盘使用率超过90%"
+                },
+                "extra_fields": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "handle_dept_id": {
+                    "type": "integer"
+                },
+                "priority": {
+                    "type": "string",
+                    "example": "high"
+                },
+                "request_template_id": {
+                    "type": "integer"
+                },
+                "resource_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "resource_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "resource_type": {
+                    "type": "string",
+                    "example": "asset"
+                },
+                "ticket_kind": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "服务器磁盘告警"
+                },
+                "type_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handler.CreateTicketTypeRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "auto_assign_rule": {
+                    "type": "string",
+                    "example": "resource_owner"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "incident"
+                },
+                "default_assignee": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "handle_dept_id": {
+                    "type": "integer"
+                },
+                "icon": {
+                    "type": "string",
+                    "example": "Warning"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "故障报修"
+                },
+                "priority": {
+                    "type": "string",
+                    "example": "medium"
+                },
+                "sort": {
+                    "type": "integer"
+                }
+            }
+        },
         "handler.DistItem": {
             "type": "object",
             "properties": {
@@ -3270,6 +4213,23 @@ const docTemplate = `{
                 "parent_id": {
                     "type": "integer",
                     "example": 0
+                }
+            }
+        },
+        "handler.ProcessTicketRequest": {
+            "type": "object",
+            "required": [
+                "action"
+            ],
+            "properties": {
+                "action": {
+                    "description": "resolve/reject",
+                    "type": "string",
+                    "example": "resolve"
+                },
+                "content": {
+                    "type": "string",
+                    "example": "已处理完成"
                 }
             }
         },
@@ -3363,6 +4323,12 @@ const docTemplate = `{
                 "service_tree_total": {
                     "type": "integer"
                 },
+                "ticket_open": {
+                    "type": "integer"
+                },
+                "ticket_total": {
+                    "type": "integer"
+                },
                 "user_total": {
                     "type": "integer"
                 }
@@ -3379,6 +4345,22 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "handler.TransferTicketRequest": {
+            "type": "object",
+            "required": [
+                "assignee_id"
+            ],
+            "properties": {
+                "assignee_id": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "content": {
+                    "type": "string",
+                    "example": "转交给更熟悉的同事"
                 }
             }
         },
@@ -3408,6 +4390,10 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "阿里云生产环境"
+                },
+                "owner_ids": {
+                    "type": "string",
+                    "example": "[1,5]"
                 },
                 "region": {
                     "type": "string",
@@ -3561,6 +4547,11 @@ const docTemplate = `{
                 "disk_gb": {
                     "type": "integer"
                 },
+                "expired_at": {
+                    "description": "到期时间（云实例）",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
                 "hostname": {
                     "type": "string"
                 },
@@ -3599,6 +4590,17 @@ const docTemplate = `{
                 },
                 "os_version": {
                     "type": "string"
+                },
+                "owner_ids": {
+                    "description": "负责人ID列表 JSON [1,5]",
+                    "type": "string"
+                },
+                "owner_names": {
+                    "description": "关联查询",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "remark": {
                     "type": "string"
@@ -3730,6 +4732,17 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "owner_ids": {
+                    "description": "负责人ID列表 JSON [1,5]",
+                    "type": "string"
+                },
+                "owner_names": {
+                    "description": "关联查询",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "provider": {
                     "description": "aliyun/tencent/aws",
@@ -4016,6 +5029,239 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "sort": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "model.Ticket": {
+            "type": "object",
+            "properties": {
+                "approval_instance_id": {
+                    "type": "integer"
+                },
+                "approval_status": {
+                    "description": "not_required/pending/in_progress/approved/rejected/canceled",
+                    "type": "string"
+                },
+                "assignee_id": {
+                    "type": "integer"
+                },
+                "assignee_name": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "creator_id": {
+                    "description": "人员",
+                    "type": "integer"
+                },
+                "creator_name": {
+                    "type": "string"
+                },
+                "dedupe_key": {
+                    "type": "string"
+                },
+                "description": {
+                    "description": "内容",
+                    "type": "string"
+                },
+                "execution_status": {
+                    "description": "not_started/pending/running/succeeded/failed/canceled",
+                    "type": "string"
+                },
+                "extra_fields": {
+                    "type": "string"
+                },
+                "handle_dept_id": {
+                    "type": "integer"
+                },
+                "handle_dept_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "priority": {
+                    "description": "low/medium/high/urgent",
+                    "type": "string"
+                },
+                "request_template_id": {
+                    "type": "integer"
+                },
+                "request_template_name": {
+                    "type": "string"
+                },
+                "resolution": {
+                    "description": "处理结果",
+                    "type": "string"
+                },
+                "resolution_note": {
+                    "type": "string"
+                },
+                "resolved_at": {
+                    "description": "时间",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "resource_id": {
+                    "type": "integer"
+                },
+                "resource_name": {
+                    "type": "string"
+                },
+                "resource_type": {
+                    "description": "通用资源关联",
+                    "type": "string"
+                },
+                "responded_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "service_tree_id": {
+                    "description": "快捷访问",
+                    "type": "integer"
+                },
+                "sla_deadline": {
+                    "description": "SLA 预留",
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "source": {
+                    "description": "来源",
+                    "type": "string"
+                },
+                "source_event_id": {
+                    "type": "string"
+                },
+                "source_event_type": {
+                    "description": "alert/sync_failed/pipeline_failed/k8s_event",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "状态",
+                    "type": "string"
+                },
+                "submit_dept_id": {
+                    "description": "部门",
+                    "type": "integer"
+                },
+                "submit_dept_name": {
+                    "type": "string"
+                },
+                "ticket_kind": {
+                    "description": "incident/request/change",
+                    "type": "string"
+                },
+                "ticket_no": {
+                    "description": "TK-20260324-0001",
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type_id": {
+                    "type": "integer"
+                },
+                "type_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "model.TicketActivity": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_system": {
+                    "type": "boolean"
+                },
+                "new_value": {
+                    "type": "string"
+                },
+                "old_value": {
+                    "type": "string"
+                },
+                "ticket_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "create/assign/comment/resolve/close/reject/reopen/transfer/sla_warn/auto_create",
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.TicketType": {
+            "type": "object",
+            "properties": {
+                "auto_assign_rule": {
+                    "description": "manual/resource_owner/service_owner/dept_default",
+                    "type": "string"
+                },
+                "code": {
+                    "description": "incident/access/resource/change",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "default_assignee": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "handle_dept_id": {
+                    "type": "integer"
+                },
+                "handle_dept_name": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "故障报修/权限申请/资源申请",
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "string"
+                },
+                "sort": {
+                    "type": "integer"
+                },
+                "status": {
                     "type": "integer"
                 },
                 "updated_at": {

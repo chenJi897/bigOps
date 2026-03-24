@@ -15,6 +15,14 @@ definitions:
           $ref: '#/definitions/handler.TopItem'
         type: array
     type: object
+  handler.AssignTicketRequest:
+    properties:
+      assignee_id:
+        example: 3
+        type: integer
+    required:
+    - assignee_id
+    type: object
   handler.ChangePasswordRequest:
     properties:
       new_password:
@@ -28,6 +36,26 @@ definitions:
     required:
     - new_password
     - old_password
+    type: object
+  handler.CloseTicketRequest:
+    properties:
+      note:
+        example: 清理了日志文件
+        type: string
+      resolution:
+        description: fixed/wontfix/duplicate/invalid/workaround
+        example: fixed
+        type: string
+    required:
+    - resolution
+    type: object
+  handler.CommentRequest:
+    properties:
+      content:
+        example: 已定位问题
+        type: string
+    required:
+    - content
     type: object
   handler.CreateAssetRequest:
     properties:
@@ -64,6 +92,9 @@ definitions:
       os_version:
         example: "7.9"
         type: string
+      owner_ids:
+        example: '[1,5]'
+        type: string
       remark:
         example: Web 前端服务器
         type: string
@@ -93,6 +124,9 @@ definitions:
         type: string
       name:
         example: 阿里云生产环境
+        type: string
+      owner_ids:
+        example: '[1,5]'
         type: string
       provider:
         enum:
@@ -228,6 +262,73 @@ definitions:
     required:
     - name
     type: object
+  handler.CreateTicketRequest:
+    properties:
+      assignee_id:
+        type: integer
+      description:
+        example: 磁盘使用率超过90%
+        type: string
+      extra_fields:
+        additionalProperties: true
+        type: object
+      handle_dept_id:
+        type: integer
+      priority:
+        example: high
+        type: string
+      request_template_id:
+        type: integer
+      resource_id:
+        example: 1
+        type: integer
+      resource_ids:
+        items:
+          type: integer
+        type: array
+      resource_type:
+        example: asset
+        type: string
+      ticket_kind:
+        type: string
+      title:
+        example: 服务器磁盘告警
+        type: string
+      type_id:
+        example: 1
+        type: integer
+    required:
+    - title
+    - type_id
+    type: object
+  handler.CreateTicketTypeRequest:
+    properties:
+      auto_assign_rule:
+        example: resource_owner
+        type: string
+      code:
+        example: incident
+        type: string
+      default_assignee:
+        type: integer
+      description:
+        type: string
+      handle_dept_id:
+        type: integer
+      icon:
+        example: Warning
+        type: string
+      name:
+        example: 故障报修
+        type: string
+      priority:
+        example: medium
+        type: string
+      sort:
+        type: integer
+    required:
+    - name
+    type: object
   handler.DistItem:
     properties:
       count:
@@ -252,6 +353,18 @@ definitions:
       parent_id:
         example: 0
         type: integer
+    type: object
+  handler.ProcessTicketRequest:
+    properties:
+      action:
+        description: resolve/reject
+        example: resolve
+        type: string
+      content:
+        example: 已处理完成
+        type: string
+    required:
+    - action
     type: object
   handler.RegisterRequest:
     properties:
@@ -316,6 +429,10 @@ definitions:
         type: integer
       service_tree_total:
         type: integer
+      ticket_open:
+        type: integer
+      ticket_total:
+        type: integer
       user_total:
         type: integer
     type: object
@@ -327,6 +444,17 @@ definitions:
         type: integer
       name:
         type: string
+    type: object
+  handler.TransferTicketRequest:
+    properties:
+      assignee_id:
+        example: 5
+        type: integer
+      content:
+        example: 转交给更熟悉的同事
+        type: string
+    required:
+    - assignee_id
     type: object
   handler.UpdateCloudAccountKeysRequest:
     properties:
@@ -344,6 +472,9 @@ definitions:
     properties:
       name:
         example: 阿里云生产环境
+        type: string
+      owner_ids:
+        example: '[1,5]'
         type: string
       region:
         example: cn-hangzhou,cn-beijing
@@ -455,6 +586,10 @@ definitions:
         type: string
       disk_gb:
         type: integer
+      expired_at:
+        description: 到期时间（云实例）
+        example: "2024-01-01 00:00:00"
+        type: string
       hostname:
         type: string
       id:
@@ -483,6 +618,14 @@ definitions:
         type: string
       os_version:
         type: string
+      owner_ids:
+        description: 负责人ID列表 JSON [1,5]
+        type: string
+      owner_names:
+        description: 关联查询
+        items:
+          type: string
+        type: array
       remark:
         type: string
       service_tree_id:
@@ -574,6 +717,14 @@ definitions:
         type: string
       name:
         type: string
+      owner_ids:
+        description: 负责人ID列表 JSON [1,5]
+        type: string
+      owner_names:
+        description: 关联查询
+        items:
+          type: string
+        type: array
       provider:
         description: aliyun/tencent/aws
         type: string
@@ -775,6 +926,170 @@ definitions:
       parent_id:
         type: integer
       sort:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.Ticket:
+    properties:
+      approval_instance_id:
+        type: integer
+      approval_status:
+        description: not_required/pending/in_progress/approved/rejected/canceled
+        type: string
+      assignee_id:
+        type: integer
+      assignee_name:
+        type: string
+      closed_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      creator_id:
+        description: 人员
+        type: integer
+      creator_name:
+        type: string
+      dedupe_key:
+        type: string
+      description:
+        description: 内容
+        type: string
+      execution_status:
+        description: not_started/pending/running/succeeded/failed/canceled
+        type: string
+      extra_fields:
+        type: string
+      handle_dept_id:
+        type: integer
+      handle_dept_name:
+        type: string
+      id:
+        type: integer
+      priority:
+        description: low/medium/high/urgent
+        type: string
+      request_template_id:
+        type: integer
+      request_template_name:
+        type: string
+      resolution:
+        description: 处理结果
+        type: string
+      resolution_note:
+        type: string
+      resolved_at:
+        description: 时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      resource_id:
+        type: integer
+      resource_name:
+        type: string
+      resource_type:
+        description: 通用资源关联
+        type: string
+      responded_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      service_tree_id:
+        description: 快捷访问
+        type: integer
+      sla_deadline:
+        description: SLA 预留
+        example: "2024-01-01 00:00:00"
+        type: string
+      source:
+        description: 来源
+        type: string
+      source_event_id:
+        type: string
+      source_event_type:
+        description: alert/sync_failed/pipeline_failed/k8s_event
+        type: string
+      status:
+        description: 状态
+        type: string
+      submit_dept_id:
+        description: 部门
+        type: integer
+      submit_dept_name:
+        type: string
+      ticket_kind:
+        description: incident/request/change
+        type: string
+      ticket_no:
+        description: TK-20260324-0001
+        type: string
+      title:
+        type: string
+      type_id:
+        type: integer
+      type_name:
+        type: string
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.TicketActivity:
+    properties:
+      content:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        type: integer
+      is_system:
+        type: boolean
+      new_value:
+        type: string
+      old_value:
+        type: string
+      ticket_id:
+        type: integer
+      type:
+        description: create/assign/comment/resolve/close/reject/reopen/transfer/sla_warn/auto_create
+        type: string
+      user_id:
+        type: integer
+      user_name:
+        type: string
+    type: object
+  model.TicketType:
+    properties:
+      auto_assign_rule:
+        description: manual/resource_owner/service_owner/dept_default
+        type: string
+      code:
+        description: incident/access/resource/change
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      default_assignee:
+        type: integer
+      description:
+        type: string
+      handle_dept_id:
+        type: integer
+      handle_dept_name:
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      name:
+        description: 故障报修/权限申请/资源申请
+        type: string
+      priority:
+        type: string
+      sort:
+        type: integer
+      status:
         type: integer
       updated_at:
         example: "2024-01-01 00:00:00"
@@ -2363,6 +2678,482 @@ paths:
       summary: 同步任务日志列表
       tags:
       - 同步日志
+  /ticket-types:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.TicketType'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单类型列表
+      tags:
+      - 工单类型
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTicketTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建工单类型
+      tags:
+      - 工单类型
+  /ticket-types/{id}:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTicketTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新工单类型
+      tags:
+      - 工单类型
+  /ticket-types/{id}/delete:
+    post:
+      parameters:
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除工单类型
+      tags:
+      - 工单类型
+  /ticket-types/all:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.TicketType'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 全量工单类型
+      tags:
+      - 工单类型
+  /tickets:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 状态
+        in: query
+        name: status
+        type: string
+      - description: 优先级
+        in: query
+        name: priority
+        type: string
+      - description: 工单类型ID
+        in: query
+        name: type_id
+        type: integer
+      - description: 来源
+        in: query
+        name: source
+        type: string
+      - description: 范围
+        enum:
+        - my_created
+        - my_assigned
+        - my_dept
+        - all
+        in: query
+        name: scope
+        type: string
+      - description: 关键字
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.Ticket'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单列表
+      tags:
+      - 工单管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Ticket'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 创建工单
+      tags:
+      - 工单管理
+  /tickets/{id}:
+    get:
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Ticket'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单详情
+      tags:
+      - 工单管理
+  /tickets/{id}/activities:
+    get:
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.TicketActivity'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单活动流
+      tags:
+      - 工单管理
+  /tickets/{id}/approval-instance:
+    get:
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 工单审批链
+      tags:
+      - 工单管理
+  /tickets/{id}/assign:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 分配请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AssignTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 分配处理人
+      tags:
+      - 工单管理
+  /tickets/{id}/close:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 关闭请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CloseTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 关闭工单
+      tags:
+      - 工单管理
+  /tickets/{id}/comment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 评论
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 添加评论
+      tags:
+      - 工单管理
+  /tickets/{id}/process:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 处理请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ProcessTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 处理工单
+      tags:
+      - 工单管理
+  /tickets/{id}/reopen:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 重开原因
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 重新打开工单
+      tags:
+      - 工单管理
+  /tickets/{id}/transfer:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 转交请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TransferTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 转交工单
+      tags:
+      - 工单管理
   /users:
     get:
       description: 分页获取用户列表，支持关键字模糊搜索（用户名/邮箱/姓名）
