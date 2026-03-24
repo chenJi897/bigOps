@@ -145,6 +145,27 @@ func Setup(mode string) *gin.Engine {
 			statsHandler := handler.NewStatsHandler()
 			authGroup.GET("/stats/summary", statsHandler.Summary)
 			authGroup.GET("/stats/asset-distribution", statsHandler.AssetDistribution)
+
+			// --- 工单类型 ---
+			ticketTypeHandler := handler.NewTicketTypeHandler()
+			authGroup.GET("/ticket-types", ticketTypeHandler.List)
+			authGroup.GET("/ticket-types/all", ticketTypeHandler.GetAll)
+			authGroup.POST("/ticket-types", ticketTypeHandler.Create)
+			authGroup.POST("/ticket-types/:id", ticketTypeHandler.Update)
+			authGroup.POST("/ticket-types/:id/delete", ticketTypeHandler.Delete)
+
+			// --- 工单管理 ---
+			ticketHandler := handler.NewTicketHandler()
+			authGroup.GET("/tickets", ticketHandler.List)
+			authGroup.GET("/tickets/:id", ticketHandler.GetByID)
+			authGroup.POST("/tickets", ticketHandler.Create)
+			authGroup.POST("/tickets/:id/assign", ticketHandler.Assign)
+			authGroup.POST("/tickets/:id/process", ticketHandler.Process)
+			authGroup.POST("/tickets/:id/close", ticketHandler.Close)
+			authGroup.POST("/tickets/:id/reopen", ticketHandler.Reopen)
+			authGroup.POST("/tickets/:id/comment", ticketHandler.Comment)
+			authGroup.POST("/tickets/:id/transfer", ticketHandler.Transfer)
+			authGroup.GET("/tickets/:id/activities", ticketHandler.Activities)
 		}
 	}
 
