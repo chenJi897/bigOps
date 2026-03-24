@@ -22,6 +22,8 @@ type SummaryResponse struct {
 	ServiceTreeTotal   int64 `json:"service_tree_total"`
 	UserTotal          int64 `json:"user_total"`
 	DepartmentTotal    int64 `json:"department_total"`
+	TicketOpen         int64 `json:"ticket_open"`
+	TicketTotal        int64 `json:"ticket_total"`
 }
 
 // Summary 平台摘要统计。
@@ -44,6 +46,8 @@ func (h *StatsHandler) Summary(c *gin.Context) {
 	db.Table("service_trees").Where("deleted_at IS NULL").Count(&s.ServiceTreeTotal)
 	db.Table("users").Where("deleted_at IS NULL").Count(&s.UserTotal)
 	db.Table("departments").Where("deleted_at IS NULL").Count(&s.DepartmentTotal)
+	db.Table("tickets").Where("deleted_at IS NULL").Count(&s.TicketTotal)
+	db.Table("tickets").Where("deleted_at IS NULL AND status IN ('open','processing')").Count(&s.TicketOpen)
 
 	response.Success(c, s)
 }

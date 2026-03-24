@@ -138,4 +138,27 @@ export const assetApi = {
   changes: (id: number, page = 1, size = 20) => api.get(`/assets/${id}/changes`, { params: { page, size } }),
 }
 
+// 工单类型
+export const ticketTypeApi = {
+  list: (page = 1, size = 20) => api.get('/ticket-types', { params: { page, size } }),
+  all: () => api.get('/ticket-types/all'),
+  create: (data: any) => api.post('/ticket-types', data),
+  update: (id: number, data: any) => api.post(`/ticket-types/${id}`, data),
+  delete: (id: number) => api.post(`/ticket-types/${id}/delete`),
+}
+
+// 工单管理
+export const ticketApi = {
+  list: (params: any) => api.get('/tickets', { params }),
+  getById: (id: number) => api.get(`/tickets/${id}`),
+  create: (data: any) => api.post('/tickets', data),
+  assign: (id: number, assignee_id: number) => api.post(`/tickets/${id}/assign`, { assignee_id }),
+  process: (id: number, action: string, content: string) => api.post(`/tickets/${id}/process`, { action, content }),
+  close: (id: number, resolution: string, note: string) => api.post(`/tickets/${id}/close`, { resolution, note }),
+  reopen: (id: number, content: string) => api.post(`/tickets/${id}/reopen`, { content }),
+  comment: (id: number, content: string) => api.post(`/tickets/${id}/comment`, { content }),
+  transfer: (id: number, assignee_id: number, content: string) => api.post(`/tickets/${id}/transfer`, { assignee_id, content }),
+  activities: (id: number, page = 1, size = 50) => api.get(`/tickets/${id}/activities`, { params: { page, size } }),
+}
+
 export default api

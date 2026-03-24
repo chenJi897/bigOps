@@ -37,6 +37,10 @@ const viewModules: Record<string, () => Promise<any>> = {
   'CloudAccounts': () => import('../views/CloudAccounts.vue'),
   'Assets': () => import('../views/Assets.vue'),
   'Departments': () => import('../views/Departments.vue'),
+  'TicketTypes': () => import('../views/TicketTypes.vue'),
+  'TicketList': () => import('../views/TicketList.vue'),
+  'TicketCreate': () => import('../views/TicketCreate.vue'),
+  'TicketDetail': () => import('../views/TicketDetail.vue'),
 }
 
 // 系统管理静态路由（仪表盘始终可访问）
