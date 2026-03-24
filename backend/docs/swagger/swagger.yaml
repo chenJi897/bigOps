@@ -1,0 +1,3906 @@
+basePath: /api/v1
+definitions:
+  handler.AssetDistributionResponse:
+    properties:
+      source_dist:
+        items:
+          $ref: '#/definitions/handler.DistItem'
+        type: array
+      status_dist:
+        items:
+          $ref: '#/definitions/handler.DistItem'
+        type: array
+      top_services:
+        items:
+          $ref: '#/definitions/handler.TopItem'
+        type: array
+    type: object
+  handler.AssignTicketRequest:
+    properties:
+      assignee_id:
+        example: 3
+        type: integer
+    required:
+    - assignee_id
+    type: object
+  handler.ChangePasswordRequest:
+    properties:
+      new_password:
+        example: NewPass456
+        maxLength: 50
+        minLength: 6
+        type: string
+      old_password:
+        example: OldPass123
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  handler.CloseTicketRequest:
+    properties:
+      note:
+        example: 清理了日志文件
+        type: string
+      resolution:
+        description: fixed/wontfix/duplicate/invalid/workaround
+        example: fixed
+        type: string
+    required:
+    - resolution
+    type: object
+  handler.CommentRequest:
+    properties:
+      content:
+        example: 已定位问题
+        type: string
+    required:
+    - content
+    type: object
+  handler.CreateAssetRequest:
+    properties:
+      asset_type:
+        enum:
+        - server
+        - network
+        example: server
+        type: string
+      cpu_cores:
+        example: 4
+        type: integer
+      disk_gb:
+        example: 200
+        type: integer
+      hostname:
+        example: web-server-01
+        type: string
+      idc:
+        example: 杭州
+        type: string
+      inner_ip:
+        example: 192.168.1.1
+        type: string
+      ip:
+        example: 10.0.1.1
+        type: string
+      memory_mb:
+        example: 8192
+        type: integer
+      os:
+        example: CentOS
+        type: string
+      os_version:
+        example: "7.9"
+        type: string
+      owner_ids:
+        example: '[1,5]'
+        type: string
+      remark:
+        example: Web 前端服务器
+        type: string
+      service_tree_id:
+        example: 1
+        type: integer
+      sn:
+        example: SN12345
+        type: string
+      status:
+        enum:
+        - online
+        - offline
+        example: online
+        type: string
+      tags:
+        example: '["production","web"]'
+        type: string
+    required:
+    - hostname
+    - ip
+    type: object
+  handler.CreateCloudAccountRequest:
+    properties:
+      access_key:
+        example: LTAI5t...
+        type: string
+      name:
+        example: 阿里云生产环境
+        type: string
+      owner_ids:
+        example: '[1,5]'
+        type: string
+      provider:
+        enum:
+        - aliyun
+        - tencent
+        - aws
+        example: aliyun
+        type: string
+      region:
+        example: cn-hangzhou,cn-beijing
+        type: string
+      secret_key:
+        example: xxxxxxxx
+        type: string
+      service_tree_id:
+        example: 1
+        type: integer
+    required:
+    - access_key
+    - name
+    - provider
+    - secret_key
+    type: object
+  handler.CreateDepartmentRequest:
+    properties:
+      code:
+        example: ops
+        type: string
+      description:
+        example: 负责基础设施运维
+        type: string
+      manager_id:
+        example: 1
+        type: integer
+      name:
+        example: 运维部
+        type: string
+      sort:
+        example: 1
+        type: integer
+    required:
+    - name
+    type: object
+  handler.CreateMenuRequest:
+    properties:
+      api_method:
+        example: GET
+        type: string
+      api_path:
+        example: /api/v1/users
+        type: string
+      component:
+        example: Layout
+        type: string
+      icon:
+        example: setting
+        type: string
+      name:
+        example: system
+        type: string
+      parent_id:
+        example: 0
+        type: integer
+      path:
+        example: /system
+        type: string
+      sort:
+        example: 1
+        type: integer
+      title:
+        example: 系统管理
+        type: string
+      type:
+        description: 1:目录 2:菜单 3:按钮/权限
+        enum:
+        - 1
+        - 2
+        - 3
+        example: 1
+        type: integer
+      visible:
+        description: 0:隐藏 1:显示
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    required:
+    - name
+    - title
+    - type
+    type: object
+  handler.CreateRoleRequest:
+    properties:
+      description:
+        example: 内容编辑角色
+        type: string
+      display_name:
+        example: 编辑员
+        type: string
+      name:
+        example: editor
+        maxLength: 50
+        minLength: 2
+        type: string
+      sort:
+        example: 1
+        type: integer
+    required:
+    - display_name
+    - name
+    type: object
+  handler.CreateServiceTreeRequest:
+    properties:
+      code:
+        example: infra
+        type: string
+      description:
+        example: 基础架构部
+        type: string
+      name:
+        example: 基础架构
+        type: string
+      owner_id:
+        example: 1
+        type: integer
+      parent_id:
+        example: 0
+        type: integer
+      sort:
+        example: 1
+        type: integer
+    required:
+    - name
+    type: object
+  handler.CreateTaskRequest:
+    properties:
+      description:
+        example: 清理临时文件
+        type: string
+      name:
+        example: 磁盘清理脚本
+        type: string
+      run_as_user:
+        example: root
+        type: string
+      script_content:
+        example: df -h
+        type: string
+      script_type:
+        example: bash
+        type: string
+      task_type:
+        example: shell
+        type: string
+      timeout:
+        example: 60
+        type: integer
+    required:
+    - name
+    type: object
+  handler.CreateTicketRequest:
+    properties:
+      assignee_id:
+        type: integer
+      description:
+        example: 磁盘使用率超过90%
+        type: string
+      extra_fields:
+        additionalProperties: true
+        type: object
+      handle_dept_id:
+        type: integer
+      priority:
+        example: high
+        type: string
+      request_template_id:
+        type: integer
+      resource_id:
+        example: 1
+        type: integer
+      resource_ids:
+        items:
+          type: integer
+        type: array
+      resource_type:
+        example: asset
+        type: string
+      ticket_kind:
+        type: string
+      title:
+        example: 服务器磁盘告警
+        type: string
+      type_id:
+        example: 1
+        type: integer
+    required:
+    - title
+    - type_id
+    type: object
+  handler.CreateTicketTypeRequest:
+    properties:
+      auto_assign_rule:
+        example: resource_owner
+        type: string
+      code:
+        example: incident
+        type: string
+      default_assignee:
+        type: integer
+      description:
+        type: string
+      handle_dept_id:
+        type: integer
+      icon:
+        example: Warning
+        type: string
+      name:
+        example: 故障报修
+        type: string
+      priority:
+        example: medium
+        type: string
+      sort:
+        type: integer
+    required:
+    - name
+    type: object
+  handler.DistItem:
+    properties:
+      count:
+        type: integer
+      label:
+        type: string
+    type: object
+  handler.ExecuteTaskRequest:
+    properties:
+      host_ips:
+        example:
+        - 10.0.0.1
+        - 10.0.0.2
+        items:
+          type: string
+        type: array
+    required:
+    - host_ips
+    type: object
+  handler.LoginRequest:
+    properties:
+      password:
+        example: Admin123
+        type: string
+      username:
+        example: admin
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handler.MoveServiceTreeRequest:
+    properties:
+      parent_id:
+        example: 0
+        type: integer
+    type: object
+  handler.ProcessTicketRequest:
+    properties:
+      action:
+        description: resolve/reject
+        example: resolve
+        type: string
+      content:
+        example: 已处理完成
+        type: string
+    required:
+    - action
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: Pass123456
+        maxLength: 50
+        minLength: 6
+        type: string
+      username:
+        example: johndoe
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handler.SetDepartmentRequest:
+    properties:
+      department_id:
+        example: 1
+        type: integer
+    type: object
+  handler.SetMenusRequest:
+    properties:
+      menu_ids:
+        example:
+        - 1
+        - 2
+        - 3
+        items:
+          type: integer
+        type: array
+    type: object
+  handler.SetUserRolesRequest:
+    properties:
+      role_ids:
+        example:
+        - 1
+        - 2
+        items:
+          type: integer
+        type: array
+    type: object
+  handler.SummaryResponse:
+    properties:
+      asset_offline:
+        type: integer
+      asset_online:
+        type: integer
+      asset_total:
+        type: integer
+      cloud_account_failed:
+        description: last_sync_status=failed
+        type: integer
+      cloud_account_total:
+        type: integer
+      department_total:
+        type: integer
+      service_tree_total:
+        type: integer
+      ticket_open:
+        type: integer
+      ticket_total:
+        type: integer
+      user_total:
+        type: integer
+    type: object
+  handler.TopItem:
+    properties:
+      count:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  handler.TransferTicketRequest:
+    properties:
+      assignee_id:
+        example: 5
+        type: integer
+      content:
+        example: 转交给更熟悉的同事
+        type: string
+    required:
+    - assignee_id
+    type: object
+  handler.UpdateCloudAccountKeysRequest:
+    properties:
+      access_key:
+        example: LTAI5t...
+        type: string
+      secret_key:
+        example: xxxxxxxx
+        type: string
+    required:
+    - access_key
+    - secret_key
+    type: object
+  handler.UpdateCloudAccountRequest:
+    properties:
+      name:
+        example: 阿里云生产环境
+        type: string
+      owner_ids:
+        example: '[1,5]'
+        type: string
+      region:
+        example: cn-hangzhou,cn-beijing
+        type: string
+      service_tree_id:
+        example: 1
+        type: integer
+      status:
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    required:
+    - name
+    type: object
+  handler.UpdateRoleRequest:
+    properties:
+      description:
+        example: 内容编辑角色
+        type: string
+      display_name:
+        example: 编辑员
+        type: string
+      sort:
+        example: 1
+        type: integer
+    required:
+    - display_name
+    type: object
+  handler.UpdateRoleStatusRequest:
+    properties:
+      status:
+        description: 0:禁用 1:启用
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    type: object
+  handler.UpdateServiceTreeRequest:
+    properties:
+      code:
+        example: infra
+        type: string
+      description:
+        example: 基础架构部
+        type: string
+      name:
+        example: 基础架构
+        type: string
+      owner_id:
+        example: 1
+        type: integer
+      sort:
+        example: 1
+        type: integer
+    required:
+    - name
+    type: object
+  handler.UpdateSyncConfigRequest:
+    properties:
+      sync_enabled:
+        type: boolean
+      sync_interval:
+        description: '分钟: 0/10/30/60/1440'
+        example: 30
+        type: integer
+    type: object
+  handler.UpdateTaskRequest:
+    properties:
+      description:
+        example: 清理临时文件
+        type: string
+      name:
+        example: 磁盘清理脚本
+        type: string
+      run_as_user:
+        example: root
+        type: string
+      script_content:
+        example: df -h
+        type: string
+      script_type:
+        example: bash
+        type: string
+      task_type:
+        example: shell
+        type: string
+      timeout:
+        example: 60
+        type: integer
+    type: object
+  handler.UpdateUserRequest:
+    properties:
+      department_id:
+        example: 1
+        type: integer
+      email:
+        example: test@example.com
+        type: string
+      phone:
+        example: "13800138000"
+        type: string
+      real_name:
+        example: 张三
+        type: string
+    type: object
+  handler.UpdateUserStatusRequest:
+    properties:
+      status:
+        description: 0:禁用 1:启用
+        enum:
+        - 0
+        - 1
+        example: 1
+        type: integer
+    type: object
+  model.AgentInfo:
+    properties:
+      agent_id:
+        type: string
+      cpu_count:
+        type: integer
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      hostname:
+        type: string
+      id:
+        type: integer
+      ip:
+        type: string
+      labels:
+        type: string
+      last_heartbeat:
+        example: "2024-01-01 00:00:00"
+        type: string
+      memory_total:
+        type: integer
+      os:
+        type: string
+      status:
+        description: online/offline
+        type: string
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      version:
+        type: string
+    type: object
+  model.Asset:
+    properties:
+      asset_type:
+        description: server/network
+        type: string
+      cloud_account_id:
+        type: integer
+      cloud_instance_id:
+        description: 云实例ID，用于同步 upsert
+        type: string
+      cpu_cores:
+        type: integer
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      disk_gb:
+        type: integer
+      expired_at:
+        description: 到期时间（云实例）
+        example: "2024-01-01 00:00:00"
+        type: string
+      hostname:
+        type: string
+      id:
+        type: integer
+      idc:
+        type: string
+      inner_ip:
+        type: string
+      ip:
+        type: string
+      last_seen_at:
+        description: 最后在云端被发现的时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      last_sync_at:
+        description: 最后同步时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      memory_mb:
+        type: integer
+      offline_at:
+        description: 标记离线的时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      os:
+        type: string
+      os_version:
+        type: string
+      owner_ids:
+        description: 负责人ID列表 JSON [1,5]
+        type: string
+      owner_names:
+        description: 关联查询
+        items:
+          type: string
+        type: array
+      remark:
+        type: string
+      service_tree_id:
+        type: integer
+      service_tree_name:
+        description: 关联查询，不入库
+        type: string
+      service_tree_path:
+        description: 完整路径，如 "阿里云 / 北京 / xxx"
+        type: string
+      sn:
+        type: string
+      source:
+        description: manual/aliyun/tencent/aws
+        type: string
+      status:
+        description: online/offline
+        type: string
+      tags:
+        description: JSON 数组 ["tag1","tag2"]
+        type: string
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.AssetChange:
+    properties:
+      asset_id:
+        type: integer
+      change_type:
+        description: create/update/sync/delete
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      field:
+        type: string
+      id:
+        type: integer
+      new_value:
+        type: string
+      old_value:
+        type: string
+      operator_id:
+        type: integer
+      operator_name:
+        type: string
+    type: object
+  model.AuditLog:
+    properties:
+      action:
+        description: create/update/delete/login/logout
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      detail:
+        type: string
+      id:
+        type: integer
+      ip:
+        type: string
+      resource:
+        description: user/role/menu
+        type: string
+      resource_id:
+        type: integer
+      status_code:
+        type: integer
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  model.CloudAccount:
+    properties:
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        type: integer
+      last_sync_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      last_sync_message:
+        type: string
+      last_sync_status:
+        description: success/failed/syncing
+        type: string
+      name:
+        type: string
+      owner_ids:
+        description: 负责人ID列表 JSON [1,5]
+        type: string
+      owner_names:
+        description: 关联查询
+        items:
+          type: string
+        type: array
+      provider:
+        description: aliyun/tencent/aws
+        type: string
+      region:
+        description: 逗号分隔的地域列表
+        type: string
+      service_tree_id:
+        description: 关联服务树节点
+        type: integer
+      status:
+        description: 1=启用 0=禁用
+        type: integer
+      sync_enabled:
+        description: 是否启用定时同步
+        type: boolean
+      sync_interval:
+        description: 同步周期（分钟），0=不同步，10/30/60/1440
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.CloudSyncTask:
+    properties:
+      account_name:
+        description: 冗余，方便查询展示
+        type: string
+      cloud_account_id:
+        type: integer
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      created_count:
+        description: 新增数
+        type: integer
+      duration_ms:
+        description: 耗时毫秒
+        type: integer
+      error_message:
+        description: 失败原因
+        type: string
+      finished_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        type: integer
+      offline_count:
+        description: 下线数（云端消失）
+        type: integer
+      operator_id:
+        description: 手动触发时的操作人
+        type: integer
+      operator_name:
+        description: 操作人用户名
+        type: string
+      provider:
+        description: aliyun/tencent/aws
+        type: string
+      regions:
+        description: 本次同步的 region 列表
+        type: string
+      started_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      status:
+        description: running / success / failed
+        type: string
+      total_count:
+        description: 云端返回的实例总数
+        type: integer
+      trigger_type:
+        description: manual / schedule
+        type: string
+      unchanged_count:
+        description: 无变化数
+        type: integer
+      updated_count:
+        description: 更新数
+        type: integer
+    type: object
+  model.Department:
+    properties:
+      code:
+        description: 部门编码，如 dev/ops/qa
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      manager_id:
+        description: 部门负责人 user_id
+        type: integer
+      manager_name:
+        description: 关联查询，不入库
+        type: string
+      name:
+        type: string
+      sort:
+        type: integer
+      status:
+        description: 1=启用 0=禁用
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      user_count:
+        description: 关联统计，不入库
+        type: integer
+    type: object
+  model.Menu:
+    properties:
+      api_method:
+        type: string
+      api_path:
+        type: string
+      children:
+        items:
+          $ref: '#/definitions/model.Menu'
+        type: array
+      component:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      parent_id:
+        type: integer
+      path:
+        type: string
+      sort:
+        type: integer
+      status:
+        type: integer
+      title:
+        type: string
+      type:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      visible:
+        type: integer
+    type: object
+  model.Role:
+    properties:
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      menus:
+        items:
+          $ref: '#/definitions/model.Menu'
+        type: array
+      name:
+        type: string
+      sort:
+        type: integer
+      status:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.ServiceTree:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/model.ServiceTree'
+        type: array
+      code:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      level:
+        description: 1=业务线 2=产品 3=模块（不硬限制，支持N层）
+        type: integer
+      name:
+        type: string
+      owner_id:
+        type: integer
+      parent_id:
+        type: integer
+      sort:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.Task:
+    properties:
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      creator_id:
+        type: integer
+      creator_name:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      run_as_user:
+        type: string
+      script_content:
+        type: string
+      script_type:
+        description: bash/python/powershell
+        type: string
+      status:
+        description: 1=enabled, 0=disabled
+        type: integer
+      task_type:
+        description: shell/python/file_transfer
+        type: string
+      timeout:
+        description: seconds
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.TaskExecution:
+    properties:
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      fail_count:
+        type: integer
+      finished_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      host_results:
+        description: 关联加载
+        items:
+          $ref: '#/definitions/model.TaskHostResult'
+        type: array
+      id:
+        type: integer
+      operator_id:
+        type: integer
+      operator_name:
+        type: string
+      started_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      status:
+        description: pending/running/success/partial_fail/failed/canceled
+        type: string
+      success_count:
+        type: integer
+      target_hosts:
+        description: '["1.2.3.4","5.6.7.8"]'
+        type: string
+      task_id:
+        type: integer
+      task_name:
+        type: string
+      total_count:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.TaskHostResult:
+    properties:
+      agent_id:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      execution_id:
+        type: integer
+      exit_code:
+        type: integer
+      finished_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      host_ip:
+        type: string
+      hostname:
+        type: string
+      id:
+        type: integer
+      started_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      status:
+        description: pending/running/success/failed/timeout
+        type: string
+      stderr:
+        type: string
+      stdout:
+        type: string
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.Ticket:
+    properties:
+      approval_instance_id:
+        type: integer
+      approval_status:
+        description: not_required/pending/in_progress/approved/rejected/canceled
+        type: string
+      assignee_id:
+        type: integer
+      assignee_name:
+        type: string
+      closed_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      creator_id:
+        description: 人员
+        type: integer
+      creator_name:
+        type: string
+      dedupe_key:
+        type: string
+      description:
+        description: 内容
+        type: string
+      execution_status:
+        description: not_started/pending/running/succeeded/failed/canceled
+        type: string
+      extra_fields:
+        type: string
+      handle_dept_id:
+        type: integer
+      handle_dept_name:
+        type: string
+      id:
+        type: integer
+      priority:
+        description: low/medium/high/urgent
+        type: string
+      request_template_id:
+        type: integer
+      request_template_name:
+        type: string
+      resolution:
+        description: 处理结果
+        type: string
+      resolution_note:
+        type: string
+      resolved_at:
+        description: 时间
+        example: "2024-01-01 00:00:00"
+        type: string
+      resource_id:
+        type: integer
+      resource_name:
+        type: string
+      resource_type:
+        description: 通用资源关联
+        type: string
+      responded_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      service_tree_id:
+        description: 快捷访问
+        type: integer
+      sla_deadline:
+        description: SLA 预留
+        example: "2024-01-01 00:00:00"
+        type: string
+      source:
+        description: 来源
+        type: string
+      source_event_id:
+        type: string
+      source_event_type:
+        description: alert/sync_failed/pipeline_failed/k8s_event
+        type: string
+      status:
+        description: 状态
+        type: string
+      submit_dept_id:
+        description: 部门
+        type: integer
+      submit_dept_name:
+        type: string
+      ticket_kind:
+        description: incident/request/change
+        type: string
+      ticket_no:
+        description: TK-20260324-0001
+        type: string
+      title:
+        type: string
+      type_id:
+        type: integer
+      type_name:
+        type: string
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.TicketActivity:
+    properties:
+      content:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      id:
+        type: integer
+      is_system:
+        type: boolean
+      new_value:
+        type: string
+      old_value:
+        type: string
+      ticket_id:
+        type: integer
+      type:
+        description: create/assign/comment/resolve/close/reject/reopen/transfer/sla_warn/auto_create
+        type: string
+      user_id:
+        type: integer
+      user_name:
+        type: string
+    type: object
+  model.TicketType:
+    properties:
+      auto_assign_rule:
+        description: manual/resource_owner/service_owner/dept_default
+        type: string
+      code:
+        description: incident/access/resource/change
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      default_assignee:
+        type: integer
+      description:
+        type: string
+      handle_dept_id:
+        type: integer
+      handle_dept_name:
+        type: string
+      icon:
+        type: string
+      id:
+        type: integer
+      name:
+        description: 故障报修/权限申请/资源申请
+        type: string
+      priority:
+        type: string
+      sort:
+        type: integer
+      status:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+    type: object
+  model.User:
+    properties:
+      avatar:
+        type: string
+      created_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      department_id:
+        type: integer
+      department_name:
+        description: 关联查询，不入库
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      phone:
+        type: string
+      real_name:
+        type: string
+      status:
+        type: integer
+      updated_at:
+        example: "2024-01-01 00:00:00"
+        type: string
+      username:
+        type: string
+    type: object
+  response.PageData:
+    properties:
+      list: {}
+      page:
+        description: 当前页码
+        type: integer
+      size:
+        description: 每页条数
+        type: integer
+      total:
+        description: 总记录数
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+  service.LoginResult:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/model.User'
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: BigOps 运维平台 API 文档
+  title: BigOps API
+  version: "1.0"
+paths:
+  /agents:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 状态
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.AgentInfo'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Agent 列表
+      tags:
+      - 任务管理
+  /assets:
+    get:
+      description: 分页获取主机资产列表，支持多条件筛选
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 状态
+        enum:
+        - online
+        - offline
+        in: query
+        name: status
+        type: string
+      - description: 服务树节点ID
+        in: query
+        name: service_tree_id
+        type: integer
+      - default: false
+        description: 是否递归查子节点
+        in: query
+        name: recursive
+        type: boolean
+      - description: 来源
+        enum:
+        - manual
+        - aliyun
+        - tencent
+        - aws
+        in: query
+        name: source
+        type: string
+      - description: 搜索关键字（主机名/IP）
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 资产列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.Asset'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 资产列表
+      tags:
+      - 资产管理
+    post:
+      consumes:
+      - application/json
+      description: 手动创建主机资产
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateAssetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误/主机名已存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建资产
+      tags:
+      - 资产管理
+  /assets/{id}:
+    get:
+      description: 获取主机资产详情
+      parameters:
+      - description: 资产ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 资产详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Asset'
+              type: object
+        "404":
+          description: 资产不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 资产详情
+      tags:
+      - 资产管理
+    post:
+      consumes:
+      - application/json
+      description: 更新主机资产信息
+      parameters:
+      - description: 资产ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateAssetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新资产
+      tags:
+      - 资产管理
+  /assets/{id}/changes:
+    get:
+      description: 获取指定资产的变更历史记录
+      parameters:
+      - description: 资产ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 变更历史
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.AssetChange'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 资产变更历史
+      tags:
+      - 资产管理
+  /assets/{id}/delete:
+    post:
+      description: 软删除主机资产
+      parameters:
+      - description: 资产ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除资产
+      tags:
+      - 资产管理
+  /audit-logs:
+    get:
+      description: 分页获取操作审计日志，支持按用户名、操作类型、资源类型过滤
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 用户名
+        in: query
+        name: username
+        type: string
+      - description: 操作类型(create/update/delete/login/logout)
+        in: query
+        name: action
+        type: string
+      - description: 资源类型(user/role/menu)
+        in: query
+        name: resource
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 审计日志列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.AuditLog'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 审计日志列表
+      tags:
+      - 审计日志
+  /auth/info:
+    get:
+      description: 根据 token 获取当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "401":
+          description: 用户未认证
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前登录用户信息
+      tags:
+      - 认证
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用用户名密码登录，返回 JWT token 和用户信息
+      parameters:
+      - description: 登录请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/service.LoginResult'
+              type: object
+        "401":
+          description: 用户名或密码错误/账号已被禁用
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户登录
+      tags:
+      - 认证
+  /auth/logout:
+    post:
+      description: 使当前 token 失效，加入 Redis 黑名单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: token 格式错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 用户登出
+      tags:
+      - 认证
+  /auth/password:
+    post:
+      consumes:
+      - application/json
+      description: 验证旧密码后修改为新密码，新密码需包含大小写字母和数字，长度 8-50 位
+      parameters:
+      - description: 修改密码请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 密码修改成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误/原密码错误/密码复杂度不够
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改当前用户密码
+      tags:
+      - 认证
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 注册新用户账号，密码需包含大小写字母和数字，长度 8-50 位
+      parameters:
+      - description: 注册请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误/用户名已存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 用户注册
+      tags:
+      - 认证
+  /cloud-accounts:
+    get:
+      description: 分页获取云账号列表（AK/SK 不返回）
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 云账号列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.CloudAccount'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 云账号列表
+      tags:
+      - 云账号
+    post:
+      consumes:
+      - application/json
+      description: 创建云账号，AK/SK 加密存储
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateCloudAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建云账号
+      tags:
+      - 云账号
+  /cloud-accounts/{id}:
+    get:
+      description: 获取云账号详情（AK/SK 不返回）
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 云账号详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.CloudAccount'
+              type: object
+        "404":
+          description: 云账号不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 云账号详情
+      tags:
+      - 云账号
+    post:
+      consumes:
+      - application/json
+      description: 更新云账号基本信息（不含密钥）
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateCloudAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新云账号
+      tags:
+      - 云账号
+  /cloud-accounts/{id}/delete:
+    post:
+      description: 软删除云账号
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除云账号
+      tags:
+      - 云账号
+  /cloud-accounts/{id}/keys:
+    post:
+      consumes:
+      - application/json
+      description: 更新云账号的 AK/SK
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 密钥请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateCloudAccountKeysRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 密钥更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新云账号密钥
+      tags:
+      - 云账号
+  /cloud-accounts/{id}/sync:
+    post:
+      description: 手动触发从云端同步主机资产到本地
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 同步完成
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 同步失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 触发云资产同步
+      tags:
+      - 云账号
+  /cloud-accounts/{id}/sync-config:
+    post:
+      consumes:
+      - application/json
+      description: 设置云账号的定时同步开关和周期
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 同步配置
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateSyncConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新同步调度配置
+      tags:
+      - 云账号
+  /cloud-accounts/{id}/sync-tasks:
+    get:
+      description: 查询指定云账号的同步任务记录
+      parameters:
+      - description: 云账号ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 同步历史
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.CloudSyncTask'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 云账号同步历史
+      tags:
+      - 同步日志
+  /departments:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.Department'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 部门列表
+      tags:
+      - 部门管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建部门
+      tags:
+      - 部门管理
+  /departments/{id}:
+    get:
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Department'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 部门详情
+      tags:
+      - 部门管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新部门
+      tags:
+      - 部门管理
+  /departments/{id}/delete:
+    post:
+      parameters:
+      - description: 部门ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除部门
+      tags:
+      - 部门管理
+  /departments/all:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Department'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 全量部门列表
+      tags:
+      - 部门管理
+  /menus:
+    get:
+      description: 获取所有菜单的树形结构
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 菜单树
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Menu'
+                  type: array
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取完整菜单树
+      tags:
+      - 菜单管理
+    post:
+      consumes:
+      - application/json
+      description: '创建菜单/目录/权限按钮，type: 1=目录 2=菜单 3=按钮权限'
+      parameters:
+      - description: 创建菜单请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateMenuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建菜单
+      tags:
+      - 菜单管理
+  /menus/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 更新菜单信息
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新菜单请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateMenuRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新菜单
+      tags:
+      - 菜单管理
+  /menus/{id}/delete:
+    post:
+      description: 删除菜单/目录/权限按钮
+      parameters:
+      - description: 菜单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除菜单
+      tags:
+      - 菜单管理
+  /menus/user:
+    get:
+      description: 获取当前登录用户有权限访问的菜单树，管理员返回所有菜单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户菜单树
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Menu'
+                  type: array
+              type: object
+        "401":
+          description: 用户未认证
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户菜单
+      tags:
+      - 菜单管理
+  /roles:
+    get:
+      description: 分页获取角色列表
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 角色列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.Role'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 角色列表
+      tags:
+      - 角色管理
+    post:
+      consumes:
+      - application/json
+      description: 创建新角色，角色名不可重复
+      parameters:
+      - description: 创建角色请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误/角色名已存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建角色
+      tags:
+      - 角色管理
+  /roles/{id}:
+    get:
+      description: 根据角色 ID 获取角色详细信息
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 角色详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Role'
+              type: object
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取角色详情
+      tags:
+      - 角色管理
+    post:
+      consumes:
+      - application/json
+      description: 更新角色显示名、描述、排序
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新角色请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新角色
+      tags:
+      - 角色管理
+  /roles/{id}/delete:
+    post:
+      description: 删除角色，管理员角色不可删除
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 不允许删除管理员角色
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除角色
+      tags:
+      - 角色管理
+  /roles/{id}/menus:
+    post:
+      consumes:
+      - application/json
+      description: 为角色分配菜单权限，传入菜单 ID 列表
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 菜单ID列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SetMenusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 设置成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置角色菜单权限
+      tags:
+      - 角色管理
+  /roles/{id}/status:
+    post:
+      consumes:
+      - application/json
+      description: 更新角色状态，0=禁用 1=启用，不允许禁用管理员角色
+      parameters:
+      - description: 角色ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 状态请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateRoleStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 启用/禁用成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 不允许禁用管理员角色
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 启用/禁用角色
+      tags:
+      - 角色管理
+  /service-trees:
+    get:
+      description: 获取完整的服务树结构
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服务树
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.ServiceTree'
+                  type: array
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取服务树
+      tags:
+      - 服务树
+    post:
+      consumes:
+      - application/json
+      description: 创建服务树节点，level 自动根据父节点计算
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateServiceTreeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建服务树节点
+      tags:
+      - 服务树
+  /service-trees/{id}:
+    get:
+      description: 根据 ID 获取服务树节点
+      parameters:
+      - description: 节点ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 节点详情
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ServiceTree'
+              type: object
+        "404":
+          description: 节点不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取服务树节点详情
+      tags:
+      - 服务树
+    post:
+      consumes:
+      - application/json
+      description: 更新服务树节点信息（不改变父节点，移动请用 move 接口）
+      parameters:
+      - description: 节点ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateServiceTreeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新服务树节点
+      tags:
+      - 服务树
+  /service-trees/{id}/delete:
+    post:
+      description: 删除节点，有子节点时不允许删除
+      parameters:
+      - description: 节点ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 存在子节点
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除服务树节点
+      tags:
+      - 服务树
+  /service-trees/{id}/move:
+    post:
+      consumes:
+      - application/json
+      description: 将节点移动到新的父节点下
+      parameters:
+      - description: 节点ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 目标父节点
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.MoveServiceTreeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 移动成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 移动失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 移动服务树节点
+      tags:
+      - 服务树
+  /service-trees/asset-counts:
+    get:
+      description: '返回每个服务树节点的直接资产数量（map: node_id → count）'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 资产数量统计
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 服务树资产数量统计
+      tags:
+      - 服务树
+  /stats/asset-distribution:
+    get:
+      description: 资产状态分布、来源分布、服务树资产 Top 10
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.AssetDistributionResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 资产分布
+      tags:
+      - 统计
+  /stats/summary:
+    get:
+      description: 一次返回首页所需的所有统计数字
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.SummaryResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 平台摘要
+      tags:
+      - 统计
+  /sync-tasks:
+    get:
+      description: 分页查询云同步任务记录，支持按状态/触发类型/云账号筛选
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 状态
+        enum:
+        - running
+        - success
+        - failed
+        in: query
+        name: status
+        type: string
+      - description: 触发类型
+        enum:
+        - manual
+        - schedule
+        in: query
+        name: trigger_type
+        type: string
+      - description: 云账号ID
+        in: query
+        name: cloud_account_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 同步日志列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.CloudSyncTask'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 同步任务日志列表
+      tags:
+      - 同步日志
+  /task-executions:
+    get:
+      parameters:
+      - description: 任务ID
+        in: query
+        name: task_id
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.TaskExecution'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 执行记录列表
+      tags:
+      - 任务管理
+  /task-executions/{id}:
+    get:
+      parameters:
+      - description: 执行ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.TaskExecution'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 执行详情
+      tags:
+      - 任务管理
+  /tasks:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 任务类型
+        in: query
+        name: task_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.Task'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 任务列表
+      tags:
+      - 任务管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Task'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 创建任务
+      tags:
+      - 任务管理
+  /tasks/{id}:
+    get:
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Task'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 任务详情
+      tags:
+      - 任务管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新任务
+      tags:
+      - 任务管理
+  /tasks/{id}/delete:
+    post:
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除任务
+      tags:
+      - 任务管理
+  /tasks/{id}/execute:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 任务ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 执行请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ExecuteTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.TaskExecution'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 执行任务
+      tags:
+      - 任务管理
+  /ticket-types:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.TicketType'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单类型列表
+      tags:
+      - 工单类型
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTicketTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建工单类型
+      tags:
+      - 工单类型
+  /ticket-types/{id}:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTicketTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新工单类型
+      tags:
+      - 工单类型
+  /ticket-types/{id}/delete:
+    post:
+      parameters:
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除工单类型
+      tags:
+      - 工单类型
+  /ticket-types/all:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.TicketType'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 全量工单类型
+      tags:
+      - 工单类型
+  /tickets:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 状态
+        in: query
+        name: status
+        type: string
+      - description: 优先级
+        in: query
+        name: priority
+        type: string
+      - description: 工单类型ID
+        in: query
+        name: type_id
+        type: integer
+      - description: 来源
+        in: query
+        name: source
+        type: string
+      - description: 范围
+        enum:
+        - my_created
+        - my_assigned
+        - my_dept
+        - all
+        in: query
+        name: scope
+        type: string
+      - description: 关键字
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.Ticket'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单列表
+      tags:
+      - 工单管理
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 创建请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Ticket'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 创建工单
+      tags:
+      - 工单管理
+  /tickets/{id}:
+    get:
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Ticket'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单详情
+      tags:
+      - 工单管理
+  /tickets/{id}/activities:
+    get:
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.TicketActivity'
+                        type: array
+                    type: object
+              type: object
+      security:
+      - BearerAuth: []
+      summary: 工单活动流
+      tags:
+      - 工单管理
+  /tickets/{id}/approval-instance:
+    get:
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 工单审批链
+      tags:
+      - 工单管理
+  /tickets/{id}/assign:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 分配请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AssignTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 分配处理人
+      tags:
+      - 工单管理
+  /tickets/{id}/close:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 关闭请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CloseTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 关闭工单
+      tags:
+      - 工单管理
+  /tickets/{id}/comment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 评论
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 添加评论
+      tags:
+      - 工单管理
+  /tickets/{id}/process:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 处理请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ProcessTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 处理工单
+      tags:
+      - 工单管理
+  /tickets/{id}/reopen:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 重开原因
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 重新打开工单
+      tags:
+      - 工单管理
+  /tickets/{id}/transfer:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 工单ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 转交请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TransferTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 转交工单
+      tags:
+      - 工单管理
+  /users:
+    get:
+      description: 分页获取用户列表，支持关键字模糊搜索（用户名/邮箱/姓名）
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页条数
+        in: query
+        name: size
+        type: integer
+      - description: 关键字（用户名/邮箱/姓名）
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/response.PageData'
+                  - properties:
+                      list:
+                        items:
+                          $ref: '#/definitions/model.User'
+                        type: array
+                    type: object
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 用户列表
+      tags:
+      - 用户管理
+  /users/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 更新用户姓名、手机、邮箱、部门
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新用户信息
+      tags:
+      - 用户管理
+  /users/{id}/delete:
+    post:
+      description: 软删除用户，不允许删除管理员（ID=1）
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 不允许删除管理员
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 删除失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除用户
+      tags:
+      - 用户管理
+  /users/{id}/department:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 部门请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SetDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置用户部门
+      tags:
+      - 用户管理
+  /users/{id}/roles:
+    get:
+      description: 获取指定用户的角色列表
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 角色列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Role'
+                  type: array
+              type: object
+        "500":
+          description: 查询失败
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户角色
+      tags:
+      - 用户角色
+    post:
+      consumes:
+      - application/json
+      description: 为用户分配角色，传入角色 ID 列表
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 角色ID列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SetUserRolesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 设置成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 设置用户角色
+      tags:
+      - 用户角色
+  /users/{id}/status:
+    post:
+      consumes:
+      - application/json
+      description: 更新用户状态，0=禁用 1=启用，不允许禁用管理员（ID=1）
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 状态请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 启用/禁用成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 不允许禁用管理员
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 启用/禁用用户
+      tags:
+      - 用户管理
+  /ws/task-executions/{id}/logs:
+    get:
+      parameters:
+      - description: 执行ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: 执行日志 WebSocket
+      tags:
+      - 任务管理
+securityDefinitions:
+  BearerAuth:
+    description: 'Bearer token 认证，格式: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
