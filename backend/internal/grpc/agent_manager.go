@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -196,12 +195,6 @@ func (m *AgentManager) PublishLog(executionID int64, line *LogLine) {
 	m.logSubsMu.RLock()
 	subs := m.logSubs[executionID]
 	m.logSubsMu.RUnlock()
-
-	data, err := json.Marshal(line)
-	if err != nil {
-		return
-	}
-	_ = data // marshaled for validation; actual send is the struct
 
 	for _, ch := range subs {
 		select {

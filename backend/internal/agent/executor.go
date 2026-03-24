@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -125,8 +126,9 @@ func (e *Executor) buildCommand(ctx context.Context, task *pb.ExecuteRequest) *e
 		cmd.Dir = task.WorkDir
 	}
 
-	// Set environment variables
+	// Set environment variables (inherit current env + add extras)
 	if len(task.Env) > 0 {
+		cmd.Env = os.Environ()
 		for k, v := range task.Env {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 		}
