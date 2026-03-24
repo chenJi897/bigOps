@@ -89,6 +89,18 @@ func (r *RoleRepository) GetRolesByUserID(userID int64) ([]*model.Role, error) {
 	return roles, err
 }
 
+func (r *RoleRepository) GetUserIDsByRoleName(roleName string) ([]int64, error) {
+	var userIDs []int64
+	err := database.GetDB().
+		Table("users").
+		Select("users.id").
+		Joins("JOIN user_roles ON user_roles.user_id = users.id").
+		Joins("JOIN roles ON roles.id = user_roles.role_id").
+		Where("roles.name = ? AND users.deleted_at IS NULL", roleName).
+		Pluck("users.id", &userIDs).Error
+	return userIDs, err
+}
+
 // SetUserRoles 设置用户的角色（替换关联）。
 func (r *RoleRepository) SetUserRoles(userID int64, roleIDs []int64) error {
 	// 先删除旧关联

@@ -151,6 +151,7 @@ export const ticketTypeApi = {
 export const ticketApi = {
   list: (params: any) => api.get('/tickets', { params }),
   getById: (id: number) => api.get(`/tickets/${id}`),
+  approvalInstance: (id: number) => api.get(`/tickets/${id}/approval-instance`),
   create: (data: any) => api.post('/tickets', data),
   assign: (id: number, assignee_id: number) => api.post(`/tickets/${id}/assign`, { assignee_id }),
   process: (id: number, action: string, content: string) => api.post(`/tickets/${id}/process`, { action, content }),
@@ -159,6 +160,37 @@ export const ticketApi = {
   comment: (id: number, content: string) => api.post(`/tickets/${id}/comment`, { content }),
   transfer: (id: number, assignee_id: number, content: string) => api.post(`/tickets/${id}/transfer`, { assignee_id, content }),
   activities: (id: number, page = 1, size = 50) => api.get(`/tickets/${id}/activities`, { params: { page, size } }),
+}
+
+export const requestTemplateApi = {
+  list: (enabled_only = false) => api.get('/request-templates', { params: { enabled_only: enabled_only ? 1 : 0 } }),
+  getById: (id: number) => api.get(`/request-templates/${id}`),
+  create: (data: any) => api.post('/request-templates', data),
+  update: (id: number, data: any) => api.post(`/request-templates/${id}`, data),
+  delete: (id: number) => api.post(`/request-templates/${id}/delete`),
+}
+
+export const approvalPolicyApi = {
+  list: () => api.get('/approval-policies'),
+  getById: (id: number) => api.get(`/approval-policies/${id}`),
+  create: (data: any) => api.post('/approval-policies', data),
+  update: (id: number, data: any) => api.post(`/approval-policies/${id}`, data),
+  delete: (id: number) => api.post(`/approval-policies/${id}/delete`),
+}
+
+export const approvalApi = {
+  pending: () => api.get('/approval-instances/pending'),
+  approve: (id: number, comment = '') => api.post(`/approval-instances/${id}/approve`, { comment }),
+  reject: (id: number, comment: string) => api.post(`/approval-instances/${id}/reject`, { comment }),
+}
+
+export const notificationApi = {
+  inApp: (unread_only = false) => api.get('/notifications/in-app', { params: { unread_only: unread_only ? 1 : 0 } }),
+  unreadCount: () => api.get('/notifications/in-app/unread-count'),
+  markRead: (id: number) => api.post(`/notifications/in-app/${id}/read`),
+  testSend: (data: { title: string; content: string; channels: string[]; user_ids?: number[] }) => api.post('/notifications/test', data),
+  events: () => api.get('/notifications/events'),
+  retryEvent: (id: number) => api.post(`/notifications/events/${id}/retry`),
 }
 
 export default api

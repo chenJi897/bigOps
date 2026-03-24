@@ -17,6 +17,7 @@ type Config struct {
 	Log      LogConfig      `mapstructure:"log"`
 	Encrypt  EncryptConfig  `mapstructure:"encrypt"`
 	Aliyun   AliyunConfig   `mapstructure:"aliyun"`
+	Notification NotificationConfig `mapstructure:"notification"`
 }
 
 // EncryptConfig 加密配置。
@@ -27,6 +28,42 @@ type EncryptConfig struct {
 // AliyunConfig 阿里云相关配置。
 type AliyunConfig struct {
 	ECSEndpoint string `mapstructure:"ecs_endpoint"` // ECS API 地址模板，含 %s 占位符表示 region，例如 ecs.%s.aliyuncs.com
+}
+
+// NotificationConfig 通知中心配置。
+type NotificationConfig struct {
+	DefaultChannels []string             `mapstructure:"default_channels"`
+	MaxRetries      int                  `mapstructure:"max_retries"`
+	RetryIntervalSeconds int             `mapstructure:"retry_interval_seconds"`
+	RetryScanIntervalSeconds int         `mapstructure:"retry_scan_interval_seconds"`
+	Webhook         NotificationWebhookConfig `mapstructure:"webhook"`
+	Email           NotificationEmailConfig   `mapstructure:"email"`
+	MessagePusher   MessagePusherConfig       `mapstructure:"message_pusher"`
+}
+
+type NotificationWebhookConfig struct {
+	Enabled        bool   `mapstructure:"enabled"`
+	URL            string `mapstructure:"url"`
+	Secret         string `mapstructure:"secret"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
+}
+
+type NotificationEmailConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	From     string `mapstructure:"from"`
+}
+
+type MessagePusherConfig struct {
+	Enabled        bool   `mapstructure:"enabled"`
+	Server         string `mapstructure:"server"`
+	Username       string `mapstructure:"username"`
+	Token          string `mapstructure:"token"`
+	Channel        string `mapstructure:"channel"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
 }
 
 // ServerConfig HTTP 服务器配置。

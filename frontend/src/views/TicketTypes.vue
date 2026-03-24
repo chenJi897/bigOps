@@ -1,9 +1,12 @@
 <script setup lang="ts">
 defineOptions({ name: 'TicketTypes' })
-import { ref, onMounted } from 'vue'
+import { ref, onActivated, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ticketTypeApi, departmentApi, userApi } from '../api'
+import { useViewStateStore } from '../stores/viewState'
 
+const router = useRouter()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
@@ -14,7 +17,9 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增工单类型')
 const isEdit = ref(false)
 const editId = ref(0)
-const form = ref<any>({ name: '', code: '', icon: '', description: '', handle_dept_id: 0, default_assignee: 0, priority: 'medium', auto_assign_rule: 'manual', sort: 0 })
+const form = ref<any>({ name: '', code: '', icon: '', description: '', handle_dept_id: undefined, default_assignee: undefined, priority: 'medium', auto_assign_rule: 'manual', sort: 0 })
+const viewStateStore = useViewStateStore()
+const seenTicketTypeVersion = ref(0)
 
 const allDepts = ref<any[]>([])
 const allUsers = ref<any[]>([])
@@ -45,7 +50,7 @@ async function fetchData() {
 function handleAdd() {
   isEdit.value = false
   dialogTitle.value = '新增工单类型'
-  form.value = { name: '', code: '', icon: '', description: '', handle_dept_id: 0, default_assignee: 0, priority: 'medium', auto_assign_rule: 'manual', sort: 0 }
+  form.value = { name: '', code: '', icon: '', description: '', handle_dept_id: undefined, default_assignee: undefined, priority: 'medium', auto_assign_rule: 'manual', sort: 0 }
   dialogVisible.value = true
 }
 
@@ -53,20 +58,36 @@ function handleEdit(row: any) {
   isEdit.value = true
   dialogTitle.value = '编辑工单类型'
   editId.value = row.id
-  form.value = { name: row.name, code: row.code || '', icon: row.icon || '', description: row.description || '', handle_dept_id: row.handle_dept_id || 0, default_assignee: row.default_assignee || 0, priority: row.priority || 'medium', auto_assign_rule: row.auto_assign_rule || 'manual', sort: row.sort || 0 }
+  form.value = {
+    name: row.name,
+    code: row.code || '',
+    icon: row.icon || '',
+    description: row.description || '',
+    handle_dept_id: row.handle_dept_id || undefined,
+    default_assignee: row.default_assignee || undefined,
+    priority: row.priority || 'medium',
+    auto_assign_rule: row.auto_assign_rule || 'manual',
+    sort: row.sort || 0,
+  }
   dialogVisible.value = true
 }
 
 async function submitForm() {
   if (!form.value.name) { ElMessage.warning('请输入类型名称'); return }
   try {
+    const payload = {
+      ...form.value,
+      handle_dept_id: form.value.handle_dept_id || 0,
+      default_assignee: form.value.default_assignee || 0,
+    }
     if (isEdit.value) {
-      await ticketTypeApi.update(editId.value, form.value)
+      await ticketTypeApi.update(editId.value, payload)
       ElMessage.success('更新成功')
     } else {
-      await ticketTypeApi.create(form.value)
+      await ticketTypeApi.create(payload)
       ElMessage.success('创建成功')
     }
+    viewStateStore.markTicketTypeDirty()
     dialogVisible.value = false
     fetchData()
   } catch {}
@@ -77,6 +98,7 @@ async function handleDelete(row: any) {
     await ElMessageBox.confirm(`确定删除工单类型 "${row.name}" 吗？`, '提示', { type: 'warning' })
     await ticketTypeApi.delete(row.id)
     ElMessage.success('删除成功')
+    viewStateStore.markTicketTypeDirty()
     fetchData()
   } catch {}
 }
@@ -88,6 +110,14 @@ onMounted(() => {
   fetchData()
   departmentApi.all().then((res: any) => { allDepts.value = res.data || [] }).catch(() => {})
   userApi.list(1, 200).then((res: any) => { allUsers.value = res.data?.list || [] }).catch(() => {})
+  seenTicketTypeVersion.value = viewStateStore.ticketTypeVersion
+})
+
+onActivated(() => {
+  if (seenTicketTypeVersion.value !== viewStateStore.ticketTypeVersion) {
+    seenTicketTypeVersion.value = viewStateStore.ticketTypeVersion
+    fetchData()
+  }
 })
 </script>
 
@@ -97,7 +127,12 @@ onMounted(() => {
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span>工单类型管理</span>
-          <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增</el-button>
+          <div style="display: flex; gap: 8px;">
+            <el-button plain @click="router.push('/request/templates')">请求模板</el-button>
+            <el-button plain @click="router.push('/approval/policies')">审批策略</el-button>
+            <el-button plain @click="router.push('/notification/console')">通知联调</el-button>
+            <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增</el-button>
+          </div>
         </div>
       </template>
 
@@ -147,7 +182,6 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="处理部门">
           <el-select v-model="form.handle_dept_id" placeholder="选择部门" clearable style="width: 100%;">
-            <el-option label="无" :value="0" />
             <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>

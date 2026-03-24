@@ -132,6 +132,15 @@ func Setup(mode string) *gin.Engine {
 			auditLogHandler := handler.NewAuditLogHandler()
 			authGroup.GET("/audit-logs", auditLogHandler.List)
 
+			// --- 通知中心 ---
+			notificationHandler := handler.NewNotificationHandler()
+			authGroup.GET("/notifications/in-app", notificationHandler.ListInApp)
+			authGroup.GET("/notifications/in-app/unread-count", notificationHandler.CountUnread)
+			authGroup.POST("/notifications/in-app/:id/read", notificationHandler.MarkRead)
+			authGroup.POST("/notifications/test", notificationHandler.TestSend)
+			authGroup.GET("/notifications/events", notificationHandler.ListEvents)
+			authGroup.POST("/notifications/events/:id/retry", notificationHandler.RetryEvent)
+
 			// --- 部门管理 ---
 			departmentHandler := handler.NewDepartmentHandler()
 			authGroup.GET("/departments", departmentHandler.List)
@@ -154,10 +163,33 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/ticket-types/:id", ticketTypeHandler.Update)
 			authGroup.POST("/ticket-types/:id/delete", ticketTypeHandler.Delete)
 
+			// --- 请求模板 ---
+			requestTemplateHandler := handler.NewRequestTemplateHandler()
+			authGroup.GET("/request-templates", requestTemplateHandler.List)
+			authGroup.GET("/request-templates/:id", requestTemplateHandler.GetByID)
+			authGroup.POST("/request-templates", requestTemplateHandler.Create)
+			authGroup.POST("/request-templates/:id", requestTemplateHandler.Update)
+			authGroup.POST("/request-templates/:id/delete", requestTemplateHandler.Delete)
+
+			// --- 审批策略 ---
+			approvalPolicyHandler := handler.NewApprovalPolicyHandler()
+			authGroup.GET("/approval-policies", approvalPolicyHandler.List)
+			authGroup.GET("/approval-policies/:id", approvalPolicyHandler.GetByID)
+			authGroup.POST("/approval-policies", approvalPolicyHandler.Create)
+			authGroup.POST("/approval-policies/:id", approvalPolicyHandler.Update)
+			authGroup.POST("/approval-policies/:id/delete", approvalPolicyHandler.Delete)
+
+			// --- 审批待办 ---
+			approvalHandler := handler.NewApprovalHandler()
+			authGroup.GET("/approval-instances/pending", approvalHandler.Pending)
+			authGroup.POST("/approval-instances/:id/approve", approvalHandler.Approve)
+			authGroup.POST("/approval-instances/:id/reject", approvalHandler.Reject)
+
 			// --- 工单管理 ---
 			ticketHandler := handler.NewTicketHandler()
 			authGroup.GET("/tickets", ticketHandler.List)
 			authGroup.GET("/tickets/:id", ticketHandler.GetByID)
+			authGroup.GET("/tickets/:id/approval-instance", ticketHandler.ApprovalInstance)
 			authGroup.POST("/tickets", ticketHandler.Create)
 			authGroup.POST("/tickets/:id/assign", ticketHandler.Assign)
 			authGroup.POST("/tickets/:id/process", ticketHandler.Process)
