@@ -41,6 +41,7 @@ type CreateAssetRequest struct {
 	SN            string `json:"sn" example:"SN12345"`
 	Tags          string `json:"tags" example:"[\"production\",\"web\"]"`
 	Remark        string `json:"remark" example:"Web 前端服务器"`
+	OwnerIDs      string `json:"owner_ids" example:"[1,5]"`
 }
 
 // List 资产列表。
@@ -126,7 +127,7 @@ func (h *AssetHandler) Create(c *gin.Context) {
 		MemoryMB: req.MemoryMB, DiskGB: req.DiskGB, Status: req.Status,
 		AssetType: req.AssetType, ServiceTreeID: req.ServiceTreeID,
 		IDC: req.IDC, SN: req.SN, Tags: req.Tags, Remark: req.Remark,
-		Source: "manual",
+		OwnerIDs: req.OwnerIDs, Source: "manual",
 	}
 	if err := h.svc.Create(asset); err != nil {
 		response.Error(c, 400, err.Error())
@@ -164,6 +165,7 @@ func (h *AssetHandler) Update(c *gin.Context) {
 		MemoryMB: req.MemoryMB, DiskGB: req.DiskGB, Status: req.Status,
 		AssetType: req.AssetType, ServiceTreeID: req.ServiceTreeID,
 		IDC: req.IDC, SN: req.SN, Tags: req.Tags, Remark: req.Remark,
+		OwnerIDs: req.OwnerIDs,
 	}
 	userID, _ := c.Get("userID")
 	operatorID, _ := userID.(int64)
