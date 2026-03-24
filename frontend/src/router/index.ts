@@ -45,6 +45,10 @@ const viewModules: Record<string, () => Promise<any>> = {
   'RequestTemplates': () => import('../views/RequestTemplates.vue'),
   'ApprovalPolicies': () => import('../views/ApprovalPolicies.vue'),
   'NotificationConsole': () => import('../views/NotificationConsole.vue'),
+  'TaskList': () => import('../views/TaskList.vue'),
+  'TaskCreate': () => import('../views/TaskCreate.vue'),
+  'TaskExecution': () => import('../views/TaskExecution.vue'),
+  'AgentList': () => import('../views/AgentList.vue'),
 }
 
 // 系统管理静态路由（仪表盘始终可访问）
@@ -268,6 +272,32 @@ function ensureCompanionRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
     }
   }
 
+  // 任务中心隐藏路由
+  const taskListRoute = nextRoutes.find(route =>
+    route.meta?.componentName === 'TaskList' || route.name === 'TaskList'
+  )
+  if (taskListRoute) {
+    const taskActiveMenu = (taskListRoute.meta?.activeMenu as string) || `/${String(taskListRoute.path)}`
+    const hasTaskCreate = nextRoutes.some(r => r.meta?.componentName === 'TaskCreate' || r.name === 'TaskCreate')
+    const hasTaskExecution = nextRoutes.some(r => r.meta?.componentName === 'TaskExecution' || r.name === 'TaskExecution')
+    if (!hasTaskCreate) {
+      nextRoutes.push({
+        path: 'task/create/:id?',
+        name: 'TaskCreate',
+        component: viewModules['TaskCreate'],
+        meta: { title: '创建任务', componentName: 'TaskCreate', activeMenu: taskActiveMenu },
+      })
+    }
+    if (!hasTaskExecution) {
+      nextRoutes.push({
+        path: 'task/execution/:id?',
+        name: 'TaskExecution',
+        component: viewModules['TaskExecution'],
+        meta: { title: '执行详情', componentName: 'TaskExecution', activeMenu: taskActiveMenu },
+      })
+    }
+  }
+
   return nextRoutes
 }
 
@@ -277,6 +307,12 @@ function normalizeRoutePath(menu: any): string {
 
   // 详情页菜单通常存的是固定路径，但页面实际需要带 ID 参数。
   if (menu.component === 'TicketDetail' && !normalizedPath.includes('/:id')) {
+    return `${normalizedPath}/:id?`
+  }
+  if (menu.component === 'TaskExecution' && !normalizedPath.includes('/:id')) {
+    return `${normalizedPath}/:id?`
+  }
+  if (menu.component === 'TaskCreate' && !normalizedPath.includes('/:id')) {
     return `${normalizedPath}/:id?`
   }
 
