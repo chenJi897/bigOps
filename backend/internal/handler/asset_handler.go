@@ -65,6 +65,12 @@ func (h *AssetHandler) List(c *gin.Context) {
 	serviceTreeID, _ := strconv.ParseInt(c.Query("service_tree_id"), 10, 64)
 	ownerID, _ := strconv.ParseInt(c.Query("owner_id"), 10, 64)
 
+	// 非 admin 用户强制按自己的 ID 过滤（数据级权限）
+	if !isAdminUser(c) {
+		userID, _ := c.Get("userID")
+		ownerID = userID.(int64)
+	}
+
 	q := repository.AssetListQuery{
 		Page:          page,
 		Size:          size,
