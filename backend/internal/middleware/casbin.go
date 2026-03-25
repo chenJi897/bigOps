@@ -22,11 +22,16 @@ var casbinWhitelist = []string{
 	"/api/v1/users",             // 用户列表（负责人选择器依赖）
 }
 
-// 公共路由前缀白名单
-var casbinPrefixWhitelist = []string{
-	"/api/v1/stats/",
+// 公共路由前缀白名单（不限方法，所有已认证用户可访问）
+var casbinPrefixWhitelistAny = []string{
 	"/api/v1/notifications/in-app",
 	"/api/v1/ws/",
+}
+
+// 公共路由前缀白名单（仅 GET）
+var casbinPrefixWhitelistGET = []string{
+	"/api/v1/stats/",
+	"/api/v1/users/",   // /users/:id/roles 等查询
 }
 
 // CasbinMiddleware Casbin 权限校验中间件。
@@ -53,8 +58,14 @@ func CasbinMiddleware() gin.HandlerFunc {
 				}
 			}
 		}
-		for _, prefix := range casbinPrefixWhitelist {
+		for _, prefix := range casbinPrefixWhitelistAny {
 			if strings.HasPrefix(obj, prefix) {
+				c.Next()
+				return
+			}
+		}
+		for _, prefix := range casbinPrefixWhitelistGET {
+			if strings.HasPrefix(obj, prefix) && act == "GET" {
 				c.Next()
 				return
 			}
