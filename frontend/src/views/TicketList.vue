@@ -22,13 +22,13 @@ const statusMap: Record<string, { label: string; type: string }> = {
   open: { label: '待处理', type: 'info' },
   processing: { label: '处理中', type: 'warning' },
   resolved: { label: '已解决', type: 'success' },
-  closed: { label: '已关闭', type: '' },
+  closed: { label: '已关闭', type: 'info' },
   rejected: { label: '已驳回', type: 'danger' },
 }
 
 const priorityMap: Record<string, { label: string; type: string }> = {
   low: { label: '低', type: 'info' },
-  medium: { label: '中', type: '' },
+  medium: { label: '中', type: 'info' },
   high: { label: '高', type: 'warning' },
   urgent: { label: '紧急', type: 'danger' },
 }
