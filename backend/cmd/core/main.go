@@ -187,7 +187,7 @@ func seedTaskMenus() {
 
 	dir := model.Menu{
 		ParentID: 0, Name: "task_dir", Title: "任务中心",
-		Icon: "Operation", Type: 1, Sort: 60, Visible: 1, Status: 1,
+		Icon: "Operation", Path: "/task", Type: 1, Sort: 60, Visible: 1, Status: 1,
 	}
 	if err := db.Create(&dir).Error; err != nil {
 		logger.Warn("seed task_dir menu failed", zap.Error(err))
