@@ -1,197 +1,300 @@
 <script setup lang="ts">
 defineOptions({ name: 'RequestTemplates' })
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { approvalPolicyApi, requestTemplateApi, ticketTypeApi } from '../api'
+import { requestTemplateApi, userApi, departmentApi } from '../api'
 import { useViewStateStore } from '../stores/viewState'
+
+type TemplateNode = {
+  node_id: string
+  name: string
+  approve_mode: 'or' | 'and' | 'none'
+  handler_ids: number[]
+  optional_handler_ids: number[]
+  notify_user_ids: number[]
+  node_form_schema: string
+  callback_config: string
+}
 
 const loading = ref(false)
 const tableData = ref<any[]>([])
-const policyOptions = ref<any[]>([])
-const ticketTypeOptions = ref<any[]>([])
+const userOptions = ref<any[]>([])
+const deptOptions = ref<any[]>([])
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增请求模板')
+const dialogTitle = ref('新增工单模板')
 const isEdit = ref(false)
 const editId = ref(0)
+const activeTab = ref<'basic' | 'nodes'>('basic')
+const nodeDialogVisible = ref(false)
+const nodeDialogTitle = ref('新增模板节点')
+const nodeEditIndex = ref(-1)
 const viewStateStore = useViewStateStore()
+
 const form = ref<any>({
-  name: '', code: '', category: 'resource', description: '', icon: '',
-  type_id: undefined, form_schema: '{"fields":[]}', approval_policy_id: undefined, execution_template: '',
-  ticket_kind: 'request', auto_create_order: 1, notify_applicant: 1, sort: 0,
+  name: '',
+  code: '',
+  category: 'other',
+  project_name: '',
+  environment_name: '',
+  description: '',
+  icon: '',
+  type_id: undefined,
+  form_schema: '{"fields":[]}',
+  nodes_json: '[]',
+  execution_template: '',
+  ticket_kind: 'request',
+  priority: 'medium',
+  handle_dept_id: undefined,
+  auto_assign_rule: 'manual',
+  default_assignee: undefined,
+  auto_create_order: 1,
+  notify_applicant: 1,
+  sort: 999,
+  status: 1,
 })
-const schemaFields = ref<any[]>([])
+
+const nodeForm = ref<TemplateNode>({
+  node_id: '',
+  name: '',
+  approve_mode: 'or',
+  handler_ids: [],
+  optional_handler_ids: [],
+  notify_user_ids: [],
+  node_form_schema: '{"fields":[]}',
+  callback_config: '',
+})
 
 const categoryOptions = [
-  { label: '资源申请', value: 'resource' },
+  { label: '发版申请', value: 'release' },
   { label: '权限申请', value: 'access' },
-  { label: '变更申请', value: 'change' },
+  { label: '数据库上线', value: 'db_release' },
+  { label: '代码仓库', value: 'repo' },
   { label: '其他', value: 'other' },
 ]
 
-const ticketKindOptions = [
-  { label: '请求单', value: 'request' },
-  { label: '变更单', value: 'change' },
+const templateCategoryOptions = categoryOptions
+
+const approveModeOptions = [
+  { label: '或签(单一通过)', value: 'or' },
+  { label: '会签(全部通过)', value: 'and' },
+  { label: '无需审批', value: 'none' },
 ]
 
-const schemaFieldTypeOptions = [
-  { label: '单行文本', value: 'text' },
-  { label: '多行文本', value: 'textarea' },
-  { label: '数字', value: 'number' },
-  { label: '下拉选择', value: 'select' },
-  { label: '开关', value: 'switch' },
-]
+const categoryLabelMap = categoryOptions.reduce<Record<string, string>>((acc, item) => {
+  acc[item.value] = item.label
+  return acc
+}, {})
 
-function createSchemaField(index = 0) {
-  return {
-    key: `field_${index + 1}`,
-    label: `字段${index + 1}`,
-    type: 'text',
-    required: false,
-    placeholder: '',
-    rows: 3,
-    default: '',
-    options: [] as Array<{ label: string; value: string }>,
-  }
-}
-
-function parseSchemaFields(raw?: string) {
+const templateNodes = computed<TemplateNode[]>(() => {
+  const raw = form.value.nodes_json
   if (!raw) return []
   try {
-    const parsed = JSON.parse(raw)
-    const fields = Array.isArray(parsed?.fields) ? parsed.fields : []
-    return fields.map((field: any, index: number) => ({
-      key: field.key || `field_${index + 1}`,
-      label: field.label || `字段${index + 1}`,
-      type: field.type || 'text',
-      required: !!field.required,
-      placeholder: field.placeholder || '',
-      rows: field.rows || 3,
-      default: field.default ?? (field.type === 'switch' ? false : ''),
-      options: Array.isArray(field.options) ? field.options.map((option: any) => ({
-        label: option.label || '',
-        value: option.value ?? '',
-      })) : [],
-    }))
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
+})
+
+function generateTemplateCode(name: string) {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  if (normalized) {
+    return normalized.slice(0, 50)
+  }
+  return `template-${Date.now().toString(36)}`
 }
 
-function syncSchemaFromFields() {
-  const payload = {
-    fields: schemaFields.value.map(field => {
-      const nextField: any = {
-        key: field.key,
-        label: field.label,
-        type: field.type,
-        required: field.required,
-      }
-      if (field.placeholder) nextField.placeholder = field.placeholder
-      if (field.type === 'textarea') nextField.rows = field.rows || 3
-      if (field.default !== '' && field.default !== undefined && field.default !== null) nextField.default = field.default
-      if (field.type === 'select') {
-        nextField.options = (field.options || []).filter((option: any) => option.label && option.value !== '')
-      }
-      return nextField
-    }),
-  }
-  form.value.form_schema = JSON.stringify(payload, null, 2)
+function createNodeID() {
+  return `node-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
 }
 
-function syncFieldsFromSchemaText() {
-  const parsed = parseSchemaFields(form.value.form_schema)
-  if (parsed.length > 0 || form.value.form_schema.trim() === '{"fields":[]}' || form.value.form_schema.trim() === '') {
-    schemaFields.value = parsed
+function syncNodesJSON(nodes: TemplateNode[]) {
+  form.value.nodes_json = JSON.stringify(nodes, null, 2)
+}
+
+function buildStageSummary(row: any) {
+  const raw = row?.nodes_json
+  if (!raw) return '发起 => 处理'
+  try {
+    const nodes = Array.isArray(raw) ? raw : JSON.parse(raw)
+    if (!Array.isArray(nodes) || nodes.length === 0) return '发起 => 处理'
+    return ['发起', ...nodes.map((node: any, index: number) => node.name || `节点${index + 1}`), '处理'].join(' => ')
+  } catch {
+    return '发起 => 处理'
   }
+}
+
+function formatCategory(category?: string) {
+  if (!category) return '-'
+  return categoryLabelMap[category] || category
+}
+
+function getUserNames(ids: number[]) {
+  if (!ids?.length) return '没有设置'
+  return ids.map(id => {
+    const user = userOptions.value.find((item: any) => item.id === id)
+    return user ? (user.real_name || user.username) : `用户${id}`
+  }).join('、')
+}
+
+function approveModeLabel(mode: string) {
+  return approveModeOptions.find(item => item.value === mode)?.label || mode
+}
+
+function isEnabled(row: any) {
+  return Number(row?.status) === 1
 }
 
 async function fetchData() {
   loading.value = true
   try {
-    const [templateRes, policyRes, typeRes] = await Promise.all([
+    const [templateRes, userRes, deptRes] = await Promise.all([
       requestTemplateApi.list(),
-      approvalPolicyApi.list(),
-      ticketTypeApi.all(),
+      userApi.list(1, 200),
+      departmentApi.all(),
     ])
     tableData.value = (templateRes as any).data || []
-    policyOptions.value = (policyRes as any).data || []
-    ticketTypeOptions.value = (typeRes as any).data || []
+    userOptions.value = (userRes as any).data?.list || []
+    deptOptions.value = (deptRes as any).data || []
   } finally {
     loading.value = false
   }
 }
 
+function resetForm() {
+  form.value = {
+    name: '',
+    code: '',
+    category: 'other',
+    project_name: '',
+    environment_name: '',
+    description: '',
+    icon: '',
+    type_id: 0,
+    form_schema: '{"fields":[]}',
+    nodes_json: '[]',
+    execution_template: '',
+    ticket_kind: 'request',
+    priority: 'medium',
+    handle_dept_id: undefined,
+    auto_assign_rule: 'manual',
+    default_assignee: undefined,
+    auto_create_order: 1,
+    notify_applicant: 1,
+    sort: 999,
+    status: 1,
+  }
+  activeTab.value = 'basic'
+}
+
 function handleAdd() {
   isEdit.value = false
-  dialogTitle.value = '新增请求模板'
-  form.value = {
-    name: '', code: '', category: 'resource', description: '', icon: '',
-    type_id: undefined, form_schema: '{"fields":[]}', approval_policy_id: undefined, execution_template: '',
-    ticket_kind: 'request', auto_create_order: 1, notify_applicant: 1, sort: 0,
-  }
-  schemaFields.value = []
+  dialogTitle.value = '新增工单模板'
+  resetForm()
   dialogVisible.value = true
 }
 
 function handleEdit(row: any) {
   isEdit.value = true
-  dialogTitle.value = '编辑请求模板'
+  dialogTitle.value = '编辑工单模板'
   editId.value = row.id
   form.value = {
     name: row.name,
-    code: row.code,
-    category: row.category,
+    code: row.code || '',
+    category: row.category || 'other',
+    project_name: row.project_name || '',
+    environment_name: row.environment_name || '',
     description: row.description || '',
     icon: row.icon || '',
-    type_id: row.type_id || undefined,
+    type_id: row.type_id || 0,
     form_schema: row.form_schema || '{"fields":[]}',
-    approval_policy_id: row.approval_policy_id || undefined,
+    nodes_json: row.nodes_json || '[]',
     execution_template: row.execution_template || '',
     ticket_kind: row.ticket_kind || 'request',
+    priority: row.priority || 'medium',
+    handle_dept_id: row.handle_dept_id || undefined,
+    auto_assign_rule: row.auto_assign_rule || 'manual',
+    default_assignee: row.default_assignee || undefined,
     auto_create_order: row.auto_create_order ?? 1,
     notify_applicant: row.notify_applicant ?? 1,
-    sort: row.sort || 0,
-    status: row.status,
+    sort: row.sort || 999,
+    status: Number(row.status) || 0,
   }
-  schemaFields.value = parseSchemaFields(form.value.form_schema)
+  activeTab.value = 'basic'
   dialogVisible.value = true
 }
 
-function addSchemaField() {
-  schemaFields.value.push(createSchemaField(schemaFields.value.length))
-  syncSchemaFromFields()
+function openNodeDialog(index = -1) {
+  nodeEditIndex.value = index
+  if (index >= 0) {
+    const node = templateNodes.value[index]
+    nodeDialogTitle.value = '编辑模板节点'
+    nodeForm.value = {
+      node_id: node.node_id || createNodeID(),
+      name: node.name,
+      approve_mode: node.approve_mode || 'or',
+      handler_ids: [...(node.handler_ids || [])],
+      optional_handler_ids: [...(node.optional_handler_ids || [])],
+      notify_user_ids: [...(node.notify_user_ids || [])],
+      node_form_schema: node.node_form_schema || '{"fields":[]}',
+      callback_config: node.callback_config || '',
+    }
+  } else {
+    nodeDialogTitle.value = '新增模板节点'
+    nodeForm.value = {
+      node_id: createNodeID(),
+      name: '',
+      approve_mode: 'or',
+      handler_ids: [],
+      optional_handler_ids: [],
+      notify_user_ids: [],
+      node_form_schema: '{"fields":[]}',
+      callback_config: '',
+    }
+  }
+  nodeDialogVisible.value = true
 }
 
-function removeSchemaField(index: number) {
-  schemaFields.value.splice(index, 1)
-  syncSchemaFromFields()
+function saveNode() {
+  if (!nodeForm.value.name) {
+    ElMessage.warning('请填写节点名')
+    return
+  }
+  const nextNodes = [...templateNodes.value]
+  const payload = { ...nodeForm.value }
+  if (nodeEditIndex.value >= 0) {
+    nextNodes.splice(nodeEditIndex.value, 1, payload)
+  } else {
+    nextNodes.push(payload)
+  }
+  syncNodesJSON(nextNodes)
+  nodeDialogVisible.value = false
 }
 
-function addOption(field: any) {
-  field.options.push({ label: '', value: '' })
-  syncSchemaFromFields()
-}
-
-function removeOption(field: any, index: number) {
-  field.options.splice(index, 1)
-  syncSchemaFromFields()
+function deleteNode(index: number) {
+  const nextNodes = [...templateNodes.value]
+  nextNodes.splice(index, 1)
+  syncNodesJSON(nextNodes)
 }
 
 async function submitForm() {
-  if (!form.value.name || !form.value.code) {
-    ElMessage.warning('请填写名称和编码')
+  if (!form.value.name) {
+    ElMessage.warning('请填写模板名称')
     return
   }
-  if (!form.value.type_id) {
-    ElMessage.warning('请选择绑定的工单类型')
-    return
+  const payload = {
+    ...form.value,
+    code: form.value.code?.trim() || generateTemplateCode(form.value.name),
+    type_id: form.value.type_id || 0,
+    approval_policy_id: 0,
+    nodes_json: form.value.nodes_json || '[]',
   }
   try {
-    const payload = {
-      ...form.value,
-      type_id: form.value.type_id,
-      approval_policy_id: form.value.approval_policy_id || 0,
-    }
     if (isEdit.value) {
       await requestTemplateApi.update(editId.value, payload)
       ElMessage.success('更新成功')
@@ -207,12 +310,47 @@ async function submitForm() {
 
 async function handleDelete(row: any) {
   try {
-    await ElMessageBox.confirm(`确定删除请求模板 "${row.name}" 吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(`确定删除工单模板 "${row.name}" 吗？`, '提示', { type: 'warning' })
     await requestTemplateApi.delete(row.id)
     ElMessage.success('删除成功')
     viewStateStore.markRequestTemplateDirty()
     fetchData()
   } catch {}
+}
+
+async function toggleStatus(row: any, value: boolean) {
+  const nextStatus = value ? 1 : 0
+  const previousStatus = row.status
+  row.status = nextStatus
+  try {
+    await requestTemplateApi.update(row.id, {
+      name: row.name,
+      code: row.code,
+      category: row.category || 'other',
+      project_name: row.project_name || '',
+      environment_name: row.environment_name || '',
+      description: row.description || '',
+      icon: row.icon || '',
+      type_id: row.type_id || 0,
+      form_schema: row.form_schema || '{"fields":[]}',
+      nodes_json: row.nodes_json || '[]',
+      execution_template: row.execution_template || '',
+      ticket_kind: row.ticket_kind || 'request',
+      priority: row.priority || 'medium',
+      handle_dept_id: row.handle_dept_id || 0,
+      auto_assign_rule: row.auto_assign_rule || 'manual',
+      default_assignee: row.default_assignee || 0,
+      auto_create_order: row.auto_create_order ?? 1,
+      notify_applicant: row.notify_applicant ?? 1,
+      sort: row.sort || 999,
+      status: nextStatus,
+      approval_policy_id: 0,
+    })
+    viewStateStore.markRequestTemplateDirty()
+    ElMessage.success(nextStatus === 1 ? '已启用' : '已停用')
+  } catch {
+    row.status = previousStatus
+  }
 }
 
 onMounted(fetchData)
@@ -223,26 +361,37 @@ onMounted(fetchData)
     <el-card shadow="never">
       <template #header>
         <div class="page-head">
-          <span>请求模板</span>
-          <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增</el-button>
+          <div class="page-head-title">
+            <span class="page-title">工单模板</span>
+            <span class="page-subtitle">按模板维护基础信息与审批节点</span>
+          </div>
+          <div class="page-head-actions">
+            <el-button @click="fetchData">刷新</el-button>
+            <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增工单模板</el-button>
+          </div>
         </div>
       </template>
 
       <el-table :data="tableData" v-loading="loading" stripe border>
-        <el-table-column prop="name" label="名称" min-width="160" />
-        <el-table-column prop="code" label="编码" width="120" />
-        <el-table-column prop="category" label="分类" width="110" />
-        <el-table-column prop="ticket_kind" label="单据类型" width="100" />
-        <el-table-column prop="type_name" label="绑定类型" width="140">
-          <template #default="{ row }">{{ row.type_name || '-' }}</template>
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="name" label="模板名" min-width="180" />
+        <el-table-column prop="category" label="所属类别" width="120">
+          <template #default="{ row }">{{ formatCategory(row.category) }}</template>
         </el-table-column>
-        <el-table-column prop="approval_policy_name" label="审批策略" width="150">
-          <template #default="{ row }">{{ row.approval_policy_name || '-' }}</template>
+        <el-table-column label="节点列表" min-width="280" show-overflow-tooltip>
+          <template #default="{ row }">{{ buildStageSummary(row) }}</template>
         </el-table-column>
-        <el-table-column prop="execution_template" label="执行模板" width="140">
-          <template #default="{ row }">{{ row.execution_template || '-' }}</template>
+        <el-table-column label="启用" width="90" align="center">
+          <template #default="{ row }">
+            <el-switch :model-value="isEnabled(row)" @update:model-value="(value: boolean) => toggleStatus(row, value)" />
+          </template>
         </el-table-column>
-        <el-table-column prop="sort" label="排序" width="70" />
+        <el-table-column prop="description" label="备注" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.description || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="updated_at" label="更新时间" width="180">
+          <template #default="{ row }">{{ row.updated_at || '-' }}</template>
+        </el-table-column>
         <el-table-column label="操作" fixed="right" min-width="160">
           <template #default="{ row }">
             <el-button link size="small" @click="handleEdit(row)">编辑</el-button>
@@ -252,88 +401,131 @@ onMounted(fetchData)
       </el-table>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="620px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="编码"><el-input v-model="form.code" /></el-form-item>
-        <el-form-item label="分类">
-          <el-select v-model="form.category" style="width: 100%;">
-            <el-option v-for="item in categoryOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="单据类型">
-          <el-select v-model="form.ticket_kind" style="width: 100%;">
-            <el-option v-for="item in ticketKindOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="工单类型">
-          <el-select v-model="form.type_id" placeholder="绑定一个底层工单类型" style="width: 100%;">
-            <el-option v-for="item in ticketTypeOptions" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="审批策略">
-          <el-select v-model="form.approval_policy_id" clearable placeholder="可不绑定审批策略" style="width: 100%;">
-            <el-option v-for="item in policyOptions" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="执行模板"><el-input v-model="form.execution_template" /></el-form-item>
-        <el-form-item label="图标"><el-input v-model="form.icon" /></el-form-item>
-        <el-form-item label="表单字段">
-          <div class="schema-builder">
-            <div class="schema-builder-head">
-              <span>可视化字段编辑</span>
-              <el-button type="primary" plain @click="addSchemaField">新增字段</el-button>
-            </div>
-            <div v-if="schemaFields.length" class="schema-field-list">
-              <div v-for="(field, index) in schemaFields" :key="index" class="schema-field-card">
-                <div class="schema-field-head">
-                  <span>字段 {{ index + 1 }}</span>
-                  <el-button link type="danger" @click="removeSchemaField(index)">删除</el-button>
-                </div>
-                <el-form label-width="90px">
-                  <el-form-item label="字段Key"><el-input v-model="field.key" @input="syncSchemaFromFields" /></el-form-item>
-                  <el-form-item label="显示名称"><el-input v-model="field.label" @input="syncSchemaFromFields" /></el-form-item>
-                  <el-form-item label="类型">
-                    <el-select v-model="field.type" style="width: 100%;" @change="syncSchemaFromFields">
-                      <el-option v-for="item in schemaFieldTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
-                    </el-select>
-                  </el-form-item>
-                  <el-form-item label="占位文案"><el-input v-model="field.placeholder" @input="syncSchemaFromFields" /></el-form-item>
-                  <el-form-item label="必填">
-                    <el-switch v-model="field.required" @change="syncSchemaFromFields" />
-                  </el-form-item>
-                  <el-form-item label="默认值">
-                    <el-input v-if="field.type !== 'switch'" v-model="field.default" @input="syncSchemaFromFields" />
-                    <el-switch v-else v-model="field.default" @change="syncSchemaFromFields" />
-                  </el-form-item>
-                  <el-form-item label="行数" v-if="field.type === 'textarea'">
-                    <el-input-number v-model="field.rows" :min="2" @change="syncSchemaFromFields" />
-                  </el-form-item>
-                  <el-form-item label="选项" v-if="field.type === 'select'">
-                    <div class="schema-options">
-                      <div v-for="(option, optionIndex) in field.options" :key="Number(optionIndex)" class="schema-option-row">
-                        <el-input v-model="option.label" placeholder="标签" @input="syncSchemaFromFields" />
-                        <el-input v-model="option.value" placeholder="值" @input="syncSchemaFromFields" />
-                        <el-button link type="danger" @click="removeOption(field, Number(optionIndex))">删除</el-button>
-                      </div>
-                      <el-button plain @click="addOption(field)">新增选项</el-button>
-                    </div>
-                  </el-form-item>
-                </el-form>
-              </div>
-            </div>
-            <el-empty v-else description="暂未配置动态字段" :image-size="60" />
-          </div>
-        </el-form-item>
-        <el-form-item label="表单Schema">
-          <el-input v-model="form.form_schema" type="textarea" :rows="6" @blur="syncFieldsFromSchemaText" />
-        </el-form-item>
-        <el-form-item label="描述"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
-        <el-form-item label="排序"><el-input-number v-model="form.sort" :min="0" /></el-form-item>
-      </el-form>
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="980px">
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="基础信息" name="basic" />
+        <el-tab-pane label="节点配置" name="nodes" />
+      </el-tabs>
+
+      <div v-if="activeTab === 'basic'" class="template-section">
+        <div class="section-title">基础信息</div>
+        <el-form :model="form" label-width="100px">
+          <el-form-item label="模板类别"><el-select v-model="form.category" style="width: 100%;"><el-option v-for="item in templateCategoryOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+          <el-form-item label="模板名称"><el-input v-model="form.name" /></el-form-item>
+          <el-form-item label="关联项目"><el-input v-model="form.project_name" placeholder="可选" /></el-form-item>
+          <el-form-item label="关联环境"><el-input v-model="form.environment_name" placeholder="可选" /></el-form-item>
+          <el-form-item label="模板排序"><el-input-number v-model="form.sort" :min="0" /></el-form-item>
+          <el-form-item label="默认优先级">
+            <el-select v-model="form.priority" style="width: 100%;">
+              <el-option label="低" value="low" />
+              <el-option label="中" value="medium" />
+              <el-option label="高" value="high" />
+              <el-option label="紧急" value="urgent" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="处理部门">
+            <el-select v-model="form.handle_dept_id" placeholder="可选" clearable style="width: 100%;">
+              <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="分派规则">
+            <el-select v-model="form.auto_assign_rule" style="width: 100%;">
+              <el-option label="手动指定" value="manual" />
+              <el-option label="资产负责人" value="resource_owner" />
+              <el-option label="服务树负责人" value="service_owner" />
+              <el-option label="部门默认人" value="dept_default" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="默认处理人" v-if="form.auto_assign_rule === 'dept_default'">
+            <el-select v-model="form.default_assignee" placeholder="选择处理人" clearable style="width: 100%;">
+              <el-option v-for="u in userOptions" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="是否启用"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
+          <el-form-item label="备注"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
+        </el-form>
+      </div>
+
+      <div v-else class="template-section">
+        <div class="section-title section-head">
+          <span>节点配置</span>
+          <el-button link type="primary" @click="openNodeDialog()">添加节点</el-button>
+        </div>
+        <el-table :data="templateNodes" border>
+          <el-table-column prop="name" label="节点名" min-width="160" />
+          <el-table-column label="审批方式" width="160">
+            <template #default="{ row }">{{ approveModeLabel(row.approve_mode) }}</template>
+          </el-table-column>
+          <el-table-column label="字段数量" width="120">
+            <template #default="{ row }">
+              {{
+                (() => {
+                  try {
+                    const parsed = JSON.parse(row.node_form_schema || '{"fields":[]}')
+                    return Array.isArray(parsed?.fields) ? parsed.fields.length : 0
+                  } catch {
+                    return 0
+                  }
+                })()
+              }}
+            </template>
+          </el-table-column>
+          <el-table-column label="处理成员" min-width="220">
+            <template #default="{ row }">{{ getUserNames(row.handler_ids) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="140">
+            <template #default="{ $index }">
+              <el-button link size="small" @click="openNodeDialog($index)">编辑</el-button>
+              <el-button link size="small" type="danger" @click="deleteNode($index)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <el-button type="primary" @click="submitForm">提交</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="nodeDialogVisible" :title="nodeDialogTitle" width="860px">
+      <div class="template-section">
+        <div class="section-title">节点基础信息</div>
+        <el-form :model="nodeForm" label-width="110px">
+          <el-form-item label="节点名"><el-input v-model="nodeForm.name" /></el-form-item>
+          <el-form-item label="审批方式">
+            <el-radio-group v-model="nodeForm.approve_mode">
+              <el-radio value="or">或签(单一通过)</el-radio>
+              <el-radio value="and">会签(全部通过)</el-radio>
+              <el-radio value="none">无需审批</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="绑定处理成员">
+            <el-select v-model="nodeForm.handler_ids" multiple clearable style="width: 100%;">
+              <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="可选处理成员">
+            <el-select v-model="nodeForm.optional_handler_ids" multiple clearable style="width: 100%;">
+              <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="绑定通知成员">
+            <el-select v-model="nodeForm.notify_user_ids" multiple clearable style="width: 100%;">
+              <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="表单可视化设计">
+            <el-input v-model="nodeForm.node_form_schema" type="textarea" :rows="6" placeholder='{"fields":[]}' />
+          </el-form-item>
+          <el-form-item label="节点回调配置">
+            <el-input v-model="nodeForm.callback_config" type="textarea" :rows="4" placeholder="可选，回调配置 JSON" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="nodeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveNode">应用</el-button>
       </template>
     </el-dialog>
   </div>
@@ -341,49 +533,48 @@ onMounted(fetchData)
 
 <style scoped>
 .page { padding: 20px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; }
-.schema-builder {
-  width: 100%;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fafafa;
-}
-.schema-builder-head {
+.page-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  font-weight: 700;
+  gap: 16px;
 }
-.schema-field-list {
+.page-head-title {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
-.schema-field-card {
-  border: 1px solid #dbe4ee;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fff;
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
 }
-.schema-field-head {
+.page-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+}
+.page-head-actions {
   display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.template-section {
+  padding-top: 8px;
+}
+.section-title {
+  margin-bottom: 14px;
+  padding-left: 10px;
+  border-left: 4px solid #0ea5e9;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+.section-head {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-weight: 700;
-}
-.schema-options {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.schema-option-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
-  align-items: center;
+  padding-left: 0;
+  border-left: 0;
 }
 </style>

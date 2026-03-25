@@ -83,29 +83,44 @@ func (s *TicketService) Create(ticket *model.Ticket, operatorID int64, operatorN
 	if ticket.Title == "" {
 		return errors.New("工单标题不能为空")
 	}
-	if ticket.TypeID == 0 && ticket.RequestTemplateID > 0 {
-		template, err := s.requestRepo.GetByID(ticket.RequestTemplateID)
+
+	// 从模板获取默认值
+	var template *model.RequestTemplate
+	if ticket.RequestTemplateID > 0 {
+		tpl, err := s.requestRepo.GetByID(ticket.RequestTemplateID)
 		if err != nil {
 			return errors.New("请求模板不存在")
 		}
-		ticket.TypeID = template.TypeID
+		template = tpl
+		if ticket.TypeID == 0 {
+			ticket.TypeID = template.TypeID
+		}
 		if ticket.TicketKind == "" {
 			ticket.TicketKind = template.TicketKind
 		}
 	}
-	if ticket.TypeID == 0 {
-		return errors.New("请选择工单类型")
-	}
 
-	// 查类型
-	tt, err := s.typeRepo.GetByID(ticket.TypeID)
-	if err != nil {
-		return errors.New("工单类型不存在")
+	// TypeID 不再强制要求（模板用 category 分类）
+	// 如果有 TypeID 则校验存在性
+	var tt *model.TicketType
+	if ticket.TypeID > 0 {
+		found, err := s.typeRepo.GetByID(ticket.TypeID)
+		if err != nil {
+			return errors.New("工单类型不存在")
+		}
+		tt = found
 	}
 
 	ticket.Status = "open"
+	// 优先级取值优先级：请求传入 > 模板默认 > 工单类型默认 > medium
 	if ticket.Priority == "" {
-		ticket.Priority = tt.Priority
+		if template != nil && template.Priority != "" {
+			ticket.Priority = template.Priority
+		} else if tt != nil {
+			ticket.Priority = tt.Priority
+		} else {
+			ticket.Priority = "medium"
+		}
 	}
 	if ticket.Source == "" {
 		ticket.Source = "manual"
@@ -123,8 +138,13 @@ func (s *TicketService) Create(ticket *model.Ticket, operatorID int64, operatorN
 			ticket.SubmitDeptID = user.DepartmentID
 		}
 	}
+	// 处理部门：请求传入 > 模板默认 > 工单类型默认
 	if ticket.HandleDeptID == 0 {
-		ticket.HandleDeptID = tt.HandleDeptID
+		if template != nil && template.HandleDeptID > 0 {
+			ticket.HandleDeptID = template.HandleDeptID
+		} else if tt != nil {
+			ticket.HandleDeptID = tt.HandleDeptID
+		}
 	}
 	if ticket.ResourceType == "asset" && ticket.ResourceID == 0 {
 		extra := parseTicketExtraFields(ticket.ExtraFields)
@@ -141,7 +161,7 @@ func (s *TicketService) Create(ticket *model.Ticket, operatorID int64, operatorN
 		return err
 	}
 	if approvalPlan == nil {
-		s.autoAssign(ticket, tt)
+		s.autoAssign(ticket, template, tt)
 	}
 
 	var approvalEventID int64
@@ -580,8 +600,19 @@ func mustMarshalTicketExtraFields(extra ticketExtraFields) string {
 	return string(data)
 }
 
-func (s *TicketService) autoAssign(ticket *model.Ticket, tt *model.TicketType) {
-	switch tt.AutoAssignRule {
+func (s *TicketService) autoAssign(ticket *model.Ticket, tpl *model.RequestTemplate, tt *model.TicketType) {
+	// 分派规则优先取模板，兜底取工单类型
+	assignRule := ""
+	var defaultAssignee int64
+	if tpl != nil && tpl.AutoAssignRule != "" && tpl.AutoAssignRule != "manual" {
+		assignRule = tpl.AutoAssignRule
+		defaultAssignee = tpl.DefaultAssignee
+	} else if tt != nil {
+		assignRule = tt.AutoAssignRule
+		defaultAssignee = tt.DefaultAssignee
+	}
+
+	switch assignRule {
 	case "resource_owner":
 		ownerID := s.getResourceOwner(ticket.ResourceType, ticket.ResourceID)
 		if ownerID > 0 {
@@ -594,8 +625,8 @@ func (s *TicketService) autoAssign(ticket *model.Ticket, tt *model.TicketType) {
 			}
 		}
 	case "dept_default":
-		if tt.DefaultAssignee > 0 {
-			ticket.AssigneeID = tt.DefaultAssignee
+		if defaultAssignee > 0 {
+			ticket.AssigneeID = defaultAssignee
 		}
 	}
 	if ticket.AssigneeID > 0 {
@@ -762,6 +793,32 @@ func (s *TicketService) prepareApprovalBootstrap(ticket *model.Ticket, operatorI
 	if template.TicketKind != "" {
 		ticket.TicketKind = template.TicketKind
 	}
+	templateStages := buildApprovalStagesFromTemplate(template)
+	if len(templateStages) > 0 {
+		firstStage := pickFirstApprovalStage(templateStages)
+		if firstStage == nil {
+			return nil, errors.New("工单模板缺少审批节点")
+		}
+		approverIDs, err := s.resolveApproverIDs(firstStage, ticket, operatorID)
+		if err != nil {
+			return nil, err
+		}
+		if len(approverIDs) == 0 {
+			return nil, errors.New("审批节点未解析到处理成员")
+		}
+		ticket.ApprovalStatus = "pending"
+		return &approvalBootstrap{
+			template: template,
+			policy: &model.ApprovalPolicy{
+				ID:     0,
+				Name:   template.Name,
+				Scope:  template.TicketKind,
+				Stages: templateStages,
+			},
+			firstStage:  firstStage,
+			approverIDs: approverIDs,
+		}, nil
+	}
 	if template.ApprovalPolicyID == 0 {
 		ticket.ApprovalStatus = "not_required"
 		return nil, nil
@@ -927,7 +984,7 @@ func (s *TicketService) startApprovalFlowTx(
 		return 0, err
 	}
 
-		activity := &model.TicketActivity{
+	activity := &model.TicketActivity{
 		TicketID: ticket.ID,
 		UserID:   0,
 		Type:     "approval_pending",
