@@ -14,7 +14,7 @@ import (
 // RBAC 模型定义：
 // sub = 角色名, obj = API 路径前缀, act = HTTP 方法（* 表示全部）
 // g = 用户-角色映射
-// keyMatch2 支持 /api/v1/tickets/* 匹配 /api/v1/tickets/123/activities
+// keyMatch 支持 /api/v1/tickets* 匹配 /api/v1/tickets 和 /api/v1/tickets/123/activities
 const rbacModel = `
 [request_definition]
 r = sub, obj, act
@@ -29,7 +29,7 @@ g = _, _
 e = some(where (p.eft == allow))
 
 [matchers]
-m = g(r.sub, p.sub) && keyMatch2(r.obj, p.obj) && (p.act == "*" || r.act == p.act) || r.sub == "admin"
+m = g(r.sub, p.sub) && keyMatch(r.obj, p.obj) && (p.act == "*" || r.act == p.act) || r.sub == "admin"
 `
 
 var globalEnforcer *casbin.Enforcer

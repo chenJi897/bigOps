@@ -23,7 +23,7 @@ ON DUPLICATE KEY UPDATE
 
 -- 任务管理（可见）
 INSERT INTO `menus` (`parent_id`, `name`, `title`, `icon`, `path`, `component`, `api_path`, `api_method`, `type`, `sort`, `visible`, `status`)
-SELECT m.id, 'task_list', '任务管理', 'List', '/task/list', 'TaskList', '/api/v1/tasks/*', '*', 2, 1, 1, 1
+SELECT m.id, 'task_list', '任务管理', 'List', '/task/list', 'TaskList', '/api/v1/tasks*', '*', 2, 1, 1, 1
 FROM `menus` m WHERE m.`name` = 'task_dir' AND m.`deleted_at` IS NULL
 ON DUPLICATE KEY UPDATE
   `parent_id`  = VALUES(`parent_id`),
@@ -31,7 +31,7 @@ ON DUPLICATE KEY UPDATE
   `icon`       = 'List',
   `path`       = '/task/list',
   `component`  = 'TaskList',
-  `api_path`   = '/api/v1/tasks/*',
+  `api_path`   = '/api/v1/tasks*',
   `api_method` = '*',
   `type`       = 2,
   `sort`       = 1,
@@ -40,7 +40,7 @@ ON DUPLICATE KEY UPDATE
 
 -- 创建任务（隐藏菜单 visible=0）
 INSERT INTO `menus` (`parent_id`, `name`, `title`, `icon`, `path`, `component`, `api_path`, `api_method`, `type`, `sort`, `visible`, `status`)
-SELECT m.id, 'task_create', '创建任务', '', '/task/create', 'TaskCreate', '/api/v1/tasks/*', '*', 2, 2, 0, 1
+SELECT m.id, 'task_create', '创建任务', '', '/task/create', 'TaskCreate', '/api/v1/tasks*', '*', 2, 2, 0, 1
 FROM `menus` m WHERE m.`name` = 'task_dir' AND m.`deleted_at` IS NULL
 ON DUPLICATE KEY UPDATE
   `parent_id`  = VALUES(`parent_id`),
@@ -48,7 +48,7 @@ ON DUPLICATE KEY UPDATE
   `icon`       = '',
   `path`       = '/task/create',
   `component`  = 'TaskCreate',
-  `api_path`   = '/api/v1/tasks/*',
+  `api_path`   = '/api/v1/tasks*',
   `api_method` = '*',
   `type`       = 2,
   `sort`       = 2,
@@ -57,7 +57,7 @@ ON DUPLICATE KEY UPDATE
 
 -- 执行详情（隐藏菜单 visible=0）
 INSERT INTO `menus` (`parent_id`, `name`, `title`, `icon`, `path`, `component`, `api_path`, `api_method`, `type`, `sort`, `visible`, `status`)
-SELECT m.id, 'task_execution', '执行详情', '', '/task/execution', 'TaskExecution', '/api/v1/task-executions/*', '*', 2, 3, 0, 1
+SELECT m.id, 'task_execution', '执行详情', '', '/task/execution', 'TaskExecution', '/api/v1/task-executions*', '*', 2, 3, 0, 1
 FROM `menus` m WHERE m.`name` = 'task_dir' AND m.`deleted_at` IS NULL
 ON DUPLICATE KEY UPDATE
   `parent_id`  = VALUES(`parent_id`),
@@ -65,7 +65,7 @@ ON DUPLICATE KEY UPDATE
   `icon`       = '',
   `path`       = '/task/execution',
   `component`  = 'TaskExecution',
-  `api_path`   = '/api/v1/task-executions/*',
+  `api_path`   = '/api/v1/task-executions*',
   `api_method` = '*',
   `type`       = 2,
   `sort`       = 3,
@@ -74,7 +74,7 @@ ON DUPLICATE KEY UPDATE
 
 -- Agent 管理（可见）
 INSERT INTO `menus` (`parent_id`, `name`, `title`, `icon`, `path`, `component`, `api_path`, `api_method`, `type`, `sort`, `visible`, `status`)
-SELECT m.id, 'agent_list', 'Agent 管理', 'Monitor', '/task/agents', 'AgentList', '/api/v1/agents/*', '*', 2, 4, 1, 1
+SELECT m.id, 'agent_list', 'Agent 管理', 'Monitor', '/task/agents', 'AgentList', '/api/v1/agents*', '*', 2, 4, 1, 1
 FROM `menus` m WHERE m.`name` = 'task_dir' AND m.`deleted_at` IS NULL
 ON DUPLICATE KEY UPDATE
   `parent_id`  = VALUES(`parent_id`),
@@ -82,7 +82,7 @@ ON DUPLICATE KEY UPDATE
   `icon`       = 'Monitor',
   `path`       = '/task/agents',
   `component`  = 'AgentList',
-  `api_path`   = '/api/v1/agents/*',
+  `api_path`   = '/api/v1/agents*',
   `api_method` = '*',
   `type`       = 2,
   `sort`       = 4,
