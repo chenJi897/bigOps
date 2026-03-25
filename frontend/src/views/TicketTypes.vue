@@ -126,7 +126,7 @@ onActivated(() => {
     <el-card shadow="never">
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>工单类型管理</span>
+          <span>工单模板</span>
           <div style="display: flex; gap: 8px;">
             <el-button plain @click="router.push('/request/templates')">请求模板</el-button>
             <el-button plain @click="router.push('/approval/policies')">审批策略</el-button>

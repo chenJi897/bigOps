@@ -29,7 +29,7 @@ const activeMenu = computed(() => (route.meta?.activeMenu as string) || route.pa
 function filterSidebarMenus(items: any[]): any[] {
   const result: any[] = []
   for (const item of items || []) {
-    if (item.type === 3 || item.visible === 0 || item.component === 'TicketDetail') continue
+    if (item.type === 3 || item.visible === 0) continue
     const children = item.children?.length ? filterSidebarMenus(item.children) : []
     if (children.length > 0) {
       result.push({ ...item, children })

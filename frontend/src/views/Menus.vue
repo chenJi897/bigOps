@@ -22,7 +22,8 @@ const typeOptions = [
 const componentOptions = [
   'Dashboard', 'Users', 'Roles', 'Menus', 'AuditLogs', 'Departments',
   'ServiceTree', 'CloudAccounts', 'Assets',
-  'TicketList', 'TicketCreate', 'TicketDetail', 'TicketTypes',
+  'TicketRequest', 'TicketTodo', 'TicketMine', 'TicketList',
+  'TicketCreate', 'TicketDetail', 'TicketTypes',
   'ApprovalInbox', 'RequestTemplates', 'ApprovalPolicies', 'NotificationConsole',
   'TaskList', 'TaskCreate', 'TaskExecution', 'AgentList',
 ]

@@ -40,6 +40,9 @@ const viewModules: Record<string, () => Promise<any>> = {
   'TicketList': () => import('../views/TicketList.vue'),
   'TicketCreate': () => import('../views/TicketCreate.vue'),
   'TicketDetail': () => import('../views/TicketDetail.vue'),
+  'TicketRequest': () => import('../views/TicketRequest.vue'),
+  'TicketTodo': () => import('../views/TicketTodo.vue'),
+  'TicketMine': () => import('../views/TicketMine.vue'),
   'ApprovalInbox': () => import('../views/ApprovalInbox.vue'),
   'RequestTemplates': () => import('../views/RequestTemplates.vue'),
   'ApprovalPolicies': () => import('../views/ApprovalPolicies.vue'),
@@ -167,62 +170,45 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
 
 function ensureCompanionRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
   const nextRoutes = [...routes]
-  const ticketListRoute = nextRoutes.find(route =>
-    route.meta?.componentName === 'TicketList' || route.name === 'TicketList'
+
+  // 工单中心：任意一个工单页面存在就补全隐藏路由
+  const ticketPageNames = ['TicketRequest', 'TicketTodo', 'TicketMine', 'TicketList']
+  const hasAnyTicketPage = nextRoutes.some(r =>
+    ticketPageNames.includes(r.meta?.componentName as string) || ticketPageNames.includes(r.name as string)
   )
 
-  if (!ticketListRoute) {
-    return nextRoutes
-  }
+  if (hasAnyTicketPage) {
+    // 找一个工单页面作为 activeMenu 回落
+    const ticketAnchor = nextRoutes.find(r =>
+      r.meta?.componentName === 'TicketRequest' || r.name === 'TicketRequest'
+    ) || nextRoutes.find(r => ticketPageNames.includes(r.meta?.componentName as string))
+    const ticketActiveMenu = ticketAnchor ? ((ticketAnchor.meta?.activeMenu as string) || `/${String(ticketAnchor.path)}`) : '/ticket/request'
 
-  const ticketActiveMenu = (ticketListRoute.meta?.activeMenu as string) || `/${String(ticketListRoute.path)}`
-  const hasTicketCreateRoute = nextRoutes.some(route =>
-    route.meta?.componentName === 'TicketCreate' || route.name === 'TicketCreate'
-  )
-  const hasTicketDetailRoute = nextRoutes.some(route =>
-    route.meta?.componentName === 'TicketDetail' || route.name === 'TicketDetail'
-  )
-  const hasApprovalInboxRoute = nextRoutes.some(route =>
-    route.meta?.componentName === 'ApprovalInbox' || route.name === 'ApprovalInbox'
-  )
-
-  if (!hasTicketCreateRoute) {
-    nextRoutes.push({
-      path: 'ticket/create',
-      name: 'TicketCreate',
-      component: viewModules['TicketCreate'],
-      meta: {
-        title: '创建工单',
-        componentName: 'TicketCreate',
-        activeMenu: ticketActiveMenu,
-      },
-    })
-  }
-
-  if (!hasTicketDetailRoute) {
-    nextRoutes.push({
-      path: 'ticket/detail/:id?',
-      name: 'TicketDetail',
-      component: viewModules['TicketDetail'],
-      meta: {
-        title: '工单详情',
-        componentName: 'TicketDetail',
-        activeMenu: ticketActiveMenu,
-      },
-    })
-  }
-
-  if (!hasApprovalInboxRoute) {
-    nextRoutes.push({
-      path: 'approval/inbox',
-      name: 'ApprovalInbox',
-      component: viewModules['ApprovalInbox'],
-      meta: {
-        title: '审批待办',
-        componentName: 'ApprovalInbox',
-        activeMenu: ticketActiveMenu,
-      },
-    })
+    if (!nextRoutes.some(r => r.meta?.componentName === 'TicketCreate' || r.name === 'TicketCreate')) {
+      nextRoutes.push({
+        path: 'ticket/create',
+        name: 'TicketCreate',
+        component: viewModules['TicketCreate'],
+        meta: { title: '创建工单', componentName: 'TicketCreate', activeMenu: ticketActiveMenu },
+      })
+    }
+    if (!nextRoutes.some(r => r.meta?.componentName === 'TicketDetail' || r.name === 'TicketDetail')) {
+      nextRoutes.push({
+        path: 'ticket/detail/:id?',
+        name: 'TicketDetail',
+        component: viewModules['TicketDetail'],
+        meta: { title: '工单详情', componentName: 'TicketDetail', activeMenu: ticketActiveMenu },
+      })
+    }
+    // ApprovalInbox 保留作为隐藏路由（兼容旧链接）
+    if (!nextRoutes.some(r => r.meta?.componentName === 'ApprovalInbox' || r.name === 'ApprovalInbox')) {
+      nextRoutes.push({
+        path: 'approval/inbox',
+        name: 'ApprovalInbox',
+        component: viewModules['ApprovalInbox'],
+        meta: { title: '审批待办', componentName: 'ApprovalInbox', activeMenu: ticketActiveMenu },
+      })
+    }
   }
 
   const ticketTypeRoute = nextRoutes.find(route =>
