@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -129,7 +132,7 @@ func (c *AgentClient) sendHeartbeat(stream pb.AgentService_HeartbeatClient) erro
 		Hostname:    c.hostname,
 		Ip:          c.ip,
 		Version:     agentVersion,
-		Os:          runtime.GOOS + "/" + runtime.GOARCH,
+		Os:          getOSInfo(),
 		CpuCount:    int32(runtime.NumCPU()),
 		MemoryTotal: getMemoryTotal(),
 		Timestamp:   time.Now().Unix(),
@@ -158,6 +161,43 @@ func (c *AgentClient) executeTask(ctx context.Context, executor *Executor, task 
 }
 
 func getMemoryTotal() int64 {
-	// Simple approach: return 0 for V1 (can be enhanced later with /proc/meminfo)
+	data, err := os.ReadFile("/proc/meminfo")
+	if err != nil {
+		return 0
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "MemTotal:") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				kb, _ := strconv.ParseInt(fields[1], 10, 64)
+				return kb * 1024 // KB → bytes
+			}
+		}
+	}
 	return 0
+}
+
+func getOSInfo() string {
+	data, err := os.ReadFile("/etc/os-release")
+	if err != nil {
+		return runtime.GOOS + "/" + runtime.GOARCH
+	}
+	var name, version string
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "PRETTY_NAME=") {
+			val := strings.TrimPrefix(line, "PRETTY_NAME=")
+			val = strings.Trim(val, "\"")
+			return val + " " + runtime.GOARCH
+		}
+		if strings.HasPrefix(line, "NAME=") {
+			name = strings.Trim(strings.TrimPrefix(line, "NAME="), "\"")
+		}
+		if strings.HasPrefix(line, "VERSION_ID=") {
+			version = strings.Trim(strings.TrimPrefix(line, "VERSION_ID="), "\"")
+		}
+	}
+	if name != "" {
+		return name + " " + version + " " + runtime.GOARCH
+	}
+	return runtime.GOOS + "/" + runtime.GOARCH
 }
