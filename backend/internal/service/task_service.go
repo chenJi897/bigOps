@@ -136,7 +136,11 @@ func (s *TaskService) ExecuteTask(taskID int64, hostIPs []string, operatorID int
 	}
 
 	// Marshal target hosts to JSON
-	hostsJSON, _ := json.Marshal(hostIPs)
+	hostsJSON, err2 := json.Marshal(hostIPs)
+	if err2 != nil {
+		logger.Warn("序列化目标主机列表失败", zap.Error(err2))
+		hostsJSON = []byte("[]")
+	}
 
 	now := model.LocalTime(time.Now())
 	exec := &model.TaskExecution{
@@ -159,12 +163,14 @@ func (s *TaskService) ExecuteTask(taskID int64, hostIPs []string, operatorID int
 		agentInfo, err := s.agentRepo.GetByIP(ip)
 		if err != nil {
 			// No agent registered for this IP, create host result as failed
-			_ = s.execRepo.CreateHostResult(&model.TaskHostResult{
+			if err := s.execRepo.CreateHostResult(&model.TaskHostResult{
 				ExecutionID: exec.ID,
 				HostIP:      ip,
 				Status:      "failed",
 				Stderr:      "Agent 未注册",
-			})
+			}); err != nil {
+				logger.Warn("创建主机结果记录失败", zap.String("host_ip", ip), zap.Error(err))
+			}
 			exec.FailCount++
 			continue
 		}
@@ -185,7 +191,9 @@ func (s *TaskService) ExecuteTask(taskID int64, hostIPs []string, operatorID int
 		if agentStream == nil {
 			hr.Status = "failed"
 			hr.Stderr = "Agent 离线"
-			_ = s.execRepo.UpdateHostResult(hr)
+			if err := s.execRepo.UpdateHostResult(hr); err != nil {
+				logger.Warn("创建主机结果记录失败", zap.String("host_ip", ip), zap.Error(err))
+			}
 			exec.FailCount++
 			continue
 		}
@@ -209,7 +217,9 @@ func (s *TaskService) ExecuteTask(taskID int64, hostIPs []string, operatorID int
 			)
 			hr.Status = "failed"
 			hr.Stderr = "下发失败: " + err.Error()
-			_ = s.execRepo.UpdateHostResult(hr)
+			if err := s.execRepo.UpdateHostResult(hr); err != nil {
+				logger.Warn("创建主机结果记录失败", zap.String("host_ip", ip), zap.Error(err))
+			}
 			exec.FailCount++
 			continue
 		}
@@ -225,7 +235,9 @@ func (s *TaskService) ExecuteTask(taskID int64, hostIPs []string, operatorID int
 		finishedAt := model.LocalTime(time.Now())
 		exec.FinishedAt = &finishedAt
 	}
-	_ = s.execRepo.Update(exec)
+	if err := s.execRepo.Update(exec); err != nil {
+		logger.Warn("更新执行状态失败", zap.Int64("execution_id", exec.ID), zap.Error(err))
+	}
 
 	logger.Info("Task execution dispatched",
 		zap.Int64("task_id", taskID),

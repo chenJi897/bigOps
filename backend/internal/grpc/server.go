@@ -271,7 +271,9 @@ func (s *Server) checkExecutionCompletion(executionID int64) {
 		exec.Status = "partial_fail"
 	}
 
-	_ = s.execRepo.Update(exec)
+	if err := s.execRepo.Update(exec); err != nil {
+		logger.Warn("更新执行状态失败", zap.Int64("execution_id", exec.ID), zap.Error(err))
+	}
 
 	logger.Info("Execution completed",
 		zap.Int64("execution_id", executionID),

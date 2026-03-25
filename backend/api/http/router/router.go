@@ -57,11 +57,7 @@ func Setup(mode string) *gin.Engine {
 		authGroup := v1.Group("")
 		authGroup.Use(middleware.AuthMiddleware())
 		authGroup.Use(middleware.AuditLog())
-		// NOTE: CasbinMiddleware 暂不启用。
-		// 当前 casbin_rule 表为空，启用会导致所有非 admin 用户 403。
-		// 需要先在菜单管理中为每个菜单配置 api_path + api_method，
-		// 并在角色分配菜单时同步写入 Casbin policy，才能安全开启。
-		// 参考: middleware.CasbinMiddleware(), internal/pkg/casbin/casbin.go
+		authGroup.Use(middleware.CasbinMiddleware())
 		{
 			// 认证相关
 			authGroup.POST("/auth/logout", authHandler.Logout)
