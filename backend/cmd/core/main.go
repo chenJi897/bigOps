@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -140,7 +141,6 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to start gRPC server", zap.Error(err))
 	}
-	defer grpcSrv.GracefulStop()
 	logger.Info(fmt.Sprintf("gRPC server started on :%d", grpcPort))
 
 	// 6. 初始化 HTTP 路由并启动服务
@@ -171,6 +171,20 @@ func main() {
 	<-quit
 
 	logger.Info("Server shutting down...")
+
+	// gRPC: 先尝试优雅关闭（3秒超时），超时则强制关闭
+	grpcDone := make(chan struct{})
+	go func() {
+		grpcSrv.GracefulStop()
+		close(grpcDone)
+	}()
+	select {
+	case <-grpcDone:
+		logger.Info("gRPC server stopped gracefully")
+	case <-time.After(3 * time.Second):
+		grpcSrv.Stop()
+		logger.Info("gRPC server force stopped")
+	}
 }
 
 // syncCasbinPolicies 启动时从 DB 同步所有 Casbin 规则。
