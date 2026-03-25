@@ -287,6 +287,11 @@ async function submitForm() {
     ElMessage.warning('请填写模板名称')
     return
   }
+  if (templateNodes.value.length < 2) {
+    ElMessage.warning('至少需要配置 2 个节点，请切换到「节点配置」添加')
+    activeTab.value = 'nodes'
+    return
+  }
   const payload = {
     ...form.value,
     code: form.value.code?.trim() || generateTemplateCode(form.value.name),

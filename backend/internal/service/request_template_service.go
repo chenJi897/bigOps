@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/crc32"
@@ -30,6 +31,9 @@ func NewRequestTemplateService() *RequestTemplateService {
 func (s *RequestTemplateService) Create(item *model.RequestTemplate) error {
 	if item.Name == "" {
 		return errors.New("请求模板名称不能为空")
+	}
+	if err := validateNodesJSON(item.NodesJSON); err != nil {
+		return err
 	}
 	if strings.TrimSpace(item.Code) == "" {
 		code, err := s.generateCode(item.Name, 0)
@@ -81,6 +85,9 @@ func (s *RequestTemplateService) Update(id int64, item *model.RequestTemplate) e
 	}
 	if item.Name == "" {
 		return errors.New("请求模板名称不能为空")
+	}
+	if err := validateNodesJSON(item.NodesJSON); err != nil {
+		return err
 	}
 	if strings.TrimSpace(item.Code) == "" {
 		item.Code = existing.Code
@@ -235,4 +242,19 @@ func (s *RequestTemplateService) pickDefaultTicketType() (*model.TicketType, err
 		return nil, errors.New("当前还没有可用的底层工单类型，请先创建一个工单类型")
 	}
 	return items[0], nil
+}
+
+// validateNodesJSON 校验节点配置至少包含 2 个节点。
+func validateNodesJSON(nodesJSON string) error {
+	if nodesJSON == "" || nodesJSON == "[]" || nodesJSON == "null" {
+		return errors.New("节点配置不能为空，至少需要 2 个节点")
+	}
+	var nodes []json.RawMessage
+	if err := json.Unmarshal([]byte(nodesJSON), &nodes); err != nil {
+		return errors.New("节点配置格式错误")
+	}
+	if len(nodes) < 2 {
+		return fmt.Errorf("至少需要 2 个节点，当前只有 %d 个", len(nodes))
+	}
+	return nil
 }
