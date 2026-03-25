@@ -1,12 +1,13 @@
 <script setup lang="ts">
 defineOptions({ name: 'TicketCreate' })
 import { computed, nextTick, onActivated, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ticketApi, ticketTypeApi, requestTemplateApi, assetApi, cloudAccountApi, serviceTreeApi, departmentApi, userApi } from '../api'
 import { useViewStateStore } from '../stores/viewState'
 
 const router = useRouter()
+const route = useRoute()
 const viewStateStore = useViewStateStore()
 const step = ref(1)
 const allTypes = ref<any[]>([])
@@ -343,10 +344,22 @@ function syncAssetSelection() {
   isSyncingAssetSelection.value = false
 }
 
-onMounted(() => {
-  loadCreatePageOptions()
+onMounted(async () => {
+  await loadCreatePageOptions()
   seenTicketTypeVersion.value = viewStateStore.ticketTypeVersion
   seenRequestTemplateVersion.value = viewStateStore.requestTemplateVersion
+
+  // 从发起工单页面跳转过来：自动选择类型/模板，跳过 step 1
+  const qTemplateId = Number(route.query.template_id) || 0
+  const qTypeId = Number(route.query.type_id) || 0
+  if (qTemplateId > 0) {
+    const tpl = allRequestTemplates.value.find((t: any) => t.id === qTemplateId)
+    if (tpl) { selectRequestTemplate(tpl); return }
+  }
+  if (qTypeId > 0) {
+    const t = allTypes.value.find((item: any) => item.id === qTypeId)
+    if (t) { selectType(t); return }
+  }
 })
 
 onActivated(() => {
