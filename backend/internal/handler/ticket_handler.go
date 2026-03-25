@@ -83,8 +83,7 @@ type CommentRequest struct {
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.Ticket}}
 // @Router /tickets [get]
 func (h *TicketHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	typeID, _ := strconv.ParseInt(c.Query("type_id"), 10, 64)
 	creatorID, _ := strconv.ParseInt(c.Query("creator_id"), 10, 64)
 	assigneeID, _ := strconv.ParseInt(c.Query("assignee_id"), 10, 64)
@@ -431,8 +430,7 @@ func (h *TicketHandler) Activities(c *gin.Context) {
 		response.Forbidden(c, "无权查看该工单活动")
 		return
 	}
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "50"))
+	page, size := parsePageSize(c)
 	items, total, err := h.svc.GetActivities(id, page, size)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")

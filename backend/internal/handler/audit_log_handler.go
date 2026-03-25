@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/bigops/platform/internal/model"
@@ -38,8 +36,7 @@ func NewAuditLogHandler() *AuditLogHandler {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /audit-logs [get]
 func (h *AuditLogHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	username := c.Query("username")
 	action := c.Query("action")
 	resource := c.Query("resource")

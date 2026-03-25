@@ -226,8 +226,7 @@ func (h *RoleHandler) GetByID(c *gin.Context) {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /roles [get]
 func (h *RoleHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	roles, total, err := h.roleService.List(page, size)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")

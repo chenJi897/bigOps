@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/bigops/platform/internal/middleware"
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
@@ -83,8 +84,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
+
+	c.Set("login_username", req.Username)
+
+	// 检查账号是否被锁定
+	if middleware.IsAccountLocked(req.Username) {
+		c.Set("login_failed", true)
+		logger.Warn("登录被锁定", zap.String("username", req.Username), zap.String("ip", c.ClientIP()))
+		response.Error(c, 401, "登录失败次数过多，账号已锁定 15 分钟")
+		return
+	}
+
 	result, err := h.authService.Login(req.Username, req.Password)
 	if err != nil {
+		c.Set("login_failed", true)
 		logger.Warn("登录失败", zap.String("username", req.Username), zap.String("ip", c.ClientIP()), zap.String("error", err.Error()))
 		response.Error(c, 401, err.Error())
 		return

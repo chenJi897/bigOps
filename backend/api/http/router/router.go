@@ -48,10 +48,10 @@ func Setup(mode string) *gin.Engine {
 			c.JSON(200, gin.H{"message": "pong"})
 		})
 
-		// --- 认证模块（公开路由） ---
+		// --- 认证模块（公开路由，含限流） ---
 		authHandler := handler.NewAuthHandler()
-		v1.POST("/auth/register", middleware.AuditLog(), authHandler.Register)
-		v1.POST("/auth/login", middleware.AuditLog(), authHandler.Login)
+		v1.POST("/auth/register", middleware.RegisterRateLimit(), middleware.AuditLog(), authHandler.Register)
+		v1.POST("/auth/login", middleware.LoginRateLimit(), middleware.AuditLog(), authHandler.Login)
 
 		// --- 需要认证的路由 ---
 		authGroup := v1.Group("")

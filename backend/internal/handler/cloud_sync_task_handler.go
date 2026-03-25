@@ -35,8 +35,7 @@ func NewCloudSyncTaskHandler() *CloudSyncTaskHandler {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /sync-tasks [get]
 func (h *CloudSyncTaskHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	status := c.Query("status")
 	triggerType := c.Query("trigger_type")
 	accountID, _ := strconv.ParseInt(c.Query("cloud_account_id"), 10, 64)
@@ -62,8 +61,7 @@ func (h *CloudSyncTaskHandler) List(c *gin.Context) {
 // @Router /cloud-accounts/{id}/sync-tasks [get]
 func (h *CloudSyncTaskHandler) GetByAccountID(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
+	page, size := parsePageSize(c)
 
 	tasks, total, err := h.repo.ListByAccountID(id, page, size)
 	if err != nil {

@@ -59,8 +59,7 @@ type UpdateCloudAccountKeysRequest struct {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /cloud-accounts [get]
 func (h *CloudAccountHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	accounts, total, err := h.svc.List(page, size)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")
