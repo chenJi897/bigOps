@@ -40,9 +40,6 @@ type UpsertRequestTemplateRequest struct {
 }
 
 func (h *RequestTemplateHandler) List(c *gin.Context) {
-	if !requireAdmin(c) {
-		return
-	}
 	enabledOnly := c.DefaultQuery("enabled_only", "0") == "1"
 	items, err := h.svc.List(enabledOnly)
 	if err != nil {
@@ -53,9 +50,6 @@ func (h *RequestTemplateHandler) List(c *gin.Context) {
 }
 
 func (h *RequestTemplateHandler) GetByID(c *gin.Context) {
-	if !requireAdmin(c) {
-		return
-	}
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	item, err := h.svc.GetByID(id)
 	if err != nil {
