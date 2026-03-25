@@ -128,6 +128,10 @@ func (s *RequestTemplateService) Update(id int64, item *model.RequestTemplate) e
 	existing.NodesJSON = item.NodesJSON
 	existing.ExecutionTemplate = item.ExecutionTemplate
 	existing.TicketKind = item.TicketKind
+	existing.Priority = item.Priority
+	existing.HandleDeptID = item.HandleDeptID
+	existing.AutoAssignRule = item.AutoAssignRule
+	existing.DefaultAssignee = item.DefaultAssignee
 	existing.AutoCreateOrder = item.AutoCreateOrder
 	existing.NotifyApplicant = item.NotifyApplicant
 	existing.Sort = item.Sort
