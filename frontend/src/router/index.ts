@@ -122,9 +122,11 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
   const routes: RouteRecordRaw[] = []
   for (const menu of menus) {
     if (menu.type === 3) continue // 按钮权限，不生成路由
-    if (!menu.path) continue
 
-    const routePath = normalizeRoutePath(menu)
+    // 目录节点（type=1）允许 path 为空，但必须递归处理 children
+    if (!menu.path && !menu.children?.length) continue
+
+    const routePath = menu.path ? normalizeRoutePath(menu) : ''
 
     const route: RouteRecordRaw = {
       path: routePath,
@@ -146,7 +148,6 @@ function generateRoutes(menus: any[]): RouteRecordRaw[] {
     if (menu.children?.length) {
       const childRoutes = generateRoutes(menu.children)
       if (route.component) {
-        // 有自身组件的同时有子路由（目录+页面合一）
         routes.push(route)
         routes.push(...childRoutes)
       } else {
