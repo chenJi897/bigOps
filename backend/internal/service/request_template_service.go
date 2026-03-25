@@ -3,6 +3,9 @@ package service
 import (
 	"errors"
 	"fmt"
+	"hash/crc32"
+	"strings"
+	"unicode"
 
 	"gorm.io/gorm"
 
@@ -28,11 +31,19 @@ func (s *RequestTemplateService) Create(item *model.RequestTemplate) error {
 	if item.Name == "" {
 		return errors.New("请求模板名称不能为空")
 	}
-	if item.Code == "" {
-		return errors.New("请求模板编码不能为空")
+	if strings.TrimSpace(item.Code) == "" {
+		code, err := s.generateCode(item.Name, 0)
+		if err != nil {
+			return err
+		}
+		item.Code = code
 	}
 	if item.TypeID == 0 {
-		return errors.New("请求模板必须绑定工单类型")
+		// TypeID 为 0 时不强制关联工单类型，使用 category 作为分类
+	} else {
+		if _, err := s.typeRepo.GetByID(item.TypeID); err != nil {
+			return errors.New("工单类型不存在")
+		}
 	}
 	if item.Category == "" {
 		item.Category = "other"
@@ -45,8 +56,10 @@ func (s *RequestTemplateService) Create(item *model.RequestTemplate) error {
 			return errors.New("审批策略不存在")
 		}
 	}
-	if _, err := s.typeRepo.GetByID(item.TypeID); err != nil {
-		return errors.New("工单类型不存在")
+	if item.TypeID > 0 {
+		if _, err := s.typeRepo.GetByID(item.TypeID); err != nil {
+			return errors.New("工单类型不存在")
+		}
 	}
 	if _, err := s.repo.GetByName(item.Name); err == nil {
 		return errors.New("请求模板名称已存在")
@@ -69,19 +82,28 @@ func (s *RequestTemplateService) Update(id int64, item *model.RequestTemplate) e
 	if item.Name == "" {
 		return errors.New("请求模板名称不能为空")
 	}
-	if item.Code == "" {
-		return errors.New("请求模板编码不能为空")
+	if strings.TrimSpace(item.Code) == "" {
+		item.Code = existing.Code
+		if item.Code == "" {
+			code, err := s.generateCode(item.Name, id)
+			if err != nil {
+				return err
+			}
+			item.Code = code
+		}
 	}
 	if item.TypeID == 0 {
-		return errors.New("请求模板必须绑定工单类型")
+		item.TypeID = existing.TypeID
 	}
 	if item.ApprovalPolicyID > 0 {
 		if _, err := s.policyRepo.GetByID(item.ApprovalPolicyID); err != nil {
 			return errors.New("审批策略不存在")
 		}
 	}
-	if _, err := s.typeRepo.GetByID(item.TypeID); err != nil {
-		return errors.New("工单类型不存在")
+	if item.TypeID > 0 {
+		if _, err := s.typeRepo.GetByID(item.TypeID); err != nil {
+			return errors.New("工单类型不存在")
+		}
 	}
 	if item.Name != existing.Name {
 		if dup, err := s.repo.GetByName(item.Name); err == nil && dup.ID != id {
@@ -96,19 +118,20 @@ func (s *RequestTemplateService) Update(id int64, item *model.RequestTemplate) e
 	existing.Name = item.Name
 	existing.Code = item.Code
 	existing.Category = item.Category
+	existing.ProjectName = item.ProjectName
+	existing.EnvironmentName = item.EnvironmentName
 	existing.Description = item.Description
 	existing.Icon = item.Icon
 	existing.TypeID = item.TypeID
 	existing.FormSchema = item.FormSchema
 	existing.ApprovalPolicyID = item.ApprovalPolicyID
+	existing.NodesJSON = item.NodesJSON
 	existing.ExecutionTemplate = item.ExecutionTemplate
 	existing.TicketKind = item.TicketKind
 	existing.AutoCreateOrder = item.AutoCreateOrder
 	existing.NotifyApplicant = item.NotifyApplicant
 	existing.Sort = item.Sort
-	if item.Status != 0 {
-		existing.Status = item.Status
-	}
+	existing.Status = item.Status
 	return s.repo.Update(existing)
 }
 
@@ -150,4 +173,62 @@ func (s *RequestTemplateService) fillExtra(item *model.RequestTemplate) {
 			item.TypeName = tt.Name
 		}
 	}
+}
+
+func (s *RequestTemplateService) generateCode(name string, currentID int64) (string, error) {
+	base := buildTemplateCodeBase(name)
+	code := base
+	for i := 1; i <= 1000; i++ {
+		existing, err := s.repo.GetByCode(code)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return code, nil
+		}
+		if err != nil {
+			return "", fmt.Errorf("生成请求模板编码失败: %w", err)
+		}
+		if existing.ID == currentID {
+			return code, nil
+		}
+		code = fmt.Sprintf("%s-%d", trimCodeBase(base, 44), i+1)
+	}
+	return "", errors.New("生成请求模板编码失败")
+}
+
+func buildTemplateCodeBase(name string) string {
+	raw := strings.TrimSpace(strings.ToLower(name))
+	var builder strings.Builder
+	lastDash := false
+	for _, r := range raw {
+		switch {
+		case r <= unicode.MaxASCII && (unicode.IsLetter(r) || unicode.IsDigit(r)):
+			builder.WriteRune(r)
+			lastDash = false
+		case !lastDash && builder.Len() > 0:
+			builder.WriteByte('-')
+			lastDash = true
+		}
+	}
+	code := strings.Trim(builder.String(), "-")
+	if code == "" {
+		code = fmt.Sprintf("template-%08x", crc32.ChecksumIEEE([]byte(name)))
+	}
+	return trimCodeBase(code, 50)
+}
+
+func trimCodeBase(code string, limit int) string {
+	if len(code) <= limit {
+		return code
+	}
+	return strings.Trim(code[:limit], "-")
+}
+
+func (s *RequestTemplateService) pickDefaultTicketType() (*model.TicketType, error) {
+	items, err := s.typeRepo.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("查询工单类型失败: %w", err)
+	}
+	if len(items) == 0 {
+		return nil, errors.New("当前还没有可用的底层工单类型，请先创建一个工单类型")
+	}
+	return items[0], nil
 }
