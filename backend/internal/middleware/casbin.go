@@ -10,11 +10,16 @@ import (
 )
 
 // 公共路由白名单（所有已认证用户可访问，无需 Casbin 校验）
+// 精确匹配 path，仅对 GET 方法放行（写操作仍需 Casbin 授权）
 var casbinWhitelist = []string{
-	"/api/v1/auth/logout",
+	"/api/v1/auth/logout",       // POST 但属于自身操作
 	"/api/v1/auth/info",
-	"/api/v1/auth/password",
+	"/api/v1/auth/password",     // POST 但属于自身操作
 	"/api/v1/menus/user",
+	"/api/v1/departments/all",   // 部门下拉（多页面筛选器依赖）
+	"/api/v1/service-trees",     // 服务树（资产筛选器依赖）
+	"/api/v1/ticket-types/all",  // 工单类型下拉
+	"/api/v1/users",             // 用户列表（负责人选择器依赖）
 }
 
 // 公共路由前缀白名单
@@ -29,7 +34,6 @@ var casbinPrefixWhitelist = []string{
 // admin 角色在 Casbin 模型中已配置为跳过校验（拥有全部权限）。
 func CasbinMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从 Context 获取用户名（由 AuthMiddleware 设置）
 		username, exists := c.Get("username")
 		if !exists {
 			response.Unauthorized(c, "用户未认证")
@@ -37,15 +41,16 @@ func CasbinMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 获取请求的 API 路径和方法
 		obj := c.Request.URL.Path
 		act := c.Request.Method
 
-		// 白名单放行
+		// 白名单放行（auth 相关不限方法，其余仅 GET）
 		for _, path := range casbinWhitelist {
 			if obj == path {
-				c.Next()
-				return
+				if act == "GET" || strings.HasPrefix(path, "/api/v1/auth/") {
+					c.Next()
+					return
+				}
 			}
 		}
 		for _, prefix := range casbinPrefixWhitelist {
