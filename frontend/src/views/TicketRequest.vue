@@ -13,10 +13,10 @@ const groupedTemplates = computed(() => {
   const groups: { type: any; templates: any[] }[] = []
   for (const t of allTypes.value) {
     const templates = allTemplates.value.filter((tpl: any) => tpl.type_id === t.id)
-    groups.push({ type: t, templates })
+    // 有模板的类型显示模板卡片；没有模板的类型显示一个通用发起入口
+    groups.push({ type: { ...t, _collapsed: false }, templates })
   }
-  // 没有模板的类型也显示（用通用发起入口）
-  return groups.filter(g => g.templates.length > 0 || true)
+  return groups
 })
 
 async function loadData() {
