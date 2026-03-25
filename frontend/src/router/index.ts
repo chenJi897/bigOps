@@ -22,7 +22,6 @@ export const layoutRoute: RouteRecordRaw = {
   name: 'Layout',
   component: () => import('../views/Layout.vue'),
   meta: { requiresAuth: true },
-  redirect: '/dashboard',
   children: [],
 }
 
@@ -107,6 +106,11 @@ router.beforeEach(async (to) => {
         router.addRoute({ name: dynamicFallbackRouteName, path: '/:pathMatch(.*)*', redirect: '/404' })
       }
       routesAdded = true
+
+      // 根路径 "/" 重定向到第一个可用页面
+      if (to.path === '/') {
+        return '/dashboard'
+      }
       return to.fullPath // 重新导航
     } catch {
       localStorage.removeItem('token')
