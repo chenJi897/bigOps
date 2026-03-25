@@ -19,6 +19,7 @@ import (
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
 	cloudsync "github.com/bigops/platform/internal/service/cloud_sync"
 )
@@ -118,6 +119,7 @@ func main() {
 	if err := casbinPkg.Init(database.GetDB()); err != nil {
 		logger.Fatal("Failed to initialize Casbin", zap.Error(err))
 	}
+	syncCasbinPolicies()
 	logger.Info("Casbin initialized")
 
 	// 4. 初始化 Redis
@@ -193,10 +195,10 @@ func seedTaskMenus() {
 	}
 
 	children := []model.Menu{
-		{ParentID: dir.ID, Name: "task_list", Title: "任务管理", Icon: "List", Path: "/task/list", Component: "TaskList", Type: 2, Sort: 1, Visible: 1, Status: 1},
-		{ParentID: dir.ID, Name: "task_create", Title: "创建任务", Path: "/task/create", Component: "TaskCreate", Type: 2, Sort: 2, Visible: 0, Status: 1},
-		{ParentID: dir.ID, Name: "task_execution", Title: "执行详情", Path: "/task/execution", Component: "TaskExecution", Type: 2, Sort: 3, Visible: 0, Status: 1},
-		{ParentID: dir.ID, Name: "agent_list", Title: "Agent 管理", Icon: "Monitor", Path: "/task/agents", Component: "AgentList", Type: 2, Sort: 4, Visible: 1, Status: 1},
+		{ParentID: dir.ID, Name: "task_list", Title: "任务管理", Icon: "List", Path: "/task/list", Component: "TaskList", APIPath: "/api/v1/tasks", APIMethod: "GET", Type: 2, Sort: 1, Visible: 1, Status: 1},
+		{ParentID: dir.ID, Name: "task_create", Title: "创建任务", Path: "/task/create", Component: "TaskCreate", APIPath: "/api/v1/tasks", APIMethod: "POST", Type: 2, Sort: 2, Visible: 0, Status: 1},
+		{ParentID: dir.ID, Name: "task_execution", Title: "执行详情", Path: "/task/execution", Component: "TaskExecution", APIPath: "/api/v1/task-executions/:id", APIMethod: "GET", Type: 2, Sort: 3, Visible: 0, Status: 1},
+		{ParentID: dir.ID, Name: "agent_list", Title: "Agent 管理", Icon: "Monitor", Path: "/task/agents", Component: "AgentList", APIPath: "/api/v1/agents", APIMethod: "GET", Type: 2, Sort: 4, Visible: 1, Status: 1},
 	}
 	for _, m := range children {
 		if err := db.Create(&m).Error; err != nil {
@@ -204,4 +206,60 @@ func seedTaskMenus() {
 		}
 	}
 	logger.Info("Task center menus seeded")
+}
+
+// syncCasbinPolicies 启动时从 DB 同步所有 Casbin 规则。
+func syncCasbinPolicies() {
+	enforcer := casbinPkg.GetEnforcer()
+
+	// 清空现有策略，重新从 DB 同步
+	enforcer.ClearPolicy()
+
+	db := database.GetDB()
+
+	// 1. 同步 policy: 遍历所有角色 → 获取其菜单 → 写入 p(role, api_path, api_method)
+	var roles []model.Role
+	db.Where("status = 1").Find(&roles)
+
+	roleRepo := repository.NewRoleRepository()
+	menuRepo := repository.NewMenuRepository()
+
+	for _, role := range roles {
+		if role.Name == "admin" {
+			continue // admin 在 matcher 中 bypass
+		}
+		menuIDs, err := roleRepo.GetMenusByRoleID(role.ID)
+		if err != nil || len(menuIDs) == 0 {
+			continue
+		}
+		menus, err := menuRepo.GetByIDs(menuIDs)
+		if err != nil {
+			continue
+		}
+		for _, menu := range menus {
+			if menu.APIPath != "" && menu.APIMethod != "" {
+				enforcer.AddPolicy(role.Name, menu.APIPath, menu.APIMethod)
+			}
+		}
+	}
+
+	// 2. 同步 grouping: 遍历所有用户-角色关系 → 写入 g(username, role_name)
+	var userRoles []model.UserRole
+	db.Find(&userRoles)
+
+	userRepo := repository.NewUserRepository()
+	for _, ur := range userRoles {
+		user, err := userRepo.GetByID(ur.UserID)
+		if err != nil {
+			continue
+		}
+		role, err := roleRepo.GetByID(ur.RoleID)
+		if err != nil {
+			continue
+		}
+		enforcer.AddRoleForUser(user.Username, role.Name)
+	}
+
+	enforcer.SavePolicy()
+	logger.Info("Casbin policies synced from database")
 }
