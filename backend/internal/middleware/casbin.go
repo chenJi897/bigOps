@@ -10,28 +10,33 @@ import (
 )
 
 // 公共路由白名单（所有已认证用户可访问，无需 Casbin 校验）
-// 精确匹配 path，仅对 GET 方法放行（写操作仍需 Casbin 授权）
+// 精确匹配 path，仅对 GET 方法放行（auth 相关不限方法）
 var casbinWhitelist = []string{
-	"/api/v1/auth/logout",       // POST 但属于自身操作
+	"/api/v1/auth/logout",
 	"/api/v1/auth/info",
-	"/api/v1/auth/password",     // POST 但属于自身操作
+	"/api/v1/auth/password",
 	"/api/v1/menus/user",
-	"/api/v1/departments/all",   // 部门下拉（多页面筛选器依赖）
-	"/api/v1/service-trees",     // 服务树（资产筛选器依赖）
-	"/api/v1/ticket-types/all",  // 工单类型下拉
-	"/api/v1/users",             // 用户列表（负责人选择器依赖）
+	"/api/v1/departments/all",
+	"/api/v1/ticket-types/all",
+	"/api/v1/request-templates",
+	"/api/v1/approval-policies",
 }
 
 // 公共路由前缀白名单（不限方法，所有已认证用户可访问）
 var casbinPrefixWhitelistAny = []string{
 	"/api/v1/notifications/in-app",
 	"/api/v1/ws/",
+	"/api/v1/approval-instances/",
 }
 
 // 公共路由前缀白名单（仅 GET）
 var casbinPrefixWhitelistGET = []string{
 	"/api/v1/stats/",
-	"/api/v1/users/",   // /users/:id/roles 等查询
+	"/api/v1/users/",
+	"/api/v1/users",
+	"/api/v1/service-trees",
+	"/api/v1/cloud-accounts",
+	"/api/v1/sync-tasks",
 }
 
 // CasbinMiddleware Casbin 权限校验中间件。
