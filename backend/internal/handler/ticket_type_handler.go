@@ -45,8 +45,7 @@ type CreateTicketTypeRequest struct {
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.TicketType}}
 // @Router /ticket-types [get]
 func (h *TicketTypeHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	items, total, err := h.svc.List(page, size)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")

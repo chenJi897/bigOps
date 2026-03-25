@@ -77,8 +77,7 @@ type ExecuteTaskRequest struct {
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.Task}}
 // @Router /tasks [get]
 func (h *TaskHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 
 	q := repository.TaskListQuery{
 		Page:     page,
@@ -289,8 +288,7 @@ func (h *TaskHandler) GetExecution(c *gin.Context) {
 // @Router /task-executions [get]
 func (h *TaskHandler) ListExecutions(c *gin.Context) {
 	taskID, _ := strconv.ParseInt(c.Query("task_id"), 10, 64)
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 
 	items, total, err := h.svc.ListExecutions(taskID, page, size)
 	if err != nil {
@@ -311,8 +309,7 @@ func (h *TaskHandler) ListExecutions(c *gin.Context) {
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.AgentInfo}}
 // @Router /agents [get]
 func (h *TaskHandler) ListAgents(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	status := c.Query("status")
 
 	items, total, err := h.svc.ListAgents(page, size, status)

@@ -38,8 +38,7 @@ func NewUserHandler() *UserHandler {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /users [get]
 func (h *UserHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	keyword := c.Query("keyword")
 	users, total, err := h.svc.List(page, size, keyword)
 	if err != nil {
