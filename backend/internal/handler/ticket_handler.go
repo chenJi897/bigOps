@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bigops/platform/internal/model"
+	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
 	"github.com/bigops/platform/internal/repository"
@@ -445,5 +446,19 @@ func canViewTicket(c *gin.Context, ticket *model.Ticket) bool {
 	}
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
-	return ticket.CreatorID == currentUserID || ticket.AssigneeID == currentUserID
+	// 创建人或处理人可查看
+	if ticket.CreatorID == currentUserID || ticket.AssigneeID == currentUserID {
+		return true
+	}
+	// 审批人可查看（当前工单有审批链且用户是审批人之一）
+	if ticket.ApprovalInstanceID > 0 {
+		var count int64
+		database.GetDB().Model(&model.ApprovalRecord{}).
+			Where("instance_id = ? AND approver_id = ?", ticket.ApprovalInstanceID, currentUserID).
+			Count(&count)
+		if count > 0 {
+			return true
+		}
+	}
+	return false
 }
