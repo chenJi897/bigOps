@@ -1,21 +1,16 @@
 <script setup lang="ts">
-defineOptions({ name: 'TicketList' })
-import { ref, onActivated, onMounted } from 'vue'
+defineOptions({ name: 'TicketMine' })
+import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
-import { ticketApi, ticketTypeApi, userApi } from '../api'
+import { ticketApi } from '../api'
 import { useViewStateStore } from '../stores/viewState'
-import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 const viewStateStore = useViewStateStore()
-const userStore = useUserStore()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
-const query = ref<any>({ page: 1, size: 20, status: '', priority: '', type_id: '', keyword: '', scope: 'all' })
-
-const allTypes = ref<any[]>([])
-const isAdmin = ref(false)
+const query = ref({ page: 1, size: 20, scope: 'my_created', status: '', keyword: '' })
 
 const statusMap: Record<string, { label: string; type: string }> = {
   open: { label: '待处理', type: 'info' },
@@ -35,7 +30,7 @@ const priorityMap: Record<string, { label: string; type: string }> = {
 async function fetchData() {
   loading.value = true
   try {
-    const params = { ...query.value }
+    const params: any = { ...query.value }
     Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === null) delete params[k] })
     const res: any = await ticketApi.list(params)
     tableData.value = res.data?.list || []
@@ -45,7 +40,7 @@ async function fetchData() {
 
 function handleSearch() { query.value.page = 1; fetchData() }
 function handleReset() {
-  query.value = { page: 1, size: 20, status: '', priority: '', type_id: '', keyword: '', scope: isAdmin.value ? 'all' : 'my_created' }
+  query.value = { page: 1, size: 20, scope: 'my_created', status: '', keyword: '' }
   fetchData()
 }
 
@@ -53,23 +48,12 @@ function openDetail(row: any) {
   router.push('/ticket/detail/' + row.id)
 }
 
-onMounted(() => {
-  const currentUserID = userStore.userInfo?.id
-  if (currentUserID) {
-    userApi.getRoles(currentUserID).then((res: any) => {
-      const roles = res.data || []
-      isAdmin.value = roles.some((role: any) => role.name === 'admin')
-      if (!isAdmin.value) query.value.scope = 'all'
-      fetchData()
-    }).catch(() => { fetchData() })
-  } else {
-    fetchData()
-  }
-  ticketTypeApi.all().then((res: any) => { allTypes.value = res.data || [] }).catch(() => {})
-})
+onMounted(() => { fetchData() })
 
 onActivated(() => {
-  if (viewStateStore.consumeTicketListDirty()) fetchData()
+  if (viewStateStore.consumeTicketListDirty()) {
+    fetchData()
+  }
 })
 </script>
 
@@ -77,38 +61,28 @@ onActivated(() => {
   <div class="page">
     <el-card shadow="never">
       <template #header>
-        <span>所有工单</span>
+        <span>我的申请</span>
       </template>
 
       <el-form :inline="true" @submit.prevent="handleSearch" style="margin-bottom: 12px;">
+        <el-form-item>
+          <el-input v-model="query.keyword" placeholder="搜索标题/编号" clearable style="width: 200px;" @keyup.enter="handleSearch" />
+        </el-form-item>
         <el-form-item>
           <el-select v-model="query.status" placeholder="状态" clearable style="width: 110px;">
             <el-option v-for="(v, k) in statusMap" :key="k" :label="v.label" :value="k" />
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-select v-model="query.priority" placeholder="优先级" clearable style="width: 100px;">
-            <el-option v-for="(v, k) in priorityMap" :key="k" :label="v.label" :value="k" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-select v-model="query.type_id" placeholder="工单类型" clearable style="width: 130px;">
-            <el-option v-for="t in allTypes" :key="t.id" :label="t.name" :value="t.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-input v-model="query.keyword" placeholder="搜索标题/编号" clearable style="width: 180px;" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
 
       <el-table :data="tableData" v-loading="loading" stripe border @row-click="openDetail" style="cursor: pointer;">
-        <el-table-column prop="ticket_no" label="编号" width="160" />
+        <el-table-column prop="ticket_no" label="工单号" width="160" />
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="type_name" label="类型" width="100" />
+        <el-table-column prop="type_name" label="工单类型" width="100" />
         <el-table-column label="优先级" width="80">
           <template #default="{ row }">
             <el-tag :type="(priorityMap[row.priority]?.type as any) || 'info'" size="small">{{ priorityMap[row.priority]?.label || row.priority }}</el-tag>
@@ -119,7 +93,6 @@ onActivated(() => {
             <el-tag :type="(statusMap[row.status]?.type as any) || 'info'" size="small">{{ statusMap[row.status]?.label || row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="creator_name" label="创建人" width="90" />
         <el-table-column prop="assignee_name" label="处理人" width="90">
           <template #default="{ row }">{{ row.assignee_name || '-' }}</template>
         </el-table-column>
