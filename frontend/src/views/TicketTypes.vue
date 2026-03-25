@@ -142,7 +142,7 @@ onActivated(() => {
         <el-table-column prop="code" label="编码" width="100" />
         <el-table-column label="默认优先级" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.priority === 'urgent' ? 'danger' : row.priority === 'high' ? 'warning' : row.priority === 'low' ? 'info' : ''" size="small">{{ priorityLabel(row.priority) }}</el-tag>
+            <el-tag :type="(row.priority === 'urgent' ? 'danger' : row.priority === 'high' ? 'warning' : 'info') as any" size="small">{{ priorityLabel(row.priority) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="分派规则" width="120">
