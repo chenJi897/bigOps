@@ -20,9 +20,11 @@ const typeOptions = [
 
 // 可用页面组件列表
 const componentOptions = [
-  'Dashboard', 'Users', 'Roles', 'Menus', 'AuditLogs',
+  'Dashboard', 'Users', 'Roles', 'Menus', 'AuditLogs', 'Departments',
   'ServiceTree', 'CloudAccounts', 'Assets',
+  'TicketList', 'TicketCreate', 'TicketDetail', 'TicketTypes',
   'ApprovalInbox', 'RequestTemplates', 'ApprovalPolicies', 'NotificationConsole',
+  'TaskList', 'TaskCreate', 'TaskExecution', 'AgentList',
 ]
 
 async function loadMenus() {
@@ -125,11 +127,11 @@ onMounted(loadMenus)
             <el-option v-for="c in componentOptions" :key="c" :label="c" :value="c" />
           </el-select>
         </el-form-item>
-        <el-form-item label="API路径" v-if="form.type === 3">
+        <el-form-item label="API路径" v-if="form.type === 2 || form.type === 3">
           <el-input v-model="form.api_path" placeholder="/api/v1/xxx" />
         </el-form-item>
-        <el-form-item label="API方法" v-if="form.type === 3">
-          <el-select v-model="form.api_method" placeholder="选择方法" style="width:100%">
+        <el-form-item label="API方法" v-if="form.type === 2 || form.type === 3">
+          <el-select v-model="form.api_method" placeholder="选择方法" clearable style="width:100%">
             <el-option label="GET" value="GET" />
             <el-option label="POST" value="POST" />
           </el-select>
