@@ -1,35 +1,56 @@
-server:
-  port: 8080
-  mode: debug
-
-database:
-  host: localhost
-  port: 3306
-  username: root
-  password: DBB4CuIwxc
-  database: bigops
-  charset: utf8mb4
-
-redis:
-  host: localhost
-  port: 6379
-  password: ""
-  db: 0
-
-jwt:
-  secret: your-secret-key-change-in-production
-  expire: 7200  # 2 hours
-
-encrypt:
-  key: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2"  # 64 hex chars = 32 bytes AES-256
-
 aliyun:
-  ecs_endpoint: "ecs.%s.aliyuncs.com"  # %s 会被替换为 region，如 ecs.cn-hangzhou.aliyuncs.com
-
+    ecs_endpoint: ecs.%s.aliyuncs.com
+database:
+    charset: utf8mb4
+    database: bigops2
+    host: localhost
+    password: DBB4CuIwxc
+    port: 3306
+    username: root
+encrypt:
+    key: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2
+grpc:
+    port: 9090
+jwt:
+    expire: 7200
+    secret: your-secret-key-change-in-production
 log:
-  level: debug
-  filename: logs/bigops.log
-  max_size: 100
-  max_backups: 10
-  max_age: 30
-  compress: true
+    compress: true
+    filename: logs/bigops.log
+    level: debug
+    max_age: 30
+    max_backups: 10
+    max_size: 100
+notification:
+    default_channels:
+        - in_app
+    email:
+        enabled: false
+        from: ""
+        host: ""
+        password: ""
+        port: 25
+        username: ""
+    max_retries: 3
+    message_pusher:
+        channel: ""
+        enabled: false
+        server: ""
+        timeout_seconds: 10
+        token: ""
+        username: ""
+    retry_interval_seconds: 60
+    retry_scan_interval_seconds: 60
+    webhook:
+        enabled: false
+        secret: ""
+        timeout_seconds: 10
+        url: ""
+redis:
+    db: 0
+    host: localhost
+    password: ""
+    port: 6379
+server:
+    mode: debug
+    port: 8080

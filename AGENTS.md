@@ -1,8 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-优先使用augment-context-engine命令进行检索。如果augment-context-engine中没有找到相关信息，再尝试使用本地文件系统的工具作为兜底。   
+优先使用ace-tool命令进行检索。如果ace-tool中没有找到相关信息，再尝试使用本地文件系统的工具作为兜底。   
 
 ## 大文件写入规则
 
