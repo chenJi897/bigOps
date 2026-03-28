@@ -266,3 +266,63 @@
 | 部门菜单不显示 | SQL 查 system_dir 但实际是 system | 修正 parent name |
 | keep-alive 缓存失效 | include 用路由名而非组件名 | componentName + defineOptions |
 | 阿里云 DescribeDisks 磁盘为 0 | DescribeInstances 不返回磁盘 | 新增 DescribeDisks API 调用 |
+
+## Phase 9: Module 06 - CI/CD 增强 `completed`
+
+- **目标**: 把 CI/CD 从“可触发”收口到“可配置、可阶段化、可验证”
+- [x] `CicdPipelines.vue` 恢复并接入：`build_hosts`、`variables`、`webhook_enabled`、`webhook_secret`
+- [x] `CicdRuns.vue` 详情抽屉改成 `Build / Approval / Deploy` 阶段视图
+- [x] 后端运行状态机支持：`build -> approval(可选) -> deploy(可选)` 自动推进
+- [x] Webhook 公开触发 + 密钥校验贯通
+- [x] 修复运行详情绕过阶段同步逻辑的问题
+- [x] Playwright 浏览器验收通过
+- [x] Chrome DevTools / CDP 浏览器验收通过
+
+## Phase 10: Module 05 - 监控中心 V2/V3 `in_progress`
+
+- **目标**: 从“监控大盘 + 告警规则”推进到“监控对象详情 + 告警事件中心 + 数据源管理 + PromQL 查询台 + 自动化联动”
+- [x] `agent_id` 改成 UUID 持久化，修复 `0.0%` 指标错乱
+- [x] 新增 `AgentDetail.vue`
+- [x] 新增 `AlertEvents.vue`
+- [x] 新增 `MonitorDatasources.vue`
+- [x] 新增 `MonitorQuery.vue`
+- [x] 新增 `AlertSilences.vue`
+- [x] 新增 `OnCallSchedules.vue`
+- [x] 新增监控扩展菜单 migration 并执行到 `bigops2`
+- [x] Prometheus 数据源 CRUD + 健康检查 + 查询接口落地
+- [x] 告警动作支持 `notify_only / create_ticket / execute_task`
+- [x] 自动建单 / 自动修复 API 联调通过
+- [x] 服务树 / 负责人聚合接口与前端视图接入
+- [x] 告警静默 / OnCall 后端模型、接口与前端页面接入
+- [x] AlertRule 接入 `oncall_schedule_id`
+- [x] 监控相关 Handler Swagger 注释补齐到代码层
+- [x] 新增 SQL 迁移 `012_create_alert_ops_tables.sql`
+- [x] 新增监控二级菜单：`告警静默 / OnCall 值班`
+- [ ] 深化浏览器验收（CDP 脚本稳定化）
+- [ ] 在真实后端运行态完成静默 / OnCall / 聚合接口验收
+- [ ] 完整收口到正式菜单与交互细节
+
+## Phase 11: 通知中心分层化 `in_progress`
+
+- **目标**: 将通知从“站内联调页”收口为正式通知体系，拆分为管理员配置中心、业务对象通知渠道、个人通知偏好三层。
+- [x] 管理员页：通知配置中心（配置 `message_pusher / webhook / email / default_channels`）
+- [x] 个人页：我的通知设置（启用状态 / 个人渠道 / 订阅业务类型）
+- [x] 监控规则接入 `notify_channels`
+- [x] CI/CD 流水线接入 `notify_channels`
+- [x] 工单模板接入 `notify_channels`
+- [x] 告警通知改为立即异步投递
+- [x] `GET/POST /api/v1/notifications/config`
+- [x] `GET/POST /api/v1/notifications/preferences`
+- [x] Playwright 验证通知配置中心与个人通知设置页面
+- [x] Chrome DevTools / CDP 验证通知配置中心与个人通知设置页面
+
+## Phase 12: 首页 Dashboard 重构 `in_progress`
+
+- **目标**: 将首页改造成“个人工作台 + 按权限显示的平台总览”，并确保普通用户只看到自己有权限的内容。
+- [x] 新增 `GET /api/v1/dashboard/personal`
+- [x] Dashboard 改为双层结构
+- [x] 快捷入口按权限显示
+- [x] 普通用户按菜单权限隐藏无权限模块
+- [x] 管理员保留完整平台视角
+- [x] Playwright 验证 admin / yunwei 首页
+- [x] Chrome DevTools / CDP 验证首页关键文本
