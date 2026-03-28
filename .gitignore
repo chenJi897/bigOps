@@ -1,1 +1,12 @@
 .ace-tool/
+.cache/
+backend/bin/
+backend/main
+backend/agent
+backend/core
+backend/backend/
+backend/github.com/
+backend/config/.agent-id
+backend/config/.agent-public-ip.json
+backend/cmd/_*/
+frontend/test-results/

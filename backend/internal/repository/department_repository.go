@@ -53,6 +53,22 @@ func (r *DepartmentRepository) List(page, size int) ([]*model.Department, int64,
 	return departments, total, nil
 }
 
+// GetByIDs 批量按 ID 查询，返回 id->Department 映射。
+func (r *DepartmentRepository) GetByIDs(ids []int64) (map[int64]*model.Department, error) {
+	result := make(map[int64]*model.Department)
+	if len(ids) == 0 {
+		return result, nil
+	}
+	var items []*model.Department
+	if err := database.GetDB().Where("id IN ?", ids).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		result[item.ID] = item
+	}
+	return result, nil
+}
+
 // GetAll 查询所有启用的部门（用于下拉选择）。
 func (r *DepartmentRepository) GetAll() ([]*model.Department, error) {
 	var departments []*model.Department

@@ -117,6 +117,10 @@ export const statsApi = {
   assetDistribution: () => api.get('/stats/asset-distribution'),
 }
 
+export const dashboardApi = {
+  personal: () => api.get('/dashboard/personal'),
+}
+
 // 部门管理
 export const departmentApi = {
   list: (page = 1, size = 20) => api.get('/departments', { params: { page, size } }),
@@ -151,6 +155,7 @@ export const ticketTypeApi = {
 export const ticketApi = {
   list: (params: any) => api.get('/tickets', { params }),
   getById: (id: number) => api.get(`/tickets/${id}`),
+  approvalInstance: (id: number) => api.get(`/tickets/${id}/approval-instance`),
   create: (data: any) => api.post('/tickets', data),
   assign: (id: number, assignee_id: number) => api.post(`/tickets/${id}/assign`, { assignee_id }),
   process: (id: number, action: string, content: string) => api.post(`/tickets/${id}/process`, { action, content }),
@@ -159,6 +164,137 @@ export const ticketApi = {
   comment: (id: number, content: string) => api.post(`/tickets/${id}/comment`, { content }),
   transfer: (id: number, assignee_id: number, content: string) => api.post(`/tickets/${id}/transfer`, { assignee_id, content }),
   activities: (id: number, page = 1, size = 50) => api.get(`/tickets/${id}/activities`, { params: { page, size } }),
+}
+
+export const requestTemplateApi = {
+  list: (enabled_only = false) => api.get('/request-templates', { params: { enabled_only: enabled_only ? 1 : 0 } }),
+  getById: (id: number) => api.get(`/request-templates/${id}`),
+  create: (data: any) => api.post('/request-templates', data),
+  update: (id: number, data: any) => api.post(`/request-templates/${id}`, data),
+  delete: (id: number) => api.post(`/request-templates/${id}/delete`),
+}
+
+export const approvalPolicyApi = {
+  list: () => api.get('/approval-policies'),
+  getById: (id: number) => api.get(`/approval-policies/${id}`),
+  create: (data: any) => api.post('/approval-policies', data),
+  update: (id: number, data: any) => api.post(`/approval-policies/${id}`, data),
+  delete: (id: number) => api.post(`/approval-policies/${id}/delete`),
+}
+
+export const approvalApi = {
+  pending: () => api.get('/approval-instances/pending'),
+  approve: (id: number, comment = '') => api.post(`/approval-instances/${id}/approve`, { comment }),
+  reject: (id: number, comment: string) => api.post(`/approval-instances/${id}/reject`, { comment }),
+}
+
+export const notificationApi = {
+  inApp: (unread_only = false) => api.get('/notifications/in-app', { params: { unread_only: unread_only ? 1 : 0 } }),
+  unreadCount: () => api.get('/notifications/in-app/unread-count'),
+  markRead: (id: number) => api.post(`/notifications/in-app/${id}/read`),
+  markAllRead: () => api.post('/notifications/in-app/read-all'),
+  clearRead: () => api.post('/notifications/in-app/clear-read'),
+  getPreference: () => api.get('/notifications/preferences'),
+  updatePreference: (data: any) => api.post('/notifications/preferences', data),
+  getConfig: () => api.get('/notifications/config'),
+  updateConfig: (data: any) => api.post('/notifications/config', data),
+  testSend: (data: { title: string; content: string; channels: string[]; user_ids?: number[] }) => api.post('/notifications/test', data),
+  events: () => api.get('/notifications/events'),
+  retryEvent: (id: number) => api.post(`/notifications/events/${id}/retry`),
+}
+
+export const monitorApi = {
+  summary: () => api.get('/monitor/summary'),
+  agents: (params: { page?: number; size?: number; status?: string; keyword?: string }) => api.get('/monitor/agents', { params }),
+  trends: (agentID: string, metric_type: string, minutes = 60, limit = 120) =>
+    api.get(`/monitor/agents/${agentID}/trends`, { params: { metric_type, minutes, limit } }),
+  aggregateServiceTrees: () => api.get('/monitor/aggregates/service-trees'),
+  aggregateOwners: () => api.get('/monitor/aggregates/owners'),
+  datasources: () => api.get('/monitor/datasources'),
+  createDatasource: (data: any) => api.post('/monitor/datasources', data),
+  updateDatasource: (id: number, data: any) => api.post(`/monitor/datasources/${id}`, data),
+  deleteDatasource: (id: number) => api.post(`/monitor/datasources/${id}/delete`),
+  datasourceHealth: (id: number) => api.get(`/monitor/datasources/${id}/health`),
+  query: (data: { datasource_id: number; query: string; time?: string }) => api.post('/monitor/query', data),
+  queryRange: (data: { datasource_id: number; query: string; start?: string; end?: string; step?: string }) => api.post('/monitor/query-range', data),
+}
+
+export const alertSilenceApi = {
+  list: () => api.get('/alert-silences'),
+  create: (data: any) => api.post('/alert-silences', data),
+  update: (id: number, data: any) => api.post(`/alert-silences/${id}`, data),
+  delete: (id: number) => api.post(`/alert-silences/${id}/delete`),
+}
+
+export const onCallApi = {
+  list: () => api.get('/oncall-schedules'),
+  create: (data: any) => api.post('/oncall-schedules', data),
+  update: (id: number, data: any) => api.post(`/oncall-schedules/${id}`, data),
+  delete: (id: number) => api.post(`/oncall-schedules/${id}/delete`),
+}
+
+export function buildWebhookUrl(pipelineCode = 'pipeline-code') {
+  const code = encodeURIComponent((pipelineCode || 'pipeline-code').trim())
+  const host = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${host}/api/v1/cicd/webhook/${code}`
+}
+
+// CI/CD
+export const cicdProjectApi = {
+  list: (params: { page?: number; size?: number; keyword?: string; active?: number }) =>
+    api.get('/cicd/projects', { params }),
+  create: (data: any) => api.post('/cicd/projects', data),
+  update: (id: number, data: any) => api.post(`/cicd/projects/${id}`, data),
+  delete: (id: number) => api.post(`/cicd/projects/${id}/delete`),
+  toggleStatus: (id: number, enabled: boolean) => api.post(`/cicd/projects/${id}/status`, { enabled }),
+}
+
+export const cicdPipelineApi = {
+  list: (params: { page?: number; size?: number; keyword?: string; project_id?: number; active?: number }) =>
+    api.get('/cicd/pipelines', { params }),
+  create: (data: any) => api.post('/cicd/pipelines', data),
+  update: (id: number, data: any) => api.post(`/cicd/pipelines/${id}`, data),
+  delete: (id: number) => api.post(`/cicd/pipelines/${id}/delete`),
+  trigger: (id: number) => api.post(`/cicd/pipelines/${id}/trigger`),
+  runs: (params: { page?: number; size?: number; project_id?: number; pipeline_id?: number; status?: string }) =>
+    api.get('/cicd/runs', { params }),
+  runDetail: (id: number) => api.get(`/cicd/runs/${id}`),
+  retryRun: (id: number) => api.post(`/cicd/runs/${id}/retry`),
+  rollbackRun: (id: number) => api.post(`/cicd/runs/${id}/rollback`),
+}
+
+export const alertRuleApi = {
+  list: (params: { page?: number; size?: number; keyword?: string; metric_type?: string; severity?: string; enabled?: number }) =>
+    api.get('/alert-rules', { params }),
+  create: (data: any) => api.post('/alert-rules', data),
+  update: (id: number, data: any) => api.post(`/alert-rules/${id}`, data),
+  delete: (id: number) => api.post(`/alert-rules/${id}/delete`),
+  evaluate: () => api.post('/alert-rules/evaluate'),
+  events: (params: { page?: number; size?: number; status?: string; severity?: string; agent_id?: string; keyword?: string; rule_id?: number }) =>
+    api.get('/alert-events', { params }),
+  getEvent: (id: number) => api.get(`/alert-events/${id}`),
+  ackEvent: (id: number, note = '') => api.post(`/alert-events/${id}/ack`, { note }),
+  resolveEvent: (id: number, note = '') => api.post(`/alert-events/${id}/resolve`, { note }),
+}
+
+// 任务管理
+export const taskApi = {
+  list: (params: { page?: number; size?: number; keyword?: string; task_type?: string }) =>
+    api.get('/tasks', { params }),
+  getById: (id: number) => api.get(`/tasks/${id}`),
+  create: (data: any) => api.post('/tasks', data),
+  update: (id: number, data: any) => api.post(`/tasks/${id}`, data),
+  delete: (id: number) => api.post(`/tasks/${id}/delete`),
+  execute: (id: number, data: { host_ips: string[] }) => api.post(`/tasks/${id}/execute`, data),
+  executions: (params: { task_id?: number; page?: number; size?: number }) =>
+    api.get('/task-executions', { params }),
+  getExecution: (id: number) => api.get(`/task-executions/${id}`),
+}
+
+// Agent 管理
+export const agentApi = {
+  list: (params: { page?: number; size?: number; status?: string }) =>
+    api.get('/agents', { params }),
 }
 
 export default api

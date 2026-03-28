@@ -61,6 +61,22 @@ func (r *TicketTypeRepository) List(page, size int) ([]*model.TicketType, int64,
 	return items, total, nil
 }
 
+// GetByIDs 批量按 ID 查询，返回 id->TicketType 映射。
+func (r *TicketTypeRepository) GetByIDs(ids []int64) (map[int64]*model.TicketType, error) {
+	result := make(map[int64]*model.TicketType)
+	if len(ids) == 0 {
+		return result, nil
+	}
+	var items []*model.TicketType
+	if err := database.GetDB().Where("id IN ?", ids).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		result[item.ID] = item
+	}
+	return result, nil
+}
+
 func (r *TicketTypeRepository) GetAll() ([]*model.TicketType, error) {
 	var items []*model.TicketType
 	err := database.GetDB().Where("status = 1").Order("sort ASC, id ASC").Find(&items).Error

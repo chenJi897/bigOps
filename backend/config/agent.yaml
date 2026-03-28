@@ -1,0 +1,12 @@
+server:
+  address: "localhost:9090"
+agent:
+  id: ""
+  state_file: ""
+  hostname: ""
+  public_ip: ""
+  public_ip_provider: "https://cip.cc"
+  public_ip_cache_file: ""
+  public_ip_timeout_seconds: 3
+  public_ip_refresh_hours: 24
+  labels: {}

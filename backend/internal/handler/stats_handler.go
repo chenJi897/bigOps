@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/bigops/platform/internal/pkg/database"
@@ -26,6 +28,15 @@ type SummaryResponse struct {
 	TicketTotal        int64 `json:"ticket_total"`
 }
 
+type PersonalDashboardResponse struct {
+	MyPendingTickets int64 `json:"my_pending_tickets"`
+	MyCreatedTickets int64 `json:"my_created_tickets"`
+	MyAssets         int64 `json:"my_assets"`
+	MyAlerts         int64 `json:"my_alerts"`
+	MyTaskExecutions int64 `json:"my_task_executions"`
+	MyPipelineRuns   int64 `json:"my_pipeline_runs"`
+}
+
 // Summary 平台摘要统计。
 // @Summary 平台摘要
 // @Description 一次返回首页所需的所有统计数字
@@ -48,6 +59,42 @@ func (h *StatsHandler) Summary(c *gin.Context) {
 	db.Table("departments").Where("deleted_at IS NULL").Count(&s.DepartmentTotal)
 	db.Table("tickets").Where("deleted_at IS NULL").Count(&s.TicketTotal)
 	db.Table("tickets").Where("deleted_at IS NULL AND status IN ('open','processing')").Count(&s.TicketOpen)
+
+	response.Success(c, s)
+}
+
+// Personal 当前用户工作台摘要。
+// @Summary 个人工作台摘要
+// @Description 返回当前登录用户相关的工单、资产、告警、任务、流水线统计
+// @Tags 统计
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response{data=PersonalDashboardResponse}
+// @Router /dashboard/personal [get]
+func (h *StatsHandler) Personal(c *gin.Context) {
+	db := database.GetDB()
+	userID, _ := c.Get("userID")
+	currentUserID, _ := userID.(int64)
+	var s PersonalDashboardResponse
+
+	db.Table("tickets").
+		Where("deleted_at IS NULL AND assignee_id = ? AND status IN ('open','processing')", currentUserID).
+		Count(&s.MyPendingTickets)
+	db.Table("tickets").
+		Where("deleted_at IS NULL AND creator_id = ?", currentUserID).
+		Count(&s.MyCreatedTickets)
+	db.Table("assets").
+		Where("deleted_at IS NULL AND JSON_CONTAINS(owner_ids, CAST(? AS JSON))", strconv.FormatInt(currentUserID, 10)).
+		Count(&s.MyAssets)
+	db.Table("alert_events").
+		Where("deleted_at IS NULL AND owner_id = ? AND status IN ('firing','acknowledged')", currentUserID).
+		Count(&s.MyAlerts)
+	db.Table("task_executions").
+		Where("operator_id = ?", currentUserID).
+		Count(&s.MyTaskExecutions)
+	db.Table("cicd_pipeline_runs").
+		Where("deleted_at IS NULL AND triggered_by = ?", currentUserID).
+		Count(&s.MyPipelineRuns)
 
 	response.Success(c, s)
 }
@@ -105,8 +152,8 @@ func (h *StatsHandler) AssetDistribution(c *gin.Context) {
 
 	// 服务树资产 Top 10
 	var topRows []struct {
-		ServiceTreeID int64  `gorm:"column:service_tree_id"`
-		Cnt           int64  `gorm:"column:cnt"`
+		ServiceTreeID int64 `gorm:"column:service_tree_id"`
+		Cnt           int64 `gorm:"column:cnt"`
 	}
 	db.Table("assets").Select("service_tree_id, COUNT(*) as cnt").
 		Where("deleted_at IS NULL AND service_tree_id > 0").

@@ -41,8 +41,7 @@ type CreateDepartmentRequest struct {
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.Department}}
 // @Router /departments [get]
 func (h *DepartmentHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	departments, total, err := h.svc.List(page, size)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")

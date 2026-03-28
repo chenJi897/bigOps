@@ -84,6 +84,7 @@ type TicketListQuery struct {
 	Keyword       string
 	// scope: my_created/my_assigned/my_dept/all
 	Scope         string
+	IsAdmin       bool
 	CurrentUserID int64
 	CurrentDeptID int64
 }
@@ -92,6 +93,10 @@ func (r *TicketRepository) List(q TicketListQuery) ([]*model.Ticket, int64, erro
 	var items []*model.Ticket
 	var total int64
 	db := database.GetDB().Model(&model.Ticket{})
+
+	if !q.IsAdmin {
+		db = db.Where("(creator_id = ? OR assignee_id = ?)", q.CurrentUserID, q.CurrentUserID)
+	}
 
 	// scope 处理
 	switch q.Scope {

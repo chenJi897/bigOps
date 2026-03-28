@@ -20,8 +20,14 @@ const typeOptions = [
 
 // 可用页面组件列表
 const componentOptions = [
-  'Dashboard', 'Users', 'Roles', 'Menus', 'AuditLogs',
+  'TicketList', 'TicketCreate', 'TicketDetail', 'RequestTemplates',
+  'Dashboard', 'Users', 'Roles', 'Menus', 'AuditLogs', 'Departments',
   'ServiceTree', 'CloudAccounts', 'Assets',
+  'TicketTypes',
+  'ApprovalInbox', 'ApprovalPolicies', 'NotificationConsole',
+  'TaskList', 'TaskCreate', 'TaskExecution', 'AgentList',
+  'MonitorDashboard', 'AlertRules', 'AgentDetail', 'AlertEvents', 'AlertSilences', 'MonitorDatasources', 'MonitorQuery', 'OnCallSchedules',
+  'CicdProjects', 'CicdPipelines', 'CicdRuns',
 ]
 
 async function loadMenus() {
@@ -80,7 +86,7 @@ onMounted(loadMenus)
         <el-table-column prop="name" label="标识" width="130" />
         <el-table-column label="类型" width="90">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.type === 1 ? '' : row.type === 2 ? 'success' : 'warning'">
+            <el-tag size="small" :type="row.type === 1 ? 'info' : row.type === 2 ? 'success' : 'warning'">
               {{ row.type === 1 ? '目录' : row.type === 2 ? '菜单' : '按钮' }}
             </el-tag>
           </template>
@@ -124,11 +130,11 @@ onMounted(loadMenus)
             <el-option v-for="c in componentOptions" :key="c" :label="c" :value="c" />
           </el-select>
         </el-form-item>
-        <el-form-item label="API路径" v-if="form.type === 3">
+        <el-form-item label="API路径" v-if="form.type === 2 || form.type === 3">
           <el-input v-model="form.api_path" placeholder="/api/v1/xxx" />
         </el-form-item>
-        <el-form-item label="API方法" v-if="form.type === 3">
-          <el-select v-model="form.api_method" placeholder="选择方法" style="width:100%">
+        <el-form-item label="API方法" v-if="form.type === 2 || form.type === 3">
+          <el-select v-model="form.api_method" placeholder="选择方法" clearable style="width:100%">
             <el-option label="GET" value="GET" />
             <el-option label="POST" value="POST" />
           </el-select>

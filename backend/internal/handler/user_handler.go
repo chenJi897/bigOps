@@ -10,7 +10,7 @@ import (
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
-	"github.com/bigops/platform/internal/repository"
+	"github.com/bigops/platform/internal/service"
 )
 
 // swag needs model import to resolve annotation types
@@ -18,11 +18,11 @@ var _ model.User
 
 // UserHandler 用户管理 HTTP 处理器。
 type UserHandler struct {
-	userRepo *repository.UserRepository
+	svc *service.UserService
 }
 
 func NewUserHandler() *UserHandler {
-	return &UserHandler{userRepo: repository.NewUserRepository()}
+	return &UserHandler{svc: service.NewUserService()}
 }
 
 // List 用户列表（分页）。
@@ -38,22 +38,12 @@ func NewUserHandler() *UserHandler {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /users [get]
 func (h *UserHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	keyword := c.Query("keyword")
-	users, total, err := h.userRepo.List(page, size, keyword)
+	users, total, err := h.svc.List(page, size, keyword)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")
 		return
-	}
-	// 填充部门名称
-	deptRepo := repository.NewDepartmentRepository()
-	for _, u := range users {
-		if u.DepartmentID > 0 {
-			if dept, err := deptRepo.GetByID(u.DepartmentID); err == nil {
-				u.DepartmentName = dept.Name
-			}
-		}
 	}
 	response.Page(c, users, total, page, size)
 }
@@ -83,26 +73,21 @@ func (h *UserHandler) Update(c *gin.Context) {
 		response.BadRequest(c, "参数错误")
 		return
 	}
-	user, err := h.userRepo.GetByID(id)
-	if err != nil {
-		response.Error(c, 404, "用户不存在")
-		return
+	params := service.UpdateUserParams{
+		RealName:     req.RealName,
+		Phone:        req.Phone,
+		Email:        req.Email,
+		DepartmentID: req.DepartmentID,
 	}
-	user.RealName = req.RealName
-	user.Phone = req.Phone
-	if req.Email != "" {
-		user.Email = &req.Email
-	}
-	user.DepartmentID = req.DepartmentID
-	if err := h.userRepo.Update(user); err != nil {
-		response.InternalServerError(c, "更新失败")
+	if err := h.svc.Update(id, params); err != nil {
+		response.Error(c, 404, err.Error())
 		return
 	}
 	logger.Info("更新用户信息", zap.String("operator", getOperator(c)), zap.Int64("user_id", id))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "user")
 	c.Set("audit_resource_id", id)
-	c.Set("audit_detail", "更新用户信息: "+user.Username)
+	c.Set("audit_detail", fmt.Sprintf("更新用户信息: ID %d", id))
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
@@ -131,29 +116,24 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 		response.BadRequest(c, "参数错误: "+err.Error())
 		return
 	}
-	user, err := h.userRepo.GetByID(id)
+	username, err := h.svc.UpdateStatus(id, req.Status)
 	if err != nil {
-		response.Error(c, 404, "用户不存在")
-		return
-	}
-	if id == 1 {
-		response.Error(c, 400, "不允许禁用管理员")
-		return
-	}
-	user.Status = req.Status
-	if err := h.userRepo.Update(user); err != nil {
-		response.InternalServerError(c, "更新失败")
+		if err.Error() == "不允许禁用管理员" {
+			response.Error(c, 400, err.Error())
+		} else {
+			response.Error(c, 404, err.Error())
+		}
 		return
 	}
 	action := "启用"
 	if req.Status == 0 {
 		action = "禁用"
 	}
-	logger.Info(fmt.Sprintf("%s用户", action), zap.String("operator", getOperator(c)), zap.Int64("user_id", id), zap.String("username", user.Username))
+	logger.Info(fmt.Sprintf("%s用户", action), zap.String("operator", getOperator(c)), zap.Int64("user_id", id), zap.String("username", username))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "user")
 	c.Set("audit_resource_id", id)
-	c.Set("audit_detail", action+"用户: "+user.Username)
+	c.Set("audit_detail", action+"用户: "+username)
 	response.SuccessWithMessage(c, action+"成功", nil)
 }
 
@@ -170,17 +150,13 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 // @Router /users/{id}/delete [post]
 func (h *UserHandler) Delete(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	if id == 1 {
-		response.Error(c, 400, "不允许删除管理员")
-		return
-	}
-	user, _ := h.userRepo.GetByID(id)
-	username := ""
-	if user != nil {
-		username = user.Username
-	}
-	if err := h.userRepo.Delete(id); err != nil {
-		response.InternalServerError(c, "删除失败")
+	username, err := h.svc.Delete(id)
+	if err != nil {
+		if err.Error() == "不允许删除管理员" {
+			response.Error(c, 400, err.Error())
+		} else {
+			response.InternalServerError(c, "删除失败")
+		}
 		return
 	}
 	logger.Info("删除用户", zap.String("operator", getOperator(c)), zap.Int64("user_id", id), zap.String("username", username))
@@ -212,20 +188,15 @@ func (h *UserHandler) SetDepartment(c *gin.Context) {
 		response.BadRequest(c, "参数错误")
 		return
 	}
-	user, err := h.userRepo.GetByID(id)
+	username, err := h.svc.SetDepartment(id, req.DepartmentID)
 	if err != nil {
-		response.Error(c, 404, "用户不存在")
-		return
-	}
-	user.DepartmentID = req.DepartmentID
-	if err := h.userRepo.Update(user); err != nil {
-		response.InternalServerError(c, "更新失败")
+		response.Error(c, 404, err.Error())
 		return
 	}
 	logger.Info("设置用户部门", zap.String("operator", getOperator(c)), zap.Int64("user_id", id), zap.Int64("dept_id", req.DepartmentID))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "user")
 	c.Set("audit_resource_id", id)
-	c.Set("audit_detail", fmt.Sprintf("设置用户 %s 部门 ID: %d", user.Username, req.DepartmentID))
+	c.Set("audit_detail", fmt.Sprintf("设置用户 %s 部门 ID: %d", username, req.DepartmentID))
 	response.SuccessWithMessage(c, "设置成功", nil)
 }

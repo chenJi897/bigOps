@@ -7,17 +7,21 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 
 	_ "github.com/bigops/platform/docs"
 
 	"github.com/bigops/platform/api/http/router"
+	grpcserver "github.com/bigops/platform/internal/grpc"
 	"github.com/bigops/platform/internal/model"
 	casbinPkg "github.com/bigops/platform/internal/pkg/casbin"
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/repository"
+	"github.com/bigops/platform/internal/service"
 	cloudsync "github.com/bigops/platform/internal/service/cloud_sync"
 )
 
@@ -76,7 +80,45 @@ func main() {
 	defer database.Close()
 
 	// 自动迁移数据库表结构（开发阶段使用，生产环境建议使用 SQL 迁移脚本）
-	if err := database.GetDB().AutoMigrate(&model.User{}, &model.Role{}, &model.Menu{}, &model.UserRole{}, &model.AuditLog{}, &model.ServiceTree{}, &model.CloudAccount{}, &model.Asset{}, &model.AssetChange{}, &model.CloudSyncTask{}, &model.Department{}, &model.Ticket{}, &model.TicketType{}, &model.TicketActivity{}); err != nil {
+	if err := database.GetDB().AutoMigrate(
+		&model.User{},
+		&model.Role{},
+		&model.Menu{},
+		&model.UserRole{},
+		&model.AuditLog{},
+		&model.ServiceTree{},
+		&model.CloudAccount{},
+		&model.Asset{},
+		&model.AssetChange{},
+		&model.CloudSyncTask{},
+		&model.Department{},
+		&model.Ticket{},
+		&model.TicketType{},
+		&model.TicketActivity{},
+		&model.RequestTemplate{},
+		&model.ApprovalPolicy{},
+		&model.ApprovalPolicyStage{},
+		&model.ApprovalInstance{},
+		&model.ApprovalRecord{},
+		&model.ExecutionOrder{},
+		&model.NotificationEvent{},
+		&model.NotificationDelivery{},
+		&model.InAppNotification{},
+		&model.NotificationUserSetting{},
+		&model.Task{},
+		&model.TaskExecution{},
+		&model.TaskHostResult{},
+		&model.AgentInfo{},
+		&model.AgentMetricSample{},
+		&model.AlertRule{},
+		&model.AlertEvent{},
+		&model.AlertSilence{},
+		&model.OnCallSchedule{},
+		&model.CICDProject{},
+		&model.CICDPipeline{},
+		&model.CICDPipelineRun{},
+		&model.MonitorDatasource{},
+	); err != nil {
 		logger.Fatal("Failed to migrate database", zap.Error(err))
 	}
 	logger.Info("Database migration completed")
@@ -85,6 +127,7 @@ func main() {
 	if err := casbinPkg.Init(database.GetDB()); err != nil {
 		logger.Fatal("Failed to initialize Casbin", zap.Error(err))
 	}
+	syncCasbinPolicies()
 	logger.Info("Casbin initialized")
 
 	// 4. 初始化 Redis
@@ -99,7 +142,18 @@ func main() {
 	}
 	defer database.CloseRedis()
 
-	// 5. 初始化 HTTP 路由并启动服务
+	// 5. 启动 gRPC Server
+	grpcPort := cfg.GRPC.Port
+	if grpcPort == 0 {
+		grpcPort = 9090
+	}
+	grpcSrv, err := grpcserver.StartGRPCServer(grpcPort)
+	if err != nil {
+		logger.Fatal("Failed to start gRPC server", zap.Error(err))
+	}
+	logger.Info(fmt.Sprintf("gRPC server started on :%d", grpcPort))
+
+	// 6. 初始化 HTTP 路由并启动服务
 	r := router.Setup(cfg.Server.Mode)
 
 	go func() {
@@ -116,10 +170,90 @@ func main() {
 	defer syncScheduler.Stop()
 	logger.Info("Cloud sync scheduler started")
 
+	notificationScheduler := service.NewNotificationScheduler()
+	notificationScheduler.Start()
+	defer notificationScheduler.Stop()
+	logger.Info("Notification scheduler started")
+
+	alertScheduler := service.NewAlertScheduler()
+	alertScheduler.Start()
+	defer alertScheduler.Stop()
+	logger.Info("Alert scheduler started")
+
 	// 6. 优雅关闭：等待中断信号
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
 	logger.Info("Server shutting down...")
+
+	// gRPC: 先尝试优雅关闭（3秒超时），超时则强制关闭
+	grpcDone := make(chan struct{})
+	go func() {
+		grpcSrv.GracefulStop()
+		close(grpcDone)
+	}()
+	select {
+	case <-grpcDone:
+		logger.Info("gRPC server stopped gracefully")
+	case <-time.After(3 * time.Second):
+		grpcSrv.Stop()
+		logger.Info("gRPC server force stopped")
+	}
+}
+
+// syncCasbinPolicies 启动时从 DB 同步所有 Casbin 规则。
+func syncCasbinPolicies() {
+	enforcer := casbinPkg.GetEnforcer()
+
+	// 清空现有策略，重新从 DB 同步
+	enforcer.ClearPolicy()
+
+	db := database.GetDB()
+
+	// 1. 同步 policy: 遍历所有角色 → 获取其菜单 → 写入 p(role, api_path, api_method)
+	var roles []model.Role
+	db.Where("status = 1").Find(&roles)
+
+	roleRepo := repository.NewRoleRepository()
+	menuRepo := repository.NewMenuRepository()
+
+	for _, role := range roles {
+		if role.Name == "admin" {
+			continue // admin 在 matcher 中 bypass
+		}
+		menuIDs, err := roleRepo.GetMenusByRoleID(role.ID)
+		if err != nil || len(menuIDs) == 0 {
+			continue
+		}
+		menus, err := menuRepo.GetByIDs(menuIDs)
+		if err != nil {
+			continue
+		}
+		for _, menu := range menus {
+			if menu.APIPath != "" && menu.APIMethod != "" {
+				enforcer.AddPolicy(role.Name, menu.APIPath, menu.APIMethod)
+			}
+		}
+	}
+
+	// 2. 同步 grouping: 遍历所有用户-角色关系 → 写入 g(username, role_name)
+	var userRoles []model.UserRole
+	db.Find(&userRoles)
+
+	userRepo := repository.NewUserRepository()
+	for _, ur := range userRoles {
+		user, err := userRepo.GetByID(ur.UserID)
+		if err != nil {
+			continue
+		}
+		role, err := roleRepo.GetByID(ur.RoleID)
+		if err != nil {
+			continue
+		}
+		enforcer.AddRoleForUser(user.Username, role.Name)
+	}
+
+	enforcer.SavePolicy()
+	logger.Info("Casbin policies synced from database")
 }
