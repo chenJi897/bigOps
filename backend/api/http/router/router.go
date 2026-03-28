@@ -48,15 +48,18 @@ func Setup(mode string) *gin.Engine {
 			c.JSON(200, gin.H{"message": "pong"})
 		})
 
-		// --- 认证模块（公开路由） ---
+		// --- 认证模块（公开路由，含限流） ---
 		authHandler := handler.NewAuthHandler()
-		v1.POST("/auth/register", middleware.AuditLog(), authHandler.Register)
-		v1.POST("/auth/login", middleware.AuditLog(), authHandler.Login)
+		cicdHandler := handler.NewCICDHandler()
+		v1.POST("/auth/register", middleware.RegisterRateLimit(), middleware.AuditLog(), authHandler.Register)
+		v1.POST("/auth/login", middleware.LoginRateLimit(), middleware.AuditLog(), authHandler.Login)
+		v1.POST("/cicd/webhook/:code", cicdHandler.TriggerByWebhook)
 
 		// --- 需要认证的路由 ---
 		authGroup := v1.Group("")
 		authGroup.Use(middleware.AuthMiddleware())
 		authGroup.Use(middleware.AuditLog())
+		authGroup.Use(middleware.CasbinMiddleware())
 		{
 			// 认证相关
 			authGroup.POST("/auth/logout", authHandler.Logout)
@@ -132,6 +135,21 @@ func Setup(mode string) *gin.Engine {
 			auditLogHandler := handler.NewAuditLogHandler()
 			authGroup.GET("/audit-logs", auditLogHandler.List)
 
+			// --- 通知中心 ---
+			notificationHandler := handler.NewNotificationHandler()
+			authGroup.GET("/notifications/in-app", notificationHandler.ListInApp)
+			authGroup.GET("/notifications/in-app/unread-count", notificationHandler.CountUnread)
+			authGroup.POST("/notifications/in-app/:id/read", notificationHandler.MarkRead)
+			authGroup.POST("/notifications/in-app/read-all", notificationHandler.MarkAllRead)
+			authGroup.POST("/notifications/in-app/clear-read", notificationHandler.ClearRead)
+			authGroup.GET("/notifications/preferences", notificationHandler.GetPreference)
+			authGroup.POST("/notifications/preferences", notificationHandler.UpdatePreference)
+			authGroup.GET("/notifications/config", notificationHandler.GetConfig)
+			authGroup.POST("/notifications/config", notificationHandler.UpdateConfig)
+			authGroup.POST("/notifications/test", notificationHandler.TestSend)
+			authGroup.GET("/notifications/events", notificationHandler.ListEvents)
+			authGroup.POST("/notifications/events/:id/retry", notificationHandler.RetryEvent)
+
 			// --- 部门管理 ---
 			departmentHandler := handler.NewDepartmentHandler()
 			authGroup.GET("/departments", departmentHandler.List)
@@ -145,6 +163,59 @@ func Setup(mode string) *gin.Engine {
 			statsHandler := handler.NewStatsHandler()
 			authGroup.GET("/stats/summary", statsHandler.Summary)
 			authGroup.GET("/stats/asset-distribution", statsHandler.AssetDistribution)
+			authGroup.GET("/dashboard/personal", statsHandler.Personal)
+
+			// --- 监控 ---
+			monitorHandler := handler.NewMonitorHandler()
+			monitorDatasourceHandler := handler.NewMonitorDatasourceHandler()
+			alertRuleHandler := handler.NewAlertRuleHandler()
+			alertSilenceHandler := handler.NewAlertSilenceHandler()
+			onCallHandler := handler.NewOnCallHandler()
+			authGroup.GET("/monitor/summary", monitorHandler.Summary)
+			authGroup.GET("/monitor/agents", monitorHandler.Agents)
+			authGroup.GET("/monitor/agents/:agent_id/trends", monitorHandler.AgentTrend)
+			authGroup.GET("/monitor/aggregates/service-trees", monitorHandler.AggregateServiceTrees)
+			authGroup.GET("/monitor/aggregates/owners", monitorHandler.AggregateOwners)
+			authGroup.GET("/monitor/datasources", monitorDatasourceHandler.List)
+			authGroup.POST("/monitor/datasources", monitorDatasourceHandler.Create)
+			authGroup.POST("/monitor/datasources/:id", monitorDatasourceHandler.Update)
+			authGroup.POST("/monitor/datasources/:id/delete", monitorDatasourceHandler.Delete)
+			authGroup.GET("/monitor/datasources/:id/health", monitorDatasourceHandler.Health)
+			authGroup.POST("/monitor/query", monitorHandler.Query)
+			authGroup.POST("/monitor/query-range", monitorHandler.QueryRange)
+			authGroup.GET("/alert-silences", alertSilenceHandler.List)
+			authGroup.POST("/alert-silences", alertSilenceHandler.Create)
+			authGroup.POST("/alert-silences/:id", alertSilenceHandler.Update)
+			authGroup.POST("/alert-silences/:id/delete", alertSilenceHandler.Delete)
+			authGroup.GET("/oncall-schedules", onCallHandler.List)
+			authGroup.POST("/oncall-schedules", onCallHandler.Create)
+			authGroup.POST("/oncall-schedules/:id", onCallHandler.Update)
+			authGroup.POST("/oncall-schedules/:id/delete", onCallHandler.Delete)
+			authGroup.GET("/alert-rules", alertRuleHandler.List)
+			authGroup.POST("/alert-rules", alertRuleHandler.Create)
+			authGroup.POST("/alert-rules/:id", alertRuleHandler.Update)
+			authGroup.POST("/alert-rules/:id/delete", alertRuleHandler.Delete)
+			authGroup.POST("/alert-rules/evaluate", alertRuleHandler.Evaluate)
+			authGroup.GET("/alert-events", alertRuleHandler.Events)
+			authGroup.GET("/alert-events/:id", alertRuleHandler.GetEvent)
+			authGroup.POST("/alert-events/:id/ack", alertRuleHandler.AcknowledgeEvent)
+			authGroup.POST("/alert-events/:id/resolve", alertRuleHandler.ResolveEvent)
+
+			// --- CI/CD ---
+			authGroup.GET("/cicd/projects", cicdHandler.ListProjects)
+			authGroup.POST("/cicd/projects", cicdHandler.CreateProject)
+			authGroup.POST("/cicd/projects/:id", cicdHandler.UpdateProject)
+			authGroup.POST("/cicd/projects/:id/status", cicdHandler.UpdateProjectStatus)
+			authGroup.POST("/cicd/projects/:id/delete", cicdHandler.DeleteProject)
+			authGroup.GET("/cicd/pipelines", cicdHandler.ListPipelines)
+			authGroup.POST("/cicd/pipelines", cicdHandler.CreatePipeline)
+			authGroup.POST("/cicd/pipelines/:id", cicdHandler.UpdatePipeline)
+			authGroup.POST("/cicd/pipelines/:id/trigger", cicdHandler.TriggerPipeline)
+			authGroup.POST("/cicd/pipelines/:id/delete", cicdHandler.DeletePipeline)
+			authGroup.GET("/cicd/runs", cicdHandler.ListRuns)
+			authGroup.GET("/cicd/runs/:id", cicdHandler.GetRunDetail)
+			authGroup.POST("/cicd/runs/:id/retry", cicdHandler.RetryRun)
+			authGroup.POST("/cicd/runs/:id/rollback", cicdHandler.RollbackRun)
 
 			// --- 工单类型 ---
 			ticketTypeHandler := handler.NewTicketTypeHandler()
@@ -154,10 +225,33 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/ticket-types/:id", ticketTypeHandler.Update)
 			authGroup.POST("/ticket-types/:id/delete", ticketTypeHandler.Delete)
 
+			// --- 请求模板 ---
+			requestTemplateHandler := handler.NewRequestTemplateHandler()
+			authGroup.GET("/request-templates", requestTemplateHandler.List)
+			authGroup.GET("/request-templates/:id", requestTemplateHandler.GetByID)
+			authGroup.POST("/request-templates", requestTemplateHandler.Create)
+			authGroup.POST("/request-templates/:id", requestTemplateHandler.Update)
+			authGroup.POST("/request-templates/:id/delete", requestTemplateHandler.Delete)
+
+			// --- 审批策略 ---
+			approvalPolicyHandler := handler.NewApprovalPolicyHandler()
+			authGroup.GET("/approval-policies", approvalPolicyHandler.List)
+			authGroup.GET("/approval-policies/:id", approvalPolicyHandler.GetByID)
+			authGroup.POST("/approval-policies", approvalPolicyHandler.Create)
+			authGroup.POST("/approval-policies/:id", approvalPolicyHandler.Update)
+			authGroup.POST("/approval-policies/:id/delete", approvalPolicyHandler.Delete)
+
+			// --- 审批待办 ---
+			approvalHandler := handler.NewApprovalHandler()
+			authGroup.GET("/approval-instances/pending", approvalHandler.Pending)
+			authGroup.POST("/approval-instances/:id/approve", approvalHandler.Approve)
+			authGroup.POST("/approval-instances/:id/reject", approvalHandler.Reject)
+
 			// --- 工单管理 ---
 			ticketHandler := handler.NewTicketHandler()
 			authGroup.GET("/tickets", ticketHandler.List)
 			authGroup.GET("/tickets/:id", ticketHandler.GetByID)
+			authGroup.GET("/tickets/:id/approval-instance", ticketHandler.ApprovalInstance)
 			authGroup.POST("/tickets", ticketHandler.Create)
 			authGroup.POST("/tickets/:id/assign", ticketHandler.Assign)
 			authGroup.POST("/tickets/:id/process", ticketHandler.Process)
@@ -166,6 +260,27 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/tickets/:id/comment", ticketHandler.Comment)
 			authGroup.POST("/tickets/:id/transfer", ticketHandler.Transfer)
 			authGroup.GET("/tickets/:id/activities", ticketHandler.Activities)
+
+			// --- 任务管理 ---
+			taskHandler := handler.NewTaskHandler()
+			authGroup.GET("/tasks", taskHandler.List)
+			authGroup.GET("/tasks/:id", taskHandler.GetByID)
+			authGroup.POST("/tasks", taskHandler.Create)
+			authGroup.POST("/tasks/:id", taskHandler.Update)
+			authGroup.POST("/tasks/:id/delete", taskHandler.Delete)
+			authGroup.POST("/tasks/:id/execute", taskHandler.Execute)
+			authGroup.GET("/task-executions/:id", taskHandler.GetExecution)
+			authGroup.GET("/task-executions", taskHandler.ListExecutions)
+			authGroup.GET("/agents", taskHandler.ListAgents)
+
+		}
+
+		// WebSocket 路由（认证但不审计）
+		wsGroup := v1.Group("")
+		wsGroup.Use(middleware.AuthMiddleware())
+		{
+			taskHandler := handler.NewTaskHandler()
+			wsGroup.GET("/ws/task-executions/:id/logs", taskHandler.WSLogs)
 		}
 	}
 

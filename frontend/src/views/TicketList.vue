@@ -1,28 +1,35 @@
 <script setup lang="ts">
 defineOptions({ name: 'TicketList' })
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ticketApi, ticketTypeApi } from '../api'
+import { computed, ref, onActivated, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ticketApi, ticketTypeApi, userApi } from '../api'
+import { useViewStateStore } from '../stores/viewState'
+import { useUserStore } from '../stores/user'
 
 const router = useRouter()
+const route = useRoute()
+const viewStateStore = useViewStateStore()
+const userStore = useUserStore()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
 const query = ref<any>({ page: 1, size: 20, status: '', priority: '', type_id: '', source: '', keyword: '', scope: 'all' })
 
 const allTypes = ref<any[]>([])
+const isAdmin = ref(false)
+const seenTicketTypeVersion = ref(0)
 
-const statusMap: Record<string, { label: string; type: string }> = {
+const statusMap: Record<string, { label: string; type: 'primary' | 'success' | 'info' | 'warning' | 'danger' }> = {
   open: { label: '待处理', type: 'info' },
   processing: { label: '处理中', type: 'warning' },
   resolved: { label: '已解决', type: 'success' },
-  closed: { label: '已关闭', type: '' },
+  closed: { label: '已关闭', type: 'info' },
   rejected: { label: '已驳回', type: 'danger' },
 }
 
-const priorityMap: Record<string, { label: string; type: string }> = {
+const priorityMap: Record<string, { label: string; type: 'primary' | 'success' | 'info' | 'warning' | 'danger' }> = {
   low: { label: '低', type: 'info' },
-  medium: { label: '中', type: '' },
+  medium: { label: '中', type: 'info' },
   high: { label: '高', type: 'warning' },
   urgent: { label: '紧急', type: 'danger' },
 }
@@ -31,28 +38,81 @@ const sourceMap: Record<string, string> = {
   manual: '手动', monitor: '监控', sync: '同步', system: '系统', cicd: 'CICD',
 }
 
-const scopeTabs = [
-  { label: '全部工单', value: 'all' },
-  { label: '我创建的', value: 'my_created' },
-  { label: '我处理的', value: 'my_assigned' },
-  { label: '本部门', value: 'my_dept' },
-]
+const modeScopeMap = {
+  todo: 'my_assigned',
+  applied: 'my_created',
+} as const
+
+type TicketMode = keyof typeof modeScopeMap
+const modeTitleMap: Record<TicketMode, string> = {
+  todo: '我的待办',
+  applied: '我的申请',
+}
+
+const routeMode = computed<TicketMode | ''>(() => {
+  const metaMode = route.meta?.ticketMode ?? route.meta?.mode
+  if (typeof metaMode === 'string') {
+    if (metaMode === 'todo' || metaMode === 'applied') {
+      return metaMode
+    }
+  }
+  const path = route.fullPath || route.path || ''
+  if (path.includes('ticket/applied')) {
+    return 'applied'
+  }
+  if (path.includes('ticket/todo')) {
+    return 'todo'
+  }
+  return ''
+})
+
+const fixedScope = computed(() => (routeMode.value ? modeScopeMap[routeMode.value] : ''))
+const showScopeTabs = computed(() => !Boolean(fixedScope.value))
+const showLaunchButton = computed(() => Boolean(routeMode.value))
+const pageTitle = computed(() => {
+  const currentMode = routeMode.value
+  if (currentMode) return modeTitleMap[currentMode]
+  return '工单中心'
+})
+
+const scopeTabs = computed(() => {
+  if (isAdmin.value) {
+    return [
+      { label: '全部工单', value: 'all' },
+      { label: '我创建的', value: 'my_created' },
+      { label: '我处理的', value: 'my_assigned' },
+      { label: '本部门', value: 'my_dept' },
+    ]
+  }
+  return [
+    { label: '我创建的', value: 'my_created' },
+    { label: '我处理的', value: 'my_assigned' },
+  ]
+})
+
+const personalScopeValues = ['my_created', 'my_assigned']
 
 async function fetchData() {
   loading.value = true
   try {
     const params = { ...query.value }
-    // 清空空值
     Object.keys(params).forEach(k => { if (params[k] === '' || params[k] === null) delete params[k] })
     const res: any = await ticketApi.list(params)
     tableData.value = res.data?.list || []
     total.value = res.data?.total || 0
-  } finally { loading.value = false }
+  } finally {
+    loading.value = false
+  }
 }
 
-function handleSearch() { query.value.page = 1; fetchData() }
+function handleSearch() {
+  query.value.page = 1
+  fetchData()
+}
+
 function handleReset() {
-  query.value = { page: 1, size: 20, status: '', priority: '', type_id: '', source: '', keyword: '', scope: query.value.scope }
+  const currentScope = query.value.scope
+  query.value = { page: 1, size: 20, status: '', priority: '', type_id: '', source: '', keyword: '', scope: currentScope }
   fetchData()
 }
 
@@ -63,16 +123,57 @@ function handleScopeChange(scope: string) {
 }
 
 function openDetail(row: any) {
-  router.push('/ticket/detail/' + row.id)
+  const currentMode = routeMode.value
+  const queryFrom = currentMode || undefined
+  router.push({ path: '/ticket/detail/' + row.id, query: queryFrom ? { from: queryFrom } : undefined })
 }
 
 function openCreate() {
   router.push('/ticket/create')
 }
 
+function ensureScopeFromMode() {
+  if (fixedScope.value) {
+    query.value.scope = fixedScope.value
+  }
+}
+
+function updateScopeForRoles(admin: boolean) {
+  isAdmin.value = admin
+  if (!fixedScope.value && !admin && !personalScopeValues.includes(query.value.scope)) {
+    query.value.scope = 'my_created'
+  }
+}
+
 onMounted(() => {
-  fetchData()
+  ensureScopeFromMode()
+  const currentUserID = userStore.userInfo?.id
+  if (currentUserID) {
+    userApi.getRoles(currentUserID).then((res: any) => {
+      const roles = res.data || []
+      const admin = roles.some((role: any) => role.name === 'admin')
+      updateScopeForRoles(admin)
+      fetchData()
+    }).catch(() => {
+      updateScopeForRoles(false)
+      fetchData()
+    })
+  } else {
+    updateScopeForRoles(false)
+    fetchData()
+  }
   ticketTypeApi.all().then((res: any) => { allTypes.value = res.data || [] }).catch(() => {})
+  seenTicketTypeVersion.value = viewStateStore.ticketTypeVersion
+})
+
+onActivated(() => {
+  if (viewStateStore.consumeTicketListDirty()) {
+    fetchData()
+  }
+  if (seenTicketTypeVersion.value !== viewStateStore.ticketTypeVersion) {
+    seenTicketTypeVersion.value = viewStateStore.ticketTypeVersion
+    ticketTypeApi.all().then((res: any) => { allTypes.value = res.data || [] }).catch(() => {})
+  }
 })
 </script>
 
@@ -81,19 +182,20 @@ onMounted(() => {
     <el-card shadow="never">
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>工单中心</span>
-          <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 创建工单</el-button>
+          <span>{{ pageTitle }}</span>
+          <el-button v-if="showLaunchButton" type="primary" @click="openCreate">
+            <el-icon><Plus /></el-icon>
+            发起工单
+          </el-button>
         </div>
       </template>
 
-      <!-- Scope Tabs -->
-      <div style="margin-bottom: 16px;">
+      <div v-if="showScopeTabs" style="margin-bottom: 16px;">
         <el-radio-group v-model="query.scope" @change="handleScopeChange">
           <el-radio-button v-for="t in scopeTabs" :key="t.value" :value="t.value">{{ t.label }}</el-radio-button>
         </el-radio-group>
       </div>
 
-      <!-- 筛选栏 -->
       <el-form :inline="true" @submit.prevent="handleSearch" style="margin-bottom: 12px;">
         <el-form-item>
           <el-select v-model="query.status" placeholder="状态" clearable style="width: 110px;">
@@ -106,7 +208,7 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-select v-model="query.type_id" placeholder="工单类型" clearable style="width: 130px;">
+          <el-select v-model="query.type_id" placeholder="工单模板" clearable style="width: 130px;">
             <el-option v-for="t in allTypes" :key="t.id" :label="t.name" :value="t.id" />
           </el-select>
         </el-form-item>
@@ -122,15 +224,17 @@ onMounted(() => {
       <el-table :data="tableData" v-loading="loading" stripe border @row-click="openDetail" style="cursor: pointer;">
         <el-table-column prop="ticket_no" label="编号" width="160" />
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="type_name" label="类型" width="100" />
+        <el-table-column label="模板" width="140">
+          <template #default="{ row }">{{ row.request_template_name || row.type_name || '-' }}</template>
+        </el-table-column>
         <el-table-column label="优先级" width="80">
           <template #default="{ row }">
-            <el-tag :type="(priorityMap[row.priority]?.type as any) || ''" size="small">{{ priorityMap[row.priority]?.label || row.priority }}</el-tag>
+            <el-tag :type="priorityMap[row.priority]?.type || 'info'" size="small">{{ priorityMap[row.priority]?.label || row.priority }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <el-tag :type="(statusMap[row.status]?.type as any) || ''" size="small">{{ statusMap[row.status]?.label || row.status }}</el-tag>
+            <el-tag :type="statusMap[row.status]?.type || 'info'" size="small">{{ statusMap[row.status]?.label || row.status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="creator_name" label="创建人" width="90" />

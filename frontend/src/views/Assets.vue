@@ -30,10 +30,32 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增资产')
 const isCreate = ref(true)
 const editId = ref(0)
+
+function createDefaultForm() {
+  return {
+    hostname: '',
+    ip: '',
+    inner_ip: '',
+    os: '',
+    os_version: '',
+    cpu_cores: 0,
+    memory_mb: 0,
+    disk_gb: 0,
+    status: 'online',
+    asset_type: 'server',
+    source: 'manual',
+    service_tree_id: undefined as number | undefined,
+    idc: '',
+    sn: '',
+    remark: '',
+    owner_ids: [] as number[],
+  }
+}
+
 const form = ref({
   hostname: '', ip: '', inner_ip: '', os: '', os_version: '',
   cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online',
-  asset_type: 'server', source: 'manual', service_tree_id: 0,
+  asset_type: 'server', source: 'manual', service_tree_id: undefined as number | undefined,
   idc: '', sn: '', remark: '', owner_ids: [] as number[],
 })
 
@@ -68,7 +90,7 @@ function handlePageChange(p: number) {
 function handleAdd() {
   isCreate.value = true
   dialogTitle.value = '新增资产'
-  form.value = { hostname: '', ip: '', inner_ip: '', os: '', os_version: '', cpu_cores: 0, memory_mb: 0, disk_gb: 0, status: 'online', asset_type: 'server', source: 'manual', service_tree_id: 0, idc: '', sn: '', remark: '', owner_ids: [] }
+  form.value = createDefaultForm()
   dialogVisible.value = true
 }
 
@@ -80,7 +102,7 @@ function handleEdit(row: any) {
     hostname: row.hostname, ip: row.ip, inner_ip: row.inner_ip || '', os: row.os || '', os_version: row.os_version || '',
     cpu_cores: row.cpu_cores || 0, memory_mb: row.memory_mb || 0, disk_gb: row.disk_gb || 0,
     status: row.status, asset_type: row.asset_type, source: row.source,
-    service_tree_id: row.service_tree_id || 0,
+    service_tree_id: row.service_tree_id || undefined,
     idc: row.idc || '', sn: row.sn || '', remark: row.remark || '',
     owner_ids: row.owner_ids ? (typeof row.owner_ids === 'string' ? JSON.parse(row.owner_ids) : row.owner_ids) : [],
   }
@@ -89,7 +111,11 @@ function handleEdit(row: any) {
 
 async function submitForm() {
   if (!form.value.hostname || !form.value.ip) { ElMessage.warning('主机名和 IP 必填'); return }
-  const payload = { ...form.value, owner_ids: JSON.stringify(form.value.owner_ids || []) }
+  const payload = {
+    ...form.value,
+    service_tree_id: form.value.service_tree_id || 0,
+    owner_ids: JSON.stringify(form.value.owner_ids || []),
+  }
   try {
     if (isCreate.value) {
       await assetApi.create(payload)

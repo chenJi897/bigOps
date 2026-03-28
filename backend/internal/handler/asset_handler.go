@@ -61,10 +61,15 @@ type CreateAssetRequest struct {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /assets [get]
 func (h *AssetHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 	serviceTreeID, _ := strconv.ParseInt(c.Query("service_tree_id"), 10, 64)
 	ownerID, _ := strconv.ParseInt(c.Query("owner_id"), 10, 64)
+
+	// 非 admin 用户强制按自己的 ID 过滤（数据级权限）
+	if !isAdminUser(c) {
+		userID, _ := c.Get("userID")
+		ownerID = userID.(int64)
+	}
 
 	q := repository.AssetListQuery{
 		Page:          page,
@@ -220,8 +225,7 @@ func (h *AssetHandler) Delete(c *gin.Context) {
 // @Router /assets/{id}/changes [get]
 func (h *AssetHandler) GetChanges(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	page, size := parsePageSize(c)
 
 	changeRepo := repository.NewAssetChangeRepository()
 	changes, total, err := changeRepo.ListByAssetID(id, page, size)

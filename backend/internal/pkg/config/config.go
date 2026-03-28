@@ -17,6 +17,13 @@ type Config struct {
 	Log      LogConfig      `mapstructure:"log"`
 	Encrypt  EncryptConfig  `mapstructure:"encrypt"`
 	Aliyun   AliyunConfig   `mapstructure:"aliyun"`
+	Notification NotificationConfig `mapstructure:"notification"`
+	GRPC     GRPCConfig     `mapstructure:"grpc"`
+}
+
+// GRPCConfig gRPC 服务器配置。
+type GRPCConfig struct {
+	Port int `mapstructure:"port"`
 }
 
 // EncryptConfig 加密配置。
@@ -27,6 +34,42 @@ type EncryptConfig struct {
 // AliyunConfig 阿里云相关配置。
 type AliyunConfig struct {
 	ECSEndpoint string `mapstructure:"ecs_endpoint"` // ECS API 地址模板，含 %s 占位符表示 region，例如 ecs.%s.aliyuncs.com
+}
+
+// NotificationConfig 通知中心配置。
+type NotificationConfig struct {
+	DefaultChannels          []string                  `mapstructure:"default_channels" json:"default_channels"`
+	MaxRetries               int                       `mapstructure:"max_retries" json:"max_retries"`
+	RetryIntervalSeconds     int                       `mapstructure:"retry_interval_seconds" json:"retry_interval_seconds"`
+	RetryScanIntervalSeconds int                       `mapstructure:"retry_scan_interval_seconds" json:"retry_scan_interval_seconds"`
+	Webhook                  NotificationWebhookConfig `mapstructure:"webhook" json:"webhook"`
+	Email                    NotificationEmailConfig   `mapstructure:"email" json:"email"`
+	MessagePusher            MessagePusherConfig       `mapstructure:"message_pusher" json:"message_pusher"`
+}
+
+type NotificationWebhookConfig struct {
+	Enabled        bool   `mapstructure:"enabled" json:"enabled"`
+	URL            string `mapstructure:"url" json:"url"`
+	Secret         string `mapstructure:"secret" json:"secret"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds" json:"timeout_seconds"`
+}
+
+type NotificationEmailConfig struct {
+	Enabled  bool   `mapstructure:"enabled" json:"enabled"`
+	Host     string `mapstructure:"host" json:"host"`
+	Port     int    `mapstructure:"port" json:"port"`
+	Username string `mapstructure:"username" json:"username"`
+	Password string `mapstructure:"password" json:"password"`
+	From     string `mapstructure:"from" json:"from"`
+}
+
+type MessagePusherConfig struct {
+	Enabled        bool   `mapstructure:"enabled" json:"enabled"`
+	Server         string `mapstructure:"server" json:"server"`
+	Username       string `mapstructure:"username" json:"username"`
+	Token          string `mapstructure:"token" json:"token"`
+	Channel        string `mapstructure:"channel" json:"channel"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds" json:"timeout_seconds"`
 }
 
 // ServerConfig HTTP 服务器配置。
@@ -71,10 +114,12 @@ type LogConfig struct {
 
 // globalConfig 全局配置单例，由 Load 函数设置。
 var globalConfig *Config
+var currentConfigPath string
 
 // Load 从指定路径读取 YAML 配置文件，解析到 Config 结构体，
 // 并将其存储为全局配置。环境变量可通过 Viper 的 AutomaticEnv 覆盖文件中的值。
 func Load(configPath string) error {
+	currentConfigPath = configPath
 	viper.SetConfigFile(configPath)
 	viper.SetConfigType("yaml")
 
@@ -101,4 +146,49 @@ func Get() *Config {
 		panic("config not loaded, call Load() first")
 	}
 	return globalConfig
+}
+
+func ConfigPath() string {
+	return currentConfigPath
+}
+
+func UpdateNotificationConfig(notificationCfg NotificationConfig) error {
+	if currentConfigPath == "" {
+		return fmt.Errorf("config path is empty")
+	}
+	v := viper.New()
+	v.SetConfigFile(currentConfigPath)
+	v.SetConfigType("yaml")
+	if err := v.ReadInConfig(); err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	v.Set("notification.default_channels", notificationCfg.DefaultChannels)
+	v.Set("notification.max_retries", notificationCfg.MaxRetries)
+	v.Set("notification.retry_interval_seconds", notificationCfg.RetryIntervalSeconds)
+	v.Set("notification.retry_scan_interval_seconds", notificationCfg.RetryScanIntervalSeconds)
+	v.Set("notification.webhook.enabled", notificationCfg.Webhook.Enabled)
+	v.Set("notification.webhook.url", notificationCfg.Webhook.URL)
+	v.Set("notification.webhook.secret", notificationCfg.Webhook.Secret)
+	v.Set("notification.webhook.timeout_seconds", notificationCfg.Webhook.TimeoutSeconds)
+	v.Set("notification.email.enabled", notificationCfg.Email.Enabled)
+	v.Set("notification.email.host", notificationCfg.Email.Host)
+	v.Set("notification.email.port", notificationCfg.Email.Port)
+	v.Set("notification.email.username", notificationCfg.Email.Username)
+	v.Set("notification.email.password", notificationCfg.Email.Password)
+	v.Set("notification.email.from", notificationCfg.Email.From)
+	v.Set("notification.message_pusher.enabled", notificationCfg.MessagePusher.Enabled)
+	v.Set("notification.message_pusher.server", notificationCfg.MessagePusher.Server)
+	v.Set("notification.message_pusher.username", notificationCfg.MessagePusher.Username)
+	v.Set("notification.message_pusher.token", notificationCfg.MessagePusher.Token)
+	v.Set("notification.message_pusher.channel", notificationCfg.MessagePusher.Channel)
+	v.Set("notification.message_pusher.timeout_seconds", notificationCfg.MessagePusher.TimeoutSeconds)
+
+	if err := v.WriteConfigAs(currentConfigPath); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+	if globalConfig != nil {
+		globalConfig.Notification = notificationCfg
+	}
+	return nil
 }

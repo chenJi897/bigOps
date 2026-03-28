@@ -15,6 +15,13 @@ export const useTagsViewStore = defineStore('tagsView', () => {
   ])
   const activeView = ref('/dashboard')
 
+  function reset() {
+    visitedViews.value = [
+      { path: '/dashboard', title: '仪表盘', name: 'Dashboard', componentName: 'Dashboard', closable: false },
+    ]
+    activeView.value = '/dashboard'
+  }
+
   function addView(view: TagView) {
     activeView.value = view.path
     if (visitedViews.value.some(v => v.path === view.path)) return
@@ -63,5 +70,5 @@ export const useTagsViewStore = defineStore('tagsView', () => {
     }
   }
 
-  return { visitedViews, activeView, addView, removeView, closeOthers, closeAll, closeRight, closeLeft }
+  return { visitedViews, activeView, addView, removeView, closeOthers, closeAll, closeRight, closeLeft, reset }
 })
