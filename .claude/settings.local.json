@@ -39,7 +39,10 @@
       "Bash(ls backend/internal/handler/*.go)",
       "Bash(xargs -I{} basename {} .vue)",
       "Bash(ls frontend/src/stores/*.ts)",
-      "Bash(xargs -I{} basename {} .ts)"
+      "Bash(xargs -I{} basename {} .ts)",
+      "mcp__deepwiki__read_wiki_contents",
+      "mcp__deepwiki__ask_question",
+      "mcp__playwright__browser_navigate"
     ]
   }
 }
