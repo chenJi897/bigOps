@@ -180,13 +180,17 @@ func (m *AgentManager) UnsubscribeLogs(executionID int64, ch chan *LogLine) {
 	if len(m.logSubs[executionID]) == 0 {
 		delete(m.logSubs, executionID)
 	}
-	close(ch)
+	// NOTE: do NOT close(ch) here — PublishLog may still hold a reference
+	// from its snapshot of the slice. The channel will be GC'd once all
+	// references are dropped.
 }
 
 // PublishLog sends a log line to all subscribers of the given execution.
 func (m *AgentManager) PublishLog(executionID int64, line *LogLine) {
 	m.logSubsMu.RLock()
-	subs := m.logSubs[executionID]
+	// Copy the subscriber slice under lock so we iterate a stable snapshot.
+	subs := make([]chan *LogLine, len(m.logSubs[executionID]))
+	copy(subs, m.logSubs[executionID])
 	m.logSubsMu.RUnlock()
 
 	for _, ch := range subs {

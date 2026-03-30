@@ -44,6 +44,14 @@ type UpsertRequestTemplateRequest struct {
 	Status            *int8  `json:"status"`
 }
 
+// List godoc
+// @Summary 获取工单模板列表
+// @Tags 工单模板
+// @Security BearerAuth
+// @Produce json
+// @Param enabled_only query string false "仅返回启用的模板" Enums(0,1) default(0)
+// @Success 200 {object} response.Response{data=[]model.RequestTemplate}
+// @Router /request-templates [get]
 func (h *RequestTemplateHandler) List(c *gin.Context) {
 	enabledOnly := c.DefaultQuery("enabled_only", "0") == "1"
 	items, err := h.svc.List(enabledOnly)
@@ -54,6 +62,15 @@ func (h *RequestTemplateHandler) List(c *gin.Context) {
 	response.Success(c, items)
 }
 
+// GetByID godoc
+// @Summary 获取工单模板详情
+// @Tags 工单模板
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "模板ID"
+// @Success 200 {object} response.Response{data=model.RequestTemplate}
+// @Failure 404 {object} response.Response
+// @Router /request-templates/{id} [get]
 func (h *RequestTemplateHandler) GetByID(c *gin.Context) {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	item, err := h.svc.GetByID(id)
@@ -64,6 +81,15 @@ func (h *RequestTemplateHandler) GetByID(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// Create godoc
+// @Summary 创建工单模板
+// @Tags 工单模板
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body UpsertRequestTemplateRequest true "模板信息"
+// @Success 200 {object} response.Response
+// @Router /request-templates [post]
 func (h *RequestTemplateHandler) Create(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -116,6 +142,16 @@ func (h *RequestTemplateHandler) Create(c *gin.Context) {
 	response.SuccessWithMessage(c, "创建成功", item)
 }
 
+// Update godoc
+// @Summary 更新工单模板
+// @Tags 工单模板
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "模板ID"
+// @Param body body UpsertRequestTemplateRequest true "模板信息"
+// @Success 200 {object} response.Response
+// @Router /request-templates/{id} [post]
 func (h *RequestTemplateHandler) Update(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -168,6 +204,14 @@ func (h *RequestTemplateHandler) Update(c *gin.Context) {
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
+// Delete godoc
+// @Summary 删除工单模板
+// @Tags 工单模板
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "模板ID"
+// @Success 200 {object} response.Response
+// @Router /request-templates/{id}/delete [post]
 func (h *RequestTemplateHandler) Delete(c *gin.Context) {
 	if !requireAdmin(c) {
 		return

@@ -88,6 +88,185 @@ const docTemplate = `{
                 }
             }
         },
+        "/alert-silences": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "查询全部静默规则",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "告警静默列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.AlertSilence"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "需要管理员权限",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "创建静默规则",
+                "parameters": [
+                    {
+                        "description": "静默规则",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.upsertAlertSilenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.AlertSilence"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/alert-silences/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "更新静默规则",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "静默规则 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "静默规则",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.upsertAlertSilenceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.AlertSilence"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/alert-silences/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "删除静默规则",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "静默规则 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "删除失败",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/assets": {
             "get": {
                 "security": [
@@ -1739,6 +1918,792 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "删除失败",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/agents": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "支持状态筛选与关键字搜索",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "agent 列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "每页条数",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "online",
+                            "offline"
+                        ],
+                        "type": "string",
+                        "description": "状态",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键字（主机名/IP）",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/definitions/response.PageData"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "list": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/definitions/model.AgentInfo"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/agents/{agent_id}/trends": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "agent 指标趋势",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "agent ID",
+                        "name": "agent_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "指标类型",
+                        "name": "metric_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 60,
+                        "description": "回溯分钟数",
+                        "name": "minutes",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 120,
+                        "description": "最大采样点",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.AgentMetricSample"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/aggregates/owners": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "负责人聚合",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/service.MonitorAggregateItem"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/aggregates/service-trees": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "服务树聚合",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/service.MonitorAggregateItem"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/datasources": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "查询所有监控数据源配置",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "数据源列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.MonitorDatasource"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "仅管理员可操作",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "创建数据源",
+                "parameters": [
+                    {
+                        "description": "数据源请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.monitorDatasourceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.MonitorDatasource"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/datasources/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "更新数据源",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "数据源 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "数据源请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.monitorDatasourceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.MonitorDatasource"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/datasources/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "删除数据源",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "数据源 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/datasources/{id}/health": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "数据源健康检查",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "数据源 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/service.MonitorDatasourceHealth"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/query": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "通过指定数据源和 PromQL 返回向量/矩阵数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "Prometheus 即时查询",
+                "parameters": [
+                    {
+                        "description": "Prometheus 查询参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.monitorQueryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/query-range": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "Prometheus 范围查询",
+                "parameters": [
+                    {
+                        "description": "Prometheus 查询范围参数",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.monitorRangeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/monitor/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回 agent、告警、规则等概览数据",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "监控概览",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/service.MonitorSummary"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/oncall-schedules": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "查询全部值班轮转配置",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "OnCall 值班表列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.OnCallSchedule"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "查询失败",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "仅管理员可创建值班轮转配置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "创建 OnCall 值班表",
+                "parameters": [
+                    {
+                        "description": "值班表请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.upsertOnCallRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.OnCallSchedule"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/oncall-schedules/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "更新 OnCall 值班表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "值班表 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "值班表请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.upsertOnCallRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.OnCallSchedule"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/oncall-schedules/{id}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "监控"
+                ],
+                "summary": "删除 OnCall 值班表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "值班表 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -4645,8 +5610,7 @@ const docTemplate = `{
         "handler.CreateTicketRequest": {
             "type": "object",
             "required": [
-                "title",
-                "type_id"
+                "title"
             ],
             "properties": {
                 "assignee_id": {
@@ -5132,6 +6096,197 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.monitorDatasourceRequest": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "name"
+            ],
+            "properties": {
+                "access_type": {
+                    "description": "AccessType 访问方式（proxy/direct）。",
+                    "type": "string"
+                },
+                "auth_type": {
+                    "description": "AuthType 认证方式（none/basic）。",
+                    "type": "string"
+                },
+                "base_url": {
+                    "description": "BaseURL 访问地址。",
+                    "type": "string"
+                },
+                "headers_json": {
+                    "description": "HeadersJSON 自定义 HTTP 头（JSON 字符串）。",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name 数据源名称。",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Password 认证密码。",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Status 状态（active/inactive）。",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type 类型（prometheus）。",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "Username 认证用户。",
+                    "type": "string"
+                }
+            }
+        },
+        "handler.monitorQueryRequest": {
+            "type": "object",
+            "required": [
+                "datasource_id",
+                "query"
+            ],
+            "properties": {
+                "datasource_id": {
+                    "description": "DatasourceID 目标数据源 ID。",
+                    "type": "integer"
+                },
+                "query": {
+                    "description": "Query PromQL 表达式。",
+                    "type": "string"
+                },
+                "time": {
+                    "description": "Time 查询时间戳，RFC3339 格式，默认为当前时间。",
+                    "type": "string"
+                }
+            }
+        },
+        "handler.monitorRangeRequest": {
+            "type": "object",
+            "required": [
+                "datasource_id",
+                "query"
+            ],
+            "properties": {
+                "datasource_id": {
+                    "description": "DatasourceID 目标数据源 ID。",
+                    "type": "integer"
+                },
+                "end": {
+                    "description": "End 结束时间，RFC3339 格式。",
+                    "type": "string"
+                },
+                "query": {
+                    "description": "Query PromQL 表达式。",
+                    "type": "string"
+                },
+                "start": {
+                    "description": "Start 起始时间，RFC3339 格式。",
+                    "type": "string"
+                },
+                "step": {
+                    "description": "Step 查询步长，支持时间间隔（例如 30s、1m）。",
+                    "type": "string"
+                }
+            }
+        },
+        "handler.upsertAlertSilenceRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "agent_id": {
+                    "description": "AgentID 作用到的 agent ID。",
+                    "type": "string"
+                },
+                "enabled": {
+                    "description": "Enabled 是否启用（1/0）。",
+                    "type": "integer"
+                },
+                "ends_at": {
+                    "description": "EndsAt 结束时间（2006-01-02 15:04:05）。",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name 静默规则名称。",
+                    "type": "string"
+                },
+                "owner_id": {
+                    "description": "OwnerID 作用到的负责人 ID。",
+                    "type": "integer"
+                },
+                "reason": {
+                    "description": "Reason 静默原因。",
+                    "type": "string"
+                },
+                "rule_id": {
+                    "description": "RuleID 作用到的告警规则 ID。",
+                    "type": "integer"
+                },
+                "service_tree_id": {
+                    "description": "ServiceTreeID 作用到的服务树节点 ID。",
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "description": "StartsAt 开始时间（2006-01-02 15:04:05）。",
+                    "type": "string"
+                }
+            }
+        },
+        "handler.upsertOnCallRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "负责平台监控和告警处理"
+                },
+                "enabled": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "escalation_minutes": {
+                    "type": "integer",
+                    "example": 15
+                },
+                "name": {
+                    "type": "string",
+                    "example": "平台运维值班"
+                },
+                "notify_channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "in_app",
+                        "email"
+                    ]
+                },
+                "rotation_days": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "timezone": {
+                    "type": "string",
+                    "example": "Asia/Shanghai"
+                },
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        1,
+                        2
+                    ]
+                }
+            }
+        },
         "model.AgentInfo": {
             "type": "object",
             "properties": {
@@ -5141,9 +6296,21 @@ const docTemplate = `{
                 "cpu_count": {
                     "type": "integer"
                 },
+                "cpu_usage_pct": {
+                    "type": "number"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2024-01-01 00:00:00"
+                },
+                "disk_total": {
+                    "type": "integer"
+                },
+                "disk_usage_pct": {
+                    "type": "number"
+                },
+                "disk_used": {
+                    "type": "integer"
                 },
                 "hostname": {
                     "type": "string"
@@ -5164,6 +6331,12 @@ const docTemplate = `{
                 "memory_total": {
                     "type": "integer"
                 },
+                "memory_usage_pct": {
+                    "type": "number"
+                },
+                "memory_used": {
+                    "type": "integer"
+                },
                 "os": {
                     "type": "string"
                 },
@@ -5177,6 +6350,96 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "string"
+                }
+            }
+        },
+        "model.AgentMetricSample": {
+            "type": "object",
+            "properties": {
+                "agent_id": {
+                    "type": "string"
+                },
+                "collected_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "labels": {
+                    "description": "JSON 对象",
+                    "type": "string"
+                },
+                "metric_type": {
+                    "description": "cpu_usage/memory_usage/disk_usage/load1...",
+                    "type": "string"
+                },
+                "metric_value": {
+                    "type": "number"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2024-01-01 00:00:00"
+                }
+            }
+        },
+        "model.AlertSilence": {
+            "type": "object",
+            "properties": {
+                "agent_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "integer"
+                },
+                "enabled": {
+                    "type": "integer"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner_id": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "rule_id": {
+                    "type": "integer"
+                },
+                "service_tree_id": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "integer"
                 }
             }
         },
@@ -5610,6 +6873,93 @@ const docTemplate = `{
                 },
                 "visible": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.MonitorDatasource": {
+            "type": "object",
+            "properties": {
+                "access_type": {
+                    "type": "string"
+                },
+                "auth_type": {
+                    "description": "none/basic",
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "headers_json": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "prometheus",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.OnCallSchedule": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "integer"
+                },
+                "escalation_minutes": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notify_channels_json": {
+                    "type": "string"
+                },
+                "rotation_days": {
+                    "type": "integer"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "integer"
+                },
+                "users_json": {
+                    "type": "string"
                 }
             }
         },
@@ -6157,6 +7507,72 @@ const docTemplate = `{
                 }
             }
         },
+        "service.AlertEventSummary": {
+            "type": "object",
+            "properties": {
+                "acknowledged_at": {
+                    "type": "string"
+                },
+                "agent_id": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "metric_type": {
+                    "type": "string"
+                },
+                "metric_value": {
+                    "type": "number"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "resolved_at": {
+                    "type": "string"
+                },
+                "rule_name": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "triggered_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.AlertSeverityCount": {
+            "type": "object",
+            "properties": {
+                "severity": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.AlertStatusCount": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "service.LoginResult": {
             "type": "object",
             "properties": {
@@ -6165,6 +7581,105 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/model.User"
+                }
+            }
+        },
+        "service.MonitorAggregateItem": {
+            "type": "object",
+            "properties": {
+                "agent_total": {
+                    "type": "integer"
+                },
+                "avg_cpu_usage_pct": {
+                    "type": "number"
+                },
+                "avg_disk_usage_pct": {
+                    "type": "number"
+                },
+                "avg_memory_usage_pct": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "offline_total": {
+                    "type": "integer"
+                },
+                "online_total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "service.MonitorDatasourceHealth": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "service.MonitorSummary": {
+            "type": "object",
+            "properties": {
+                "agent_offline": {
+                    "type": "integer"
+                },
+                "agent_online": {
+                    "type": "integer"
+                },
+                "agent_total": {
+                    "type": "integer"
+                },
+                "alert_firing_total": {
+                    "type": "integer"
+                },
+                "alert_severity_counts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.AlertSeverityCount"
+                    }
+                },
+                "alert_status_counts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.AlertStatusCount"
+                    }
+                },
+                "cpu_high_agents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AgentInfo"
+                    }
+                },
+                "disk_high_agents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AgentInfo"
+                    }
+                },
+                "last_collected_at": {
+                    "type": "string"
+                },
+                "memory_high_agents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AgentInfo"
+                    }
+                },
+                "recent_alerts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.AlertEventSummary"
+                    }
+                },
+                "rule_enabled_total": {
+                    "type": "integer"
                 }
             }
         }

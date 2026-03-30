@@ -45,11 +45,14 @@ func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream 
 	}
 
 	// Send running phase
-	stream.Send(&pb.ExecuteResponse{
+	if err := stream.Send(&pb.ExecuteResponse{
 		HostResultId: task.HostResultId,
 		Phase:        "running",
 		Timestamp:    time.Now().Unix(),
-	})
+	}); err != nil {
+		log.Printf("Task host_result_id=%d: failed to send running phase: %v", task.HostResultId, err)
+		return
+	}
 
 	if err := cmd.Start(); err != nil {
 		e.sendError(stream, task.HostResultId, fmt.Sprintf("start error: %v", err))
@@ -89,24 +92,28 @@ func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream 
 	if execCtx.Err() == context.DeadlineExceeded {
 		phase = "error"
 		exitCode = -1
-		stream.Send(&pb.ExecuteResponse{
+		if err := stream.Send(&pb.ExecuteResponse{
 			HostResultId: task.HostResultId,
 			OutputLine:   "execution timed out",
 			IsStderr:     true,
 			Phase:        "error",
 			ExitCode:     int32(exitCode),
 			Timestamp:    time.Now().Unix(),
-		})
+		}); err != nil {
+			log.Printf("Task host_result_id=%d: failed to send timeout: %v", task.HostResultId, err)
+		}
 		return
 	}
 
 	// Send finished
-	stream.Send(&pb.ExecuteResponse{
+	if err := stream.Send(&pb.ExecuteResponse{
 		HostResultId: task.HostResultId,
 		Phase:        phase,
 		ExitCode:     int32(exitCode),
 		Timestamp:    time.Now().Unix(),
-	})
+	}); err != nil {
+		log.Printf("Task host_result_id=%d: failed to send finished: %v", task.HostResultId, err)
+	}
 
 	log.Printf("Task host_result_id=%d finished with exit_code=%d", task.HostResultId, exitCode)
 }
@@ -143,24 +150,32 @@ func (e *Executor) streamOutput(stream pb.AgentService_ReportOutputClient, hostR
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
-		stream.Send(&pb.ExecuteResponse{
+		if err := stream.Send(&pb.ExecuteResponse{
 			HostResultId: hostResultID,
 			OutputLine:   line,
 			IsStderr:     isStderr,
 			Phase:        "running",
 			Timestamp:    time.Now().Unix(),
-		})
+		}); err != nil {
+			log.Printf("Task host_result_id=%d: stream send failed: %v", hostResultID, err)
+			return
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("Task host_result_id=%d: scanner error: %v", hostResultID, err)
 	}
 }
 
 func (e *Executor) sendError(stream pb.AgentService_ReportOutputClient, hostResultID int64, msg string) {
 	log.Printf("Task error: host_result_id=%d: %s", hostResultID, msg)
-	stream.Send(&pb.ExecuteResponse{
+	if err := stream.Send(&pb.ExecuteResponse{
 		HostResultId: hostResultID,
 		OutputLine:   msg,
 		IsStderr:     true,
 		Phase:        "error",
 		ExitCode:     -1,
 		Timestamp:    time.Now().Unix(),
-	})
+	}); err != nil {
+		log.Printf("Task host_result_id=%d: failed to send error: %v", hostResultID, err)
+	}
 }
