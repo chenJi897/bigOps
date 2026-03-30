@@ -44,6 +44,15 @@ type AlertEventStatusRequest struct {
 	Note string `json:"note"`
 }
 
+// List godoc
+// @Summary 获取告警规则列表
+// @Tags 告警规则
+// @Security BearerAuth
+// @Produce json
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Success 200 {object} response.Response{data=[]model.AlertRule}
+// @Router /alert-rules [get]
 func (h *AlertRuleHandler) List(c *gin.Context) {
 	page, size := parsePageSize(c)
 	var enabled *int8
@@ -67,6 +76,15 @@ func (h *AlertRuleHandler) List(c *gin.Context) {
 	response.Page(c, items, total, page, size)
 }
 
+// Create godoc
+// @Summary 创建告警规则
+// @Tags 告警规则
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body UpsertAlertRuleRequest true "告警规则信息"
+// @Success 200 {object} response.Response
+// @Router /alert-rules [post]
 func (h *AlertRuleHandler) Create(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -112,6 +130,16 @@ func (h *AlertRuleHandler) Create(c *gin.Context) {
 	response.SuccessWithMessage(c, "创建成功", item)
 }
 
+// Update godoc
+// @Summary 更新告警规则
+// @Tags 告警规则
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "规则ID"
+// @Param body body UpsertAlertRuleRequest true "告警规则信息"
+// @Success 200 {object} response.Response
+// @Router /alert-rules/{id} [post]
 func (h *AlertRuleHandler) Update(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -151,6 +179,14 @@ func (h *AlertRuleHandler) Update(c *gin.Context) {
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
+// Delete godoc
+// @Summary 删除告警规则
+// @Tags 告警规则
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "规则ID"
+// @Success 200 {object} response.Response
+// @Router /alert-rules/{id}/delete [post]
 func (h *AlertRuleHandler) Delete(c *gin.Context) {
 	if !requireAdmin(c) {
 		return

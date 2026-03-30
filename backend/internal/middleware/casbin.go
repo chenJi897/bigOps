@@ -39,6 +39,18 @@ var casbinPrefixWhitelistGET = []string{
 	"/api/v1/service-trees",
 	"/api/v1/cloud-accounts",
 	"/api/v1/sync-tasks",
+	// 监控中心（有菜单权限的用户可读）
+	"/api/v1/monitor/",
+	"/api/v1/alert-rules",
+	"/api/v1/alert-events",
+	"/api/v1/alert-silences",
+	"/api/v1/oncall-schedules",
+	// 任务中心
+	"/api/v1/tasks",
+	"/api/v1/task-executions",
+	"/api/v1/agents",
+	// CI/CD
+	"/api/v1/cicd/",
 }
 
 // CasbinMiddleware Casbin 权限校验中间件。

@@ -59,10 +59,13 @@ func (s *Server) Heartbeat(stream grpc.BidiStreamingServer[pb.HeartbeatRequest, 
 	defer mgr.UnregisterAgent(agentID)
 
 	// Send first ack
-	_ = stream.Send(&pb.HeartbeatResponse{
+	if err := stream.Send(&pb.HeartbeatResponse{
 		Accepted:   true,
 		ServerTime: time.Now().Unix(),
-	})
+	}); err != nil {
+		logger.Warn("Failed to send first heartbeat ack", zap.String("agent_id", agentID), zap.Error(err))
+		return err
+	}
 
 	// Loop: receive heartbeats, update last_heartbeat
 	for {
@@ -87,10 +90,13 @@ func (s *Server) Heartbeat(stream grpc.BidiStreamingServer[pb.HeartbeatRequest, 
 		s.upsertHeartbeat(agentID, msg, hbTime, extractPeerIP(stream.Context()))
 
 		// Send ack (no task in normal heartbeat responses)
-		_ = stream.Send(&pb.HeartbeatResponse{
+		if err := stream.Send(&pb.HeartbeatResponse{
 			Accepted:   true,
 			ServerTime: time.Now().Unix(),
-		})
+		}); err != nil {
+			logger.Warn("Failed to send heartbeat ack", zap.String("agent_id", agentID), zap.Error(err))
+			return err
+		}
 	}
 }
 
@@ -326,7 +332,9 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 			} else {
 				updates["stdout"] = gorm.Expr("CONCAT(COALESCE(stdout,''), ?)", appendLine)
 			}
-			database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hr.ID).Updates(updates)
+			if err := database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hr.ID).Updates(updates).Error; err != nil {
+				logger.Warn("update host result output failed", zap.Int64("host_result_id", hr.ID), zap.Error(err))
+			}
 
 			// Publish to WebSocket subscribers
 			mgr.PublishLog(hr.ExecutionID, &LogLine{
@@ -359,7 +367,9 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 					finalUpdates["stdout"] = gorm.Expr("CONCAT(COALESCE(stdout,''), ?)", appendLine)
 				}
 			}
-			database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hr.ID).Updates(finalUpdates)
+			if err := database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hr.ID).Updates(finalUpdates).Error; err != nil {
+				logger.Warn("update host result final status failed", zap.Int64("host_result_id", hr.ID), zap.Error(err))
+			}
 
 			// Publish finish event to WebSocket
 			mgr.PublishLog(hr.ExecutionID, &LogLine{
@@ -398,6 +408,7 @@ func (s *Server) FileTransfer(stream grpc.ClientStreamingServer[pb.FileChunk, pb
 }
 
 // checkExecutionCompletion checks if all host results are done and updates execution status.
+// Uses optimistic locking (WHERE status IN ('pending','running')) to prevent concurrent double-updates.
 func (s *Server) checkExecutionCompletion(executionID int64) {
 	results, err := s.execRepo.GetHostResultsByExecutionID(executionID)
 	if err != nil {
@@ -422,31 +433,36 @@ func (s *Server) checkExecutionCompletion(executionID int64) {
 		return
 	}
 
-	exec, err := s.execRepo.GetByID(executionID)
-	if err != nil {
+	now := model.LocalTime(time.Now())
+	finalStatus := "partial_fail"
+	if failCount == 0 {
+		finalStatus = "success"
+	} else if successCount == 0 {
+		finalStatus = "failed"
+	}
+
+	// Atomic update: only update if execution is still in a non-terminal state.
+	// This prevents race conditions when multiple host results finish concurrently.
+	result := database.GetDB().Model(&model.TaskExecution{}).
+		Where("id = ? AND status IN ('pending','running')", executionID).
+		Updates(map[string]interface{}{
+			"status":        finalStatus,
+			"finished_at":   &now,
+			"success_count": successCount,
+			"fail_count":    failCount,
+		})
+	if result.Error != nil {
+		logger.Warn("更新执行状态失败", zap.Int64("execution_id", executionID), zap.Error(result.Error))
 		return
 	}
-
-	now := model.LocalTime(time.Now())
-	exec.FinishedAt = &now
-	exec.SuccessCount = successCount
-	exec.FailCount = failCount
-
-	if failCount == 0 {
-		exec.Status = "success"
-	} else if successCount == 0 {
-		exec.Status = "failed"
-	} else {
-		exec.Status = "partial_fail"
-	}
-
-	if err := s.execRepo.Update(exec); err != nil {
-		logger.Warn("更新执行状态失败", zap.Int64("execution_id", exec.ID), zap.Error(err))
+	if result.RowsAffected == 0 {
+		// Already updated by another goroutine, skip
+		return
 	}
 
 	logger.Info("Execution completed",
 		zap.Int64("execution_id", executionID),
-		zap.String("status", exec.Status),
+		zap.String("status", finalStatus),
 		zap.Int("success", successCount),
 		zap.Int("fail", failCount),
 	)

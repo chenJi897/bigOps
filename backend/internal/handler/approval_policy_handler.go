@@ -43,6 +43,13 @@ type UpsertApprovalPolicyRequest struct {
 	Stages      []ApprovalPolicyStageRequest `json:"stages" binding:"required"`
 }
 
+// List godoc
+// @Summary 获取审批策略列表
+// @Tags 审批策略
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} response.Response{data=[]model.ApprovalPolicy}
+// @Router /approval-policies [get]
 func (h *ApprovalPolicyHandler) List(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -55,6 +62,14 @@ func (h *ApprovalPolicyHandler) List(c *gin.Context) {
 	response.Success(c, items)
 }
 
+// GetByID godoc
+// @Summary 获取审批策略详情
+// @Tags 审批策略
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "策略ID"
+// @Success 200 {object} response.Response{data=model.ApprovalPolicy}
+// @Router /approval-policies/{id} [get]
 func (h *ApprovalPolicyHandler) GetByID(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -68,6 +83,15 @@ func (h *ApprovalPolicyHandler) GetByID(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// Create godoc
+// @Summary 创建审批策略
+// @Tags 审批策略
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body UpsertApprovalPolicyRequest true "审批策略信息"
+// @Success 200 {object} response.Response
+// @Router /approval-policies [post]
 func (h *ApprovalPolicyHandler) Create(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -91,6 +115,16 @@ func (h *ApprovalPolicyHandler) Create(c *gin.Context) {
 	response.SuccessWithMessage(c, "创建成功", item)
 }
 
+// Update godoc
+// @Summary 更新审批策略
+// @Tags 审批策略
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "策略ID"
+// @Param body body UpsertApprovalPolicyRequest true "审批策略信息"
+// @Success 200 {object} response.Response
+// @Router /approval-policies/{id} [post]
 func (h *ApprovalPolicyHandler) Update(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -115,6 +149,14 @@ func (h *ApprovalPolicyHandler) Update(c *gin.Context) {
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
+// Delete godoc
+// @Summary 删除审批策略
+// @Tags 审批策略
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "策略ID"
+// @Success 200 {object} response.Response
+// @Router /approval-policies/{id}/delete [post]
 func (h *ApprovalPolicyHandler) Delete(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
