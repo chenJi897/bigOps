@@ -80,6 +80,14 @@ func (r *UserRepository) List(page, size int, keyword string) ([]*model.User, in
 }
 
 // GetNamesByIDs 批量查询用户名称（优先 real_name，无则用 username）。
+func (r *UserRepository) ListActiveUserIDs() ([]int64, error) {
+	var ids []int64
+	if err := database.GetDB().Model(&model.User{}).Where("status = 1").Pluck("id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 func (r *UserRepository) GetNamesByIDs(ids []int64) map[int64]string {
 	result := make(map[int64]string)
 	if len(ids) == 0 {

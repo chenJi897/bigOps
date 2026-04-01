@@ -151,125 +151,187 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
+  <div class="p-4 md:p-6 min-h-full flex flex-col">
+    <el-card shadow="never" class="border-0 shadow-sm flex-1 flex flex-col">
       <template #header>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span>用户管理</span>
-          <el-button type="primary" @click="openCreateDialog"><el-icon><Plus /></el-icon> 新增用户</el-button>
+        <div class="flex justify-between items-center">
+          <span class="text-base font-medium text-gray-800">用户管理</span>
+          <el-button type="primary" @click="openCreateDialog">
+            <el-icon class="mr-1"><Plus /></el-icon> 新增用户
+          </el-button>
         </div>
       </template>
 
-      <el-form :inline="true" @submit.prevent="handleSearch" style="margin-bottom:16px">
-        <el-form-item>
-          <el-input v-model="searchKeyword" placeholder="用户名 / 邮箱 / 姓名" clearable style="width:220px" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
+      <div class="flex flex-wrap items-center gap-3 mb-4">
+        <el-input 
+          v-model="searchKeyword" 
+          placeholder="用户名 / 邮箱 / 姓名" 
+          clearable 
+          class="w-64" 
+          @keyup.enter="handleSearch" 
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button type="primary" @click="handleSearch">搜索</el-button>
+        <el-button @click="handleReset">重置</el-button>
+      </div>
 
-      <el-table :data="users" v-loading="loading" stripe border>
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="username" label="用户名" width="120" />
-        <el-table-column prop="real_name" label="姓名" width="100">
-          <template #default="{ row }">{{ row.real_name || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="部门" width="120">
+      <el-table :data="users" v-loading="loading" stripe border class="w-full">
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="username" label="用户名" min-width="120">
           <template #default="{ row }">
-            <span v-if="row.department_name">{{ row.department_name }}</span>
-            <span v-else style="color: #999;">-</span>
+            <span class="font-medium text-gray-800">{{ row.username }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="email" label="邮箱" min-width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.email || '-' }}</template>
-        </el-table-column>
-        <el-table-column prop="phone" label="手机号" width="130">
-          <template #default="{ row }">{{ row.phone || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="80">
+        <el-table-column prop="real_name" label="姓名" width="120" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+            <span class="text-gray-600">{{ row.real_name || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="部门" width="140" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.department_name" size="small" type="info" effect="light">
+              {{ row.department_name }}
+            </el-tag>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="text-gray-600">{{ row.email || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="手机号" width="130" align="center">
+          <template #default="{ row }">
+            <span class="text-gray-600">{{ row.phone || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="plain" round>
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="170" />
-        <el-table-column label="操作" fixed="right" width="240">
+        <el-table-column prop="created_at" label="创建时间" width="170" align="center" />
+        <el-table-column label="操作" fixed="right" width="260" align="center">
           <template #default="{ row }">
-            <el-button link size="small" @click="openEditDialog(row)"><el-icon><Edit /></el-icon> 编辑</el-button>
-            <el-button link size="small" @click="openRoleDialog(row)">角色</el-button>
-            <el-button link size="small" :type="row.status === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
-            <el-button link size="small" type="danger" @click="handleDelete(row)" :disabled="row.id === 1">删除</el-button>
+            <div class="flex items-center justify-center gap-1">
+              <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-divider direction="vertical" />
+              <el-button link type="primary" @click="openRoleDialog(row)">角色</el-button>
+              <el-divider direction="vertical" />
+              <el-button link :type="row.status === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">
+                {{ row.status === 1 ? '禁用' : '启用' }}
+              </el-button>
+              <el-divider direction="vertical" />
+              <el-button link type="danger" @click="handleDelete(row)" :disabled="row.id === 1">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
 
-      <el-pagination
-        style="margin-top:16px;justify-content:flex-end"
-        background layout="total, sizes, prev, pager, next"
-        :total="total" :page-size="size" :current-page="page" :page-sizes="[10, 20, 50]"
-        @current-change="(p: number) => { page = p; loadUsers() }"
-        @size-change="(s: number) => { size = s; page = 1; loadUsers() }"
-      />
+      <div class="mt-4 flex justify-end">
+        <el-pagination
+          background 
+          layout="total, sizes, prev, pager, next"
+          :total="total" 
+          :page-size="size" 
+          :current-page="page" 
+          :page-sizes="[10, 20, 50]"
+          @current-change="(p: number) => { page = p; loadUsers() }"
+          @size-change="(s: number) => { size = s; page = 1; loadUsers() }"
+        />
+      </div>
     </el-card>
 
     <!-- 新建用户 -->
-    <el-dialog v-model="createVisible" title="新增用户" width="480px">
-      <el-form :model="createForm" label-width="80px">
-        <el-form-item label="用户名"><el-input v-model="createForm.username" placeholder="至少 3 位" /></el-form-item>
-        <el-form-item label="密码"><el-input v-model="createForm.password" type="password" show-password placeholder="至少 8 位，含大小写字母和数字" /></el-form-item>
-        <el-form-item label="邮箱"><el-input v-model="createForm.email" placeholder="可选" /></el-form-item>
+    <el-dialog v-model="createVisible" title="新增用户" width="500px" destroy-on-close align-center>
+      <el-form :model="createForm" label-width="90px" class="pr-6">
+        <el-form-item label="用户名" required>
+          <el-input v-model="createForm.username" placeholder="至少 3 位" />
+        </el-form-item>
+        <el-form-item label="密码" required>
+          <el-input v-model="createForm.password" type="password" show-password placeholder="至少 8 位，含大小写字母和数字" />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="createForm.email" placeholder="可选" />
+        </el-form-item>
         <el-form-item label="部门">
-          <el-select v-model="createForm.department_id" placeholder="选择部门" clearable style="width: 100%;">
+          <el-select v-model="createForm.department_id" placeholder="选择部门" clearable class="w-full">
             <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="角色">
-          <el-select v-model="createForm.role_ids" multiple placeholder="选择角色" style="width: 100%;">
+          <el-select v-model="createForm.role_ids" multiple placeholder="选择角色" class="w-full">
             <el-option v-for="r in allRoles" :key="r.id" :label="r.display_name" :value="r.id" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" :loading="createLoading" @click="submitCreate">创建</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="createVisible = false">取消</el-button>
+          <el-button type="primary" :loading="createLoading" @click="submitCreate">创建</el-button>
+        </div>
       </template>
     </el-dialog>
 
     <!-- 编辑用户 -->
-    <el-dialog v-model="editVisible" title="编辑用户" width="480px">
-      <el-form :model="editForm" label-width="80px">
-        <el-form-item label="姓名"><el-input v-model="editForm.real_name" placeholder="真实姓名" /></el-form-item>
-        <el-form-item label="手机号"><el-input v-model="editForm.phone" placeholder="手机号" /></el-form-item>
-        <el-form-item label="邮箱"><el-input v-model="editForm.email" placeholder="邮箱" /></el-form-item>
+    <el-dialog v-model="editVisible" title="编辑用户" width="500px" destroy-on-close align-center>
+      <el-form :model="editForm" label-width="90px" class="pr-6">
+        <el-form-item label="姓名">
+          <el-input v-model="editForm.real_name" placeholder="真实姓名" />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="editForm.phone" placeholder="手机号" />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="editForm.email" placeholder="邮箱" />
+        </el-form-item>
         <el-form-item label="部门">
-          <el-select v-model="editForm.department_id" placeholder="选择部门" clearable style="width: 100%;">
+          <el-select v-model="editForm.department_id" placeholder="选择部门" clearable class="w-full">
             <el-option label="无部门" :value="0" />
             <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitEdit">保存</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="editVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitEdit">保存</el-button>
+        </div>
       </template>
     </el-dialog>
 
     <!-- 角色分配 -->
-    <el-dialog v-model="roleVisible" :title="'分配角色 - ' + roleUserName" width="400px">
-      <el-checkbox-group v-model="selectedRoles" style="display:flex;flex-direction:column;gap:8px">
-        <el-checkbox v-for="r in allRoles" :key="r.id" :value="r.id">{{ r.display_name }}</el-checkbox>
-      </el-checkbox-group>
+    <el-dialog v-model="roleVisible" :title="'分配角色 - ' + roleUserName" width="440px" destroy-on-close align-center>
+      <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 max-h-[60vh] overflow-y-auto">
+        <el-checkbox-group v-model="selectedRoles" class="flex flex-col gap-3">
+          <el-checkbox v-for="r in allRoles" :key="r.id" :value="r.id" class="!mr-0">
+            <span class="text-gray-700 font-medium">{{ r.display_name }}</span>
+            <span class="text-gray-400 text-xs ml-2">({{ r.name }})</span>
+          </el-checkbox>
+        </el-checkbox-group>
+      </div>
       <template #footer>
-        <el-button @click="roleVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitRoles">确定</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="roleVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitRoles">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
+:deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+:deep(.el-table) {
+  flex: 1;
+}
 </style>

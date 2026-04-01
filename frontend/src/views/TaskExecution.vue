@@ -146,48 +146,93 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never" v-loading="loading">
+  <div class="p-4 md:p-6 min-h-full flex flex-col">
+    <el-card shadow="never" class="border-0 shadow-sm flex-1 flex flex-col" v-loading="loading">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span>执行详情 #{{ execId }}</span>
-            <el-tag v-if="execution" :type="(execStatusMap[execution.status]?.type as any) || ''" size="default">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <el-button link @click="goBack" class="text-gray-500 hover:text-gray-700 -ml-2">
+              <el-icon class="text-lg"><Back /></el-icon>
+            </el-button>
+            <span class="text-base font-medium text-gray-800">执行详情 #{{ execId }}</span>
+            <el-tag v-if="execution" :type="(execStatusMap[execution.status]?.type as any) || ''" size="default" effect="light">
               {{ execStatusMap[execution.status]?.label || execution.status }}
             </el-tag>
-            <span v-if="elapsed" style="color: #909399; font-size: 13px;">耗时: {{ elapsed }}</span>
+            <span v-if="elapsed" class="text-gray-500 text-sm ml-2">耗时: {{ elapsed }}</span>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <el-button v-if="!isRunning" @click="fetchExecution" :loading="loading">刷新</el-button>
-            <el-button @click="goBack">返回</el-button>
+          <div class="flex items-center gap-2">
+            <el-button v-if="!isRunning" @click="fetchExecution" :loading="loading">
+              <el-icon class="mr-1"><Refresh /></el-icon> 刷新
+            </el-button>
           </div>
         </div>
       </template>
 
       <!-- 概览 -->
-      <div v-if="execution" style="margin-bottom: 16px; display: flex; gap: 24px; color: #606266; font-size: 13px;">
-        <span>任务: {{ execution.task_name || '-' }}</span>
-        <span>执行人: {{ execution.operator_name || '-' }}</span>
-        <span>总计: {{ execution.total_count }} 台</span>
-        <span style="color: #67c23a;">成功: {{ execution.success_count }}</span>
-        <span style="color: #f56c6c;">失败: {{ execution.fail_count }}</span>
+      <div v-if="execution" class="mb-4 flex flex-wrap items-center gap-6 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">任务:</span>
+          <span class="font-medium text-gray-800">{{ execution.task_name || '-' }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">执行人:</span>
+          <span class="font-medium text-gray-800">{{ execution.operator_name || '-' }}</span>
+        </div>
+        <el-divider direction="vertical" class="hidden md:block" />
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">总计:</span>
+          <span class="font-medium text-gray-800">{{ execution.total_count }} 台</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">成功:</span>
+          <span class="font-medium text-emerald-600">{{ execution.success_count }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">失败:</span>
+          <span class="font-medium text-red-500">{{ execution.fail_count }}</span>
+        </div>
       </div>
 
       <!-- 主体：左侧主机列表 + 右侧日志 -->
-      <div class="exec-body">
-        <div class="host-list">
-          <div v-for="hr in hostResults" :key="hr.host_ip" class="host-item" :class="{ active: selectedHostIP === hr.host_ip }" @click="selectHost(hr.host_ip)">
-            <div class="host-ip">{{ hr.host_ip }}</div>
-            <div class="host-name">{{ hr.hostname || '-' }}</div>
-            <el-tag :type="(execStatusMap[hr.status]?.type as any) || ''" size="small">
-              {{ execStatusMap[hr.status]?.label || hr.status }}
-            </el-tag>
+      <div class="flex flex-col lg:flex-row gap-4 flex-1 h-[600px] xl:h-[700px]">
+        <div class="w-full lg:w-64 shrink-0 border border-gray-200 rounded-lg overflow-y-auto bg-white flex flex-col h-64 lg:h-full">
+          <div 
+            v-for="hr in hostResults" 
+            :key="hr.host_ip" 
+            class="p-3 cursor-pointer border-b border-gray-100 flex flex-col gap-2 transition-colors relative"
+            :class="selectedHostIP === hr.host_ip ? 'bg-indigo-50/50' : 'hover:bg-gray-50'"
+            @click="selectHost(hr.host_ip)"
+          >
+            <div v-if="selectedHostIP === hr.host_ip" class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
+            <div class="font-medium text-sm text-gray-800">{{ hr.host_ip }}</div>
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-xs text-gray-500 truncate flex-1">{{ hr.hostname || '-' }}</div>
+              <el-tag :type="(execStatusMap[hr.status]?.type as any) || ''" size="small" effect="plain" round>
+                {{ execStatusMap[hr.status]?.label || hr.status }}
+              </el-tag>
+            </div>
           </div>
-          <div v-if="hostResults.length === 0" style="padding: 20px; color: #909399; text-align: center;">暂无主机</div>
+          <div v-if="hostResults.length === 0" class="p-8 text-gray-400 text-center text-sm my-auto">
+            暂无主机
+          </div>
         </div>
-        <div class="log-panel" ref="logContainerRef">
-          <div v-if="selectedHostLogs.length === 0" class="log-empty">暂无日志输出</div>
-          <div v-for="(line, idx) in selectedHostLogs" :key="idx" class="log-line" :class="{ stderr: line.is_stderr }">{{ line.line }}</div>
+        
+        <div 
+          class="flex-1 bg-gray-900 text-gray-300 font-mono text-sm leading-relaxed p-4 rounded-lg overflow-y-auto whitespace-pre-wrap break-all shadow-inner border border-gray-800" 
+          ref="logContainerRef"
+        >
+          <div v-if="selectedHostLogs.length === 0" class="text-gray-600 text-center py-12 flex flex-col items-center gap-3">
+            <el-icon class="text-4xl opacity-50"><Document /></el-icon>
+            暂无日志输出
+          </div>
+          <div 
+            v-for="(line, idx) in selectedHostLogs" 
+            :key="idx" 
+            class="py-px hover:bg-white/5 transition-colors" 
+            :class="{ 'text-red-400': line.is_stderr }"
+          >
+            {{ line.line }}
+          </div>
         </div>
       </div>
     </el-card>
@@ -195,51 +240,9 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.exec-body {
-  display: flex;
-  gap: 12px;
-  height: 500px;
-}
-.host-list {
-  width: 220px;
-  flex-shrink: 0;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  overflow-y: auto;
-}
-.host-item {
-  padding: 10px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  transition: background 0.15s;
-}
-.host-item:hover { background: #f5f7fa; }
-.host-item.active { background: #ecf5ff; border-left: 3px solid #409eff; }
-.host-ip { font-weight: 500; font-size: 13px; width: 100%; }
-.host-name { font-size: 12px; color: #909399; flex: 1; }
-.log-panel {
+:deep(.el-card__body) {
   flex: 1;
-  background: #1e1e1e;
-  color: #d4d4d4;
-  font-family: 'Courier New', Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  padding: 12px;
-  border-radius: 4px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
+  display: flex;
+  flex-direction: column;
 }
-.log-empty {
-  color: #666;
-  text-align: center;
-  padding: 40px;
-}
-.log-line { padding: 1px 0; }
-.log-line.stderr { color: #f56c6c; }
 </style>

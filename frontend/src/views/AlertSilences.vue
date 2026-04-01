@@ -175,52 +175,52 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="page-head">
-          <div>
-            <div class="page-title">告警静默</div>
-            <div class="page-subtitle">按规则、Agent、服务树或负责人设置静默窗口，降低值守噪音。</div>
-          </div>
-          <div class="page-actions">
-            <el-button plain @click="fetchData">刷新</el-button>
-            <el-button type="primary" @click="openAdd">新增静默</el-button>
-          </div>
-        </div>
-      </template>
+  <div class="h-full flex flex-col bg-gray-50">
+    <div class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">告警静默</h1>
+        <p class="text-sm text-gray-500 mt-1">按规则、Agent、服务树或负责人设置静默窗口，降低值守噪音。</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <el-button plain @click="fetchData">刷新</el-button>
+        <el-button type="primary" @click="openAdd">新增静默</el-button>
+      </div>
+    </div>
 
-      <el-table :data="rows" v-loading="loading" stripe border>
-        <el-table-column prop="name" label="静默名称" min-width="180" show-overflow-tooltip />
-        <el-table-column label="作用范围" min-width="320" show-overflow-tooltip>
-          <template #default="{ row }">{{ silenceScope(row) }}</template>
-        </el-table-column>
-        <el-table-column prop="starts_at" label="开始时间" width="180" />
-        <el-table-column prop="ends_at" label="结束时间" width="180" />
-        <el-table-column label="启用" width="90">
-          <template #default="{ row }">
-            <el-tag size="small" :type="Number(row.enabled) === 1 ? 'success' : 'info'">
-              {{ Number(row.enabled) === 1 ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="reason" label="原因" min-width="220" show-overflow-tooltip />
-        <el-table-column label="操作" width="140" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="removeRow(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <div class="flex-1 overflow-auto p-6">
+      <el-card shadow="never" class="border-gray-200">
+        <el-table :data="rows" v-loading="loading" stripe border class="w-full">
+          <el-table-column prop="name" label="静默名称" min-width="180" show-overflow-tooltip />
+          <el-table-column label="作用范围" min-width="320" show-overflow-tooltip>
+            <template #default="{ row }">{{ silenceScope(row) }}</template>
+          </el-table-column>
+          <el-table-column prop="starts_at" label="开始时间" width="180" align="center" />
+          <el-table-column prop="ends_at" label="结束时间" width="180" align="center" />
+          <el-table-column label="启用" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="Number(row.enabled) === 1 ? 'success' : 'info'">
+                {{ Number(row.enabled) === 1 ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="reason" label="原因" min-width="220" show-overflow-tooltip />
+          <el-table-column label="操作" width="140" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑静默' : '新增静默'" width="640px">
-      <el-form label-width="100px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑静默' : '新增静默'" width="640px" destroy-on-close align-center>
+      <el-form label-width="100px" class="pr-6">
         <el-form-item label="静默名称" required>
           <el-input v-model="form.name" placeholder="例如：数据库维护窗口" />
         </el-form-item>
         <el-form-item label="规则范围">
-          <el-select v-model="form.rule_id" clearable filterable style="width: 100%;" placeholder="不限制规则">
+          <el-select v-model="form.rule_id" clearable filterable class="w-full" placeholder="不限制规则">
             <el-option v-for="item in rules" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
@@ -228,12 +228,12 @@ onMounted(async () => {
           <el-input v-model="form.agent_id" placeholder="可选，指定某台 Agent" />
         </el-form-item>
         <el-form-item label="服务树">
-          <el-select v-model="form.service_tree_id" clearable filterable style="width: 100%;" placeholder="不限制服务树">
+          <el-select v-model="form.service_tree_id" clearable filterable class="w-full" placeholder="不限制服务树">
             <el-option v-for="item in serviceTrees" :key="item.id" :label="item.label" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="负责人">
-          <el-select v-model="form.owner_id" clearable filterable style="width: 100%;" placeholder="不限制负责人">
+          <el-select v-model="form.owner_id" clearable filterable class="w-full" placeholder="不限制负责人">
             <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -243,7 +243,7 @@ onMounted(async () => {
             type="datetime"
             value-format="YYYY-MM-DD HH:mm:ss"
             placeholder="选择开始时间"
-            style="width: 100%;"
+            class="!w-full"
           />
         </el-form-item>
         <el-form-item label="结束时间">
@@ -252,7 +252,7 @@ onMounted(async () => {
             type="datetime"
             value-format="YYYY-MM-DD HH:mm:ss"
             placeholder="选择结束时间"
-            style="width: 100%;"
+            class="!w-full"
           />
         </el-form-item>
         <el-form-item label="状态">
@@ -263,17 +263,15 @@ onMounted(async () => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+        <div class="flex justify-end pt-4">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.page-title { font-size: 18px; font-weight: 700; color: #1f2937; }
-.page-subtitle { margin-top: 4px; color: #6b7280; }
-.page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Scoped styles replaced with Tailwind utility classes */
 </style>

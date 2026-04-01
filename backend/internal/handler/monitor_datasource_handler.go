@@ -4,8 +4,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/bigops/platform/internal/model"
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
 	"github.com/bigops/platform/internal/service"
 )
@@ -90,6 +92,7 @@ func (h *MonitorDatasourceHandler) Create(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("创建监控数据源", zap.String("operator", c.GetString("username")), zap.Int64("datasource_id", item.ID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "创建成功", item)
 }
 
@@ -128,6 +131,7 @@ func (h *MonitorDatasourceHandler) Update(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新监控数据源", zap.String("operator", c.GetString("username")), zap.Int64("datasource_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "更新成功", item)
 }
 
@@ -148,6 +152,7 @@ func (h *MonitorDatasourceHandler) Delete(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("删除监控数据源", zap.String("operator", c.GetString("username")), zap.Int64("datasource_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 

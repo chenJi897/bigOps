@@ -4,9 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 优先使用augment-context-engine命令进行检索代码。如果augment-context-engine中没有找到相关信息，再尝试使用本地文件系统的工具作为兜底。   
 
-## 大文件写入规则
 
-当需要写入超过 500 行的文件时，禁止使用 Write 工具，改用 Bash 的 cat heredoc 分段写入。
 
 ## Repository overview
 

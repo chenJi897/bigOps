@@ -45,71 +45,84 @@ onMounted(() => { loadData() })
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never" v-loading="loading">
-      <template #header>
-        <span>发起工单</span>
-      </template>
+  <div class="p-6">
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 tracking-tight">发起工单</h1>
+        <p class="text-sm text-gray-500 mt-1">选择对应的服务目录和工单模板，快速提交您的服务请求</p>
+      </div>
+    </div>
 
-      <div v-if="groupedTemplates.length === 0 && !loading" style="text-align: center; padding: 40px; color: #909399;">
-        暂无可用的工单模板
+    <div v-loading="loading" class="min-h-[400px]">
+      <div v-if="groupedTemplates.length === 0 && !loading" class="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-dashed border-gray-200">
+        <el-icon class="text-gray-300 text-6xl mb-4"><Document /></el-icon>
+        <p class="text-gray-500">暂无可用的工单模板</p>
       </div>
 
-      <div v-for="group in groupedTemplates" :key="group.type.id" class="type-group">
-        <div class="type-header" @click="group.type._collapsed = !group.type._collapsed">
-          <span class="type-title">{{ group.type.name }}</span>
-          <el-icon style="transition: transform 0.2s;" :style="{ transform: group.type._collapsed ? 'rotate(-90deg)' : '' }"><ArrowDown /></el-icon>
-        </div>
-        <div v-show="!group.type._collapsed" class="template-grid">
-          <div v-if="group.templates.length === 0" class="template-card" @click="openCreateDirect(group.type.id)">
-            <span class="card-name">{{ group.type.name }}</span>
-            <el-icon class="card-arrow"><ArrowRight /></el-icon>
+      <div class="space-y-6">
+        <div v-for="group in groupedTemplates" :key="group.type.id" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div 
+            class="flex items-center justify-between px-6 py-4 bg-gray-50/50 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors"
+            @click="group.type._collapsed = !group.type._collapsed"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <el-icon><FolderOpened /></el-icon>
+              </div>
+              <span class="text-base font-semibold text-gray-800">{{ group.type.name }}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">{{ group.templates.length || 1 }} 个模板</span>
+            </div>
+            <el-icon 
+              class="text-gray-400 transition-transform duration-300 text-lg" 
+              :class="{ '-rotate-90': group.type._collapsed }"
+            >
+              <ArrowDown />
+            </el-icon>
           </div>
-          <div v-for="tpl in group.templates" :key="tpl.id" class="template-card" @click="openCreate(group.type.id, tpl.id)">
-            <span class="card-name">{{ tpl.name }}</span>
-            <el-icon class="card-arrow"><ArrowRight /></el-icon>
-          </div>
+          
+          <el-collapse-transition>
+            <div v-show="!group.type._collapsed" class="p-6 bg-white">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div 
+                  v-if="group.templates.length === 0" 
+                  class="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-md cursor-pointer transition-all duration-300"
+                  @click="openCreateDirect(group.type.id)"
+                >
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors flex-shrink-0">
+                      <el-icon><Document /></el-icon>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700 group-hover:text-indigo-600 truncate">{{ group.type.name }}</span>
+                  </div>
+                  <el-icon class="text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all"><ArrowRight /></el-icon>
+                </div>
+                
+                <div 
+                  v-for="tpl in group.templates" 
+                  :key="tpl.id" 
+                  class="group flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-indigo-500 hover:shadow-md cursor-pointer transition-all duration-300"
+                  @click="openCreate(group.type.id, tpl.id)"
+                >
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors flex-shrink-0">
+                      <el-icon><DocumentAdd /></el-icon>
+                    </div>
+                    <div class="flex flex-col overflow-hidden">
+                      <span class="text-sm font-medium text-gray-700 group-hover:text-indigo-600 truncate">{{ tpl.name }}</span>
+                      <span class="text-xs text-gray-400 truncate mt-0.5">点击发起该类型申请</span>
+                    </div>
+                  </div>
+                  <el-icon class="text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all"><ArrowRight /></el-icon>
+                </div>
+              </div>
+            </div>
+          </el-collapse-transition>
         </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.type-group { margin-bottom: 20px; }
-.type-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #f5f7fa;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
-}
-.type-title { font-size: 15px; font-weight: 500; color: #303133; }
-.template-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  padding: 16px 0;
-}
-.template-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.template-card:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
-}
-.card-name { font-size: 14px; color: #303133; }
-.card-arrow { color: #909399; font-size: 16px; }
-.template-card:hover .card-arrow { color: #409eff; }
+/* 移除旧的样式，完全使用 Tailwind */
 </style>

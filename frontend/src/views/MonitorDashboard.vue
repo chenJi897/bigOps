@@ -336,107 +336,114 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="monitor-page" v-loading="loading">
-    <div class="hero-card">
+  <div class="min-h-full bg-slate-50 p-4 md:p-6" style="background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 30%), radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 26%), #f8fafc;" v-loading="loading">
+    <div class="flex flex-col lg:flex-row justify-between gap-4 items-start lg:items-center p-6 md:px-8 md:py-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-sky-700 text-white shadow-lg mb-6">
       <div>
-        <div class="hero-title">监控中心</div>
-        <div class="hero-subtitle">聚合 Agent 在线状态、资源水位与最近告警，适合值守时快速扫面全局。</div>
+        <div class="text-2xl font-bold">监控中心</div>
+        <div class="mt-2 max-w-2xl text-white/80 leading-relaxed text-sm md:text-base">
+          聚合 Agent 在线状态、资源水位与最近告警，适合值守时快速扫面全局。
+        </div>
       </div>
-      <div class="hero-actions">
-        <el-button plain @click="goSilencePage">告警静默</el-button>
-        <el-button plain @click="goOnCallPage">OnCall</el-button>
-        <el-button plain @click="goDatasourcePage">数据源</el-button>
-        <el-button plain @click="goQueryPage">PromQL 查询</el-button>
-        <el-switch
-          v-model="autoRefresh"
-          inline-prompt
-          active-text="自动刷新"
-          inactive-text="手动"
-          @change="setupRefreshTimer"
-        />
-        <el-button type="primary" plain @click="refreshAll(true)">
-          <el-icon><RefreshRight /></el-icon>
+      <div class="flex flex-wrap items-center gap-3">
+        <el-button plain @click="goSilencePage" class="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20">告警静默</el-button>
+        <el-button plain @click="goOnCallPage" class="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20">OnCall</el-button>
+        <el-button plain @click="goDatasourcePage" class="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20">数据源</el-button>
+        <el-button plain @click="goQueryPage" class="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20">PromQL 查询</el-button>
+        <div class="bg-white/10 px-3 py-1.5 rounded border border-white/20 flex items-center gap-2">
+          <span class="text-sm">自动刷新</span>
+          <el-switch
+            v-model="autoRefresh"
+            size="small"
+            @change="setupRefreshTimer"
+          />
+        </div>
+        <el-button type="primary" @click="refreshAll(true)" class="!bg-sky-500 hover:!bg-sky-400 !border-none">
+          <el-icon class="mr-1"><RefreshRight /></el-icon>
           刷新
         </el-button>
       </div>
     </div>
 
-    <el-row :gutter="16" class="stat-grid">
-      <el-col :xs="24" :sm="12" :lg="8" :xl="4">
-        <el-card shadow="never" class="stat-card">
-          <div class="stat-kicker">Agent</div>
-          <div class="stat-value">{{ summary.agent_total }}</div>
-          <div class="stat-meta">已接入主机</div>
+    <el-row :gutter="16" class="mb-6">
+      <el-col :xs="12" :sm="8" :lg="4" class="mb-4 lg:mb-0">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">Agent</div>
+          <div class="mt-2 text-3xl font-bold text-slate-900">{{ summary.agent_total }}</div>
+          <div class="mt-2 text-xs text-slate-500">已接入主机</div>
         </el-card>
       </el-col>
-      <el-col :xs="24" :sm="12" :lg="8" :xl="4">
-        <el-card shadow="never" class="stat-card success">
-          <div class="stat-kicker">在线</div>
-          <div class="stat-value">{{ summary.agent_online }}</div>
-          <div class="stat-meta">心跳正常</div>
+      <el-col :xs="12" :sm="8" :lg="4" class="mb-4 lg:mb-0">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">在线</div>
+          <div class="mt-2 text-3xl font-bold text-emerald-600">{{ summary.agent_online }}</div>
+          <div class="mt-2 text-xs text-slate-500">心跳正常</div>
         </el-card>
       </el-col>
-      <el-col :xs="24" :sm="12" :lg="8" :xl="4">
-        <el-card shadow="never" class="stat-card danger">
-          <div class="stat-kicker">离线</div>
-          <div class="stat-value">{{ summary.agent_offline }}</div>
-          <div class="stat-meta">超过阈值未上报</div>
+      <el-col :xs="12" :sm="8" :lg="4" class="mb-4 lg:mb-0">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">离线</div>
+          <div class="mt-2 text-3xl font-bold text-red-600">{{ summary.agent_offline }}</div>
+          <div class="mt-2 text-xs text-slate-500">超过阈值未上报</div>
         </el-card>
       </el-col>
-      <el-col :xs="24" :sm="12" :lg="8" :xl="4">
-        <el-card shadow="never" class="stat-card warning">
-          <div class="stat-kicker">启用规则</div>
-          <div class="stat-value">{{ summary.rule_enabled_total }}</div>
-          <div class="stat-meta">当前生效</div>
+      <el-col :xs="12" :sm="8" :lg="4" class="mb-4 lg:mb-0">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">启用规则</div>
+          <div class="mt-2 text-3xl font-bold text-amber-600">{{ summary.rule_enabled_total }}</div>
+          <div class="mt-2 text-xs text-slate-500">当前生效</div>
         </el-card>
       </el-col>
-      <el-col :xs="24" :sm="12" :lg="8" :xl="4">
-        <el-card shadow="never" class="stat-card">
-          <div class="stat-kicker">触发中</div>
-          <div class="stat-value">{{ activeEventCount }}</div>
-          <div class="stat-meta">告警事件</div>
+      <el-col :xs="12" :sm="8" :lg="4" class="mb-4 lg:mb-0">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">触发中</div>
+          <div class="mt-2 text-3xl font-bold text-slate-900">{{ activeEventCount }}</div>
+          <div class="mt-2 text-xs text-slate-500">告警事件</div>
         </el-card>
       </el-col>
-      <el-col :xs="24" :sm="12" :lg="8" :xl="4">
-        <el-card shadow="never" class="stat-card">
-          <div class="stat-kicker">最近采样</div>
-          <div class="stat-value stat-time">{{ summary.last_collected_at || '-' }}</div>
-          <div class="stat-meta">监控数据新鲜度</div>
+      <el-col :xs="12" :sm="8" :lg="4">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">最近采样</div>
+          <div class="mt-2 text-lg lg:text-base xl:text-lg font-bold text-slate-900 leading-tight truncate">{{ summary.last_collected_at || '-' }}</div>
+          <div class="mt-2 text-xs text-slate-500">监控数据新鲜度</div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" class="panel-grid">
-      <el-col :xs="24" :xl="24">
+    <el-row :gutter="16">
+      <el-col :xs="24" :xl="24" class="mb-6">
         <el-row :gutter="16">
-          <el-col :xs="24" :lg="12">
-            <el-card shadow="never" class="panel-card aggregate-card">
+          <el-col :xs="24" :lg="12" class="mb-6 lg:mb-0">
+            <el-card shadow="never" class="border-0 shadow-sm rounded-2xl h-full flex flex-col">
               <template #header>
-                <div class="panel-header">
-                  <span>按服务树聚合</span>
-                  <span class="panel-hint">业务视角查看 Agent 水位</span>
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                  <span class="font-medium text-slate-800">按服务树聚合</span>
+                  <span class="text-xs text-slate-500">业务视角查看 Agent 水位</span>
                 </div>
               </template>
-              <el-table :data="serviceTreeAggregates.slice(0, 8)" size="small" stripe border>
+              <el-table :data="serviceTreeAggregates.slice(0, 8)" size="small" stripe border class="w-full">
                 <el-table-column prop="name" label="服务树" min-width="180" show-overflow-tooltip />
-                <el-table-column label="状态" width="90">
+                <el-table-column label="状态" width="80" align="center">
                   <template #default="{ row }">
-                    <el-tag size="small" :type="aggregateStatus(row)">
+                    <el-tag size="small" :type="aggregateStatus(row)" effect="plain" round>
                       {{ Number(row.offline_total || 0) > 0 ? '关注' : '健康' }}
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="agent_total" label="主机数" width="90" />
-                <el-table-column label="在线 / 离线" width="120">
-                  <template #default="{ row }">{{ row.online_total }} / {{ row.offline_total }}</template>
+                <el-table-column prop="agent_total" label="主机数" width="70" align="center" />
+                <el-table-column label="在线 / 离线" width="100" align="center">
+                  <template #default="{ row }">
+                    <span class="text-emerald-600 font-medium">{{ row.online_total }}</span>
+                    <span class="text-slate-300 mx-1">/</span>
+                    <span class="text-red-500 font-medium">{{ row.offline_total }}</span>
+                  </template>
                 </el-table-column>
-                <el-table-column label="CPU" width="90">
+                <el-table-column label="CPU" width="80" align="center">
                   <template #default="{ row }">{{ formatPercent(row.avg_cpu_usage_pct) }}</template>
                 </el-table-column>
-                <el-table-column label="内存" width="90">
+                <el-table-column label="内存" width="80" align="center">
                   <template #default="{ row }">{{ formatPercent(row.avg_memory_usage_pct) }}</template>
                 </el-table-column>
-                <el-table-column label="磁盘" width="90">
+                <el-table-column label="磁盘" width="80" align="center">
                   <template #default="{ row }">{{ formatPercent(row.avg_disk_usage_pct) }}</template>
                 </el-table-column>
               </el-table>
@@ -445,33 +452,41 @@ onUnmounted(() => {
           </el-col>
 
           <el-col :xs="24" :lg="12">
-            <el-card shadow="never" class="panel-card aggregate-card">
+            <el-card shadow="never" class="border-0 shadow-sm rounded-2xl h-full flex flex-col">
               <template #header>
-                <div class="panel-header">
-                  <span>按负责人聚合</span>
-                  <span class="panel-hint">谁在负责异常对象，一眼看到</span>
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                  <span class="font-medium text-slate-800">按负责人聚合</span>
+                  <span class="text-xs text-slate-500">谁在负责异常对象，一眼看到</span>
                 </div>
               </template>
-              <el-table :data="ownerAggregates.slice(0, 8)" size="small" stripe border>
-                <el-table-column prop="name" label="负责人" min-width="160" show-overflow-tooltip />
-                <el-table-column label="状态" width="90">
+              <el-table :data="ownerAggregates.slice(0, 8)" size="small" stripe border class="w-full">
+                <el-table-column prop="name" label="负责人" min-width="160" show-overflow-tooltip>
                   <template #default="{ row }">
-                    <el-tag size="small" :type="aggregateStatus(row)">
+                    <span>{{ row.name || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="状态" width="80" align="center">
+                  <template #default="{ row }">
+                    <el-tag size="small" :type="aggregateStatus(row)" effect="plain" round>
                       {{ Number(row.offline_total || 0) > 0 ? '关注' : '健康' }}
                     </el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column prop="agent_total" label="主机数" width="90" />
-                <el-table-column label="在线 / 离线" width="120">
-                  <template #default="{ row }">{{ row.online_total }} / {{ row.offline_total }}</template>
+                <el-table-column prop="agent_total" label="主机数" width="70" align="center" />
+                <el-table-column label="在线 / 离线" width="100" align="center">
+                  <template #default="{ row }">
+                    <span class="text-emerald-600 font-medium">{{ row.online_total }}</span>
+                    <span class="text-slate-300 mx-1">/</span>
+                    <span class="text-red-500 font-medium">{{ row.offline_total }}</span>
+                  </template>
                 </el-table-column>
-                <el-table-column label="CPU" width="90">
+                <el-table-column label="CPU" width="80" align="center">
                   <template #default="{ row }">{{ formatPercent(row.avg_cpu_usage_pct) }}</template>
                 </el-table-column>
-                <el-table-column label="内存" width="90">
+                <el-table-column label="内存" width="80" align="center">
                   <template #default="{ row }">{{ formatPercent(row.avg_memory_usage_pct) }}</template>
                 </el-table-column>
-                <el-table-column label="磁盘" width="90">
+                <el-table-column label="磁盘" width="80" align="center">
                   <template #default="{ row }">{{ formatPercent(row.avg_disk_usage_pct) }}</template>
                 </el-table-column>
               </el-table>
@@ -481,55 +496,68 @@ onUnmounted(() => {
         </el-row>
       </el-col>
 
-      <el-col :xs="24" :xl="14">
-        <el-card shadow="never" class="panel-card">
+      <el-col :xs="24" :xl="14" class="mb-6 xl:mb-0">
+        <el-card shadow="never" class="border-0 shadow-sm rounded-2xl h-full flex flex-col">
           <template #header>
-            <div class="panel-header">
-              <span>Agent 实时列表</span>
-              <el-form inline>
-                <el-form-item>
-                  <el-input v-model="filters.keyword" clearable placeholder="搜索主机名 / IP / Agent ID" style="width: 220px" @keyup.enter="applyFilters" />
-                </el-form-item>
-                <el-form-item>
-                  <el-select v-model="filters.status" style="width: 120px">
-                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                  </el-select>
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" @click="applyFilters">筛选</el-button>
-                  <el-button @click="resetFilters">重置</el-button>
-                </el-form-item>
-              </el-form>
+            <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+              <span class="font-medium text-slate-800">Agent 实时列表</span>
+              <div class="flex flex-wrap items-center gap-2">
+                <el-input v-model="filters.keyword" clearable placeholder="搜索主机名 / IP / Agent ID" class="w-56" @keyup.enter="applyFilters">
+                  <template #prefix><el-icon><Search /></el-icon></template>
+                </el-input>
+                <el-select v-model="filters.status" class="w-32" clearable placeholder="全部状态">
+                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+                <el-button type="primary" @click="applyFilters">筛选</el-button>
+                <el-button @click="resetFilters">重置</el-button>
+              </div>
             </div>
           </template>
 
-          <el-table :data="agents" stripe border>
-            <el-table-column prop="hostname" label="主机名" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="ip" label="IP" width="150" />
-            <el-table-column label="状态" width="100">
+          <el-table :data="agents" stripe border class="w-full">
+            <el-table-column prop="hostname" label="主机名" min-width="160" show-overflow-tooltip>
               <template #default="{ row }">
-                <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+                <span class="font-medium text-slate-800">{{ row.hostname || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="CPU" width="110">
-              <template #default="{ row }">{{ formatPercent(row.cpu_usage_pct) }}</template>
-            </el-table-column>
-            <el-table-column label="内存" width="110">
-              <template #default="{ row }">{{ formatPercent(row.memory_usage_pct) }}</template>
-            </el-table-column>
-            <el-table-column label="磁盘" width="110">
-              <template #default="{ row }">{{ formatPercent(row.disk_usage_pct) }}</template>
-            </el-table-column>
-            <el-table-column prop="last_heartbeat" label="最后心跳" width="180" />
-            <el-table-column label="操作" width="120" fixed="right">
+            <el-table-column prop="ip" label="IP" width="130" align="center">
               <template #default="{ row }">
-                <el-button link type="primary" @click="openAgentDetail(row)">趋势</el-button>
-                <el-button link type="warning" @click="goAgentDetail(row)">详情</el-button>
+                <span class="text-slate-600">{{ row.ip }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="statusTagType(row.status)" effect="light" round size="small">{{ statusLabel(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="CPU" width="90" align="center">
+              <template #default="{ row }">
+                <span :class="row.cpu_usage_pct > 80 ? 'text-red-500 font-medium' : ''">{{ formatPercent(row.cpu_usage_pct) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="内存" width="90" align="center">
+              <template #default="{ row }">
+                <span :class="row.memory_usage_pct > 80 ? 'text-red-500 font-medium' : ''">{{ formatPercent(row.memory_usage_pct) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="磁盘" width="90" align="center">
+              <template #default="{ row }">
+                <span :class="row.disk_usage_pct > 80 ? 'text-red-500 font-medium' : ''">{{ formatPercent(row.disk_usage_pct) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="last_heartbeat" label="最后心跳" width="160" align="center" />
+            <el-table-column label="操作" width="120" fixed="right" align="center">
+              <template #default="{ row }">
+                <div class="flex items-center justify-center gap-1">
+                  <el-button link type="primary" @click="openAgentDetail(row)">趋势</el-button>
+                  <el-divider direction="vertical" />
+                  <el-button link type="warning" @click="goAgentDetail(row)">详情</el-button>
+                </div>
               </template>
             </el-table-column>
           </el-table>
 
-          <div class="table-footer">
+          <div class="mt-4 flex justify-end">
             <el-pagination
               background
               layout="total, sizes, prev, pager, next"
@@ -545,59 +573,63 @@ onUnmounted(() => {
       </el-col>
 
       <el-col :xs="24" :xl="10">
-        <el-row :gutter="16">
-          <el-col :span="24">
-            <el-card shadow="never" class="panel-card rank-panel">
-              <template #header><span>热点 Top</span></template>
-              <div class="rank-block">
-                <div class="rank-title">CPU Top</div>
-                <div v-if="summary.cpu_high_agents?.length" class="rank-list">
-                  <div v-for="agent in summary.cpu_high_agents" :key="`cpu-${agent.agent_id}`" class="rank-row">
-                    <span>{{ agent.hostname || agent.agent_id }}</span>
-                    <strong>{{ formatPercent(agent.cpu_usage_pct) }}</strong>
+        <el-row :gutter="16" class="h-full">
+          <el-col :span="24" class="mb-6">
+            <el-card shadow="never" class="border-0 shadow-sm rounded-2xl h-full">
+              <template #header><span class="font-medium text-slate-800">热点 Top</span></template>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="flex flex-col gap-3">
+                  <div class="text-sm font-semibold text-slate-600 mb-1 border-b border-slate-100 pb-2">CPU Top</div>
+                  <div v-if="summary.cpu_high_agents?.length" class="flex flex-col gap-2">
+                    <div v-for="agent in summary.cpu_high_agents" :key="`cpu-${agent.agent_id}`" class="flex justify-between items-center p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-sm">
+                      <span class="truncate pr-2 text-slate-700">{{ agent.hostname || agent.agent_id }}</span>
+                      <strong class="text-red-500">{{ formatPercent(agent.cpu_usage_pct) }}</strong>
+                    </div>
                   </div>
+                  <el-empty v-else description="暂无高 CPU Agent" :image-size="46" />
                 </div>
-                <el-empty v-else description="暂无高 CPU Agent" :image-size="46" />
-              </div>
-              <div class="rank-block">
-                <div class="rank-title">内存 Top</div>
-                <div v-if="summary.memory_high_agents?.length" class="rank-list">
-                  <div v-for="agent in summary.memory_high_agents" :key="`mem-${agent.agent_id}`" class="rank-row">
-                    <span>{{ agent.hostname || agent.agent_id }}</span>
-                    <strong>{{ formatPercent(agent.memory_usage_pct) }}</strong>
+                <div class="flex flex-col gap-3">
+                  <div class="text-sm font-semibold text-slate-600 mb-1 border-b border-slate-100 pb-2">内存 Top</div>
+                  <div v-if="summary.memory_high_agents?.length" class="flex flex-col gap-2">
+                    <div v-for="agent in summary.memory_high_agents" :key="`mem-${agent.agent_id}`" class="flex justify-between items-center p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-sm">
+                      <span class="truncate pr-2 text-slate-700">{{ agent.hostname || agent.agent_id }}</span>
+                      <strong class="text-red-500">{{ formatPercent(agent.memory_usage_pct) }}</strong>
+                    </div>
                   </div>
+                  <el-empty v-else description="暂无高内存 Agent" :image-size="46" />
                 </div>
-                <el-empty v-else description="暂无高内存 Agent" :image-size="46" />
-              </div>
-              <div class="rank-block">
-                <div class="rank-title">磁盘 Top</div>
-                <div v-if="summary.disk_high_agents?.length" class="rank-list">
-                  <div v-for="agent in summary.disk_high_agents" :key="`disk-${agent.agent_id}`" class="rank-row">
-                    <span>{{ agent.hostname || agent.agent_id }}</span>
-                    <strong>{{ formatPercent(agent.disk_usage_pct) }}</strong>
+                <div class="flex flex-col gap-3">
+                  <div class="text-sm font-semibold text-slate-600 mb-1 border-b border-slate-100 pb-2">磁盘 Top</div>
+                  <div v-if="summary.disk_high_agents?.length" class="flex flex-col gap-2">
+                    <div v-for="agent in summary.disk_high_agents" :key="`disk-${agent.agent_id}`" class="flex justify-between items-center p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-sm">
+                      <span class="truncate pr-2 text-slate-700">{{ agent.hostname || agent.agent_id }}</span>
+                      <strong class="text-red-500">{{ formatPercent(agent.disk_usage_pct) }}</strong>
+                    </div>
                   </div>
+                  <el-empty v-else description="暂无高磁盘 Agent" :image-size="46" />
                 </div>
-                <el-empty v-else description="暂无高磁盘 Agent" :image-size="46" />
               </div>
             </el-card>
           </el-col>
 
           <el-col :span="24">
-            <el-card shadow="never" class="panel-card">
-              <template #header><span>最近告警</span></template>
-              <div v-if="alertEvents.length" class="event-list">
-                <div v-for="item in alertEvents" :key="item.id" class="event-item">
-                  <div class="event-main">
-                    <div class="event-title">{{ item.rule_name }}</div>
-                    <div class="event-sub">{{ item.hostname || item.agent_id }} · {{ metricLabel(item.metric_type) }}</div>
+            <el-card shadow="never" class="border-0 shadow-sm rounded-2xl h-full flex flex-col">
+              <template #header><span class="font-medium text-slate-800">最近告警</span></template>
+              <div v-if="alertEvents.length" class="flex flex-col gap-3">
+                <div v-for="item in alertEvents" :key="item.id" class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-100 transition-colors">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-slate-800 truncate">{{ item.rule_name }}</div>
+                    <div class="mt-1 text-xs text-slate-500 truncate">{{ item.hostname || item.agent_id }} · {{ metricLabel(item.metric_type) }}</div>
                   </div>
-                  <div class="event-side">
-                    <el-tag size="small" :type="severityTagType(item.severity)">{{ severityLabel(item.severity) }}</el-tag>
-                    <el-tag size="small" :type="statusTagType(item.status)">{{ statusLabel(item.status) }}</el-tag>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <el-tag size="small" :type="severityTagType(item.severity)" effect="dark">{{ severityLabel(item.severity) }}</el-tag>
+                    <el-tag size="small" :type="statusTagType(item.status)" effect="plain">{{ statusLabel(item.status) }}</el-tag>
                   </div>
                 </div>
-                <div class="event-footer">
-                  <el-button link type="primary" @click="goAlertCenter()">进入告警事件中心</el-button>
+                <div class="mt-2 text-right">
+                  <el-button link type="primary" @click="goAlertCenter()">
+                    进入告警事件中心 <el-icon class="ml-1"><ArrowRight /></el-icon>
+                  </el-button>
                 </div>
               </div>
               <el-empty v-else description="暂无告警事件" :image-size="60" />
@@ -608,56 +640,60 @@ onUnmounted(() => {
     </el-row>
 
     <el-drawer v-model="detailVisible" size="720px" :title="currentAgent ? `${currentAgent.hostname || currentAgent.agent_id} 指标趋势` : '指标趋势'">
-      <div v-loading="trendLoading" class="detail-wrap">
-        <div v-if="currentAgent" class="detail-header">
+      <div v-loading="trendLoading" class="flex flex-col gap-5 p-2">
+        <div v-if="currentAgent" class="flex justify-between items-start gap-3">
           <div>
-            <div class="detail-host">{{ currentAgent.hostname || currentAgent.agent_id }}</div>
-            <div class="detail-sub">{{ currentAgent.ip }} · {{ statusLabel(currentAgent.status) }}</div>
+            <div class="text-xl font-bold text-slate-900">{{ currentAgent.hostname || currentAgent.agent_id }}</div>
+            <div class="mt-1 text-sm text-slate-500 flex items-center gap-2">
+              <span>{{ currentAgent.ip }}</span>
+              <el-divider direction="vertical" />
+              <el-tag :type="statusTagType(currentAgent.status)" size="small" effect="plain" round>{{ statusLabel(currentAgent.status) }}</el-tag>
+            </div>
           </div>
-          <el-button plain @click="fetchTrends">刷新趋势</el-button>
+          <el-button plain @click="fetchTrends" size="small">刷新趋势</el-button>
         </div>
 
         <el-row :gutter="16">
           <el-col :span="8">
-            <el-card shadow="never" class="mini-stat">
-              <div class="mini-kicker">内存占用</div>
-              <div class="mini-value">{{ formatBytes(currentAgent?.memory_used) }}</div>
-              <div class="mini-sub">总计 {{ formatBytes(currentAgent?.memory_total) }}</div>
+            <el-card shadow="never" class="border-0 bg-slate-50 rounded-xl">
+              <div class="text-xs text-slate-500">内存占用</div>
+              <div class="mt-2 text-xl font-bold text-slate-800">{{ formatBytes(currentAgent?.memory_used) }}</div>
+              <div class="mt-1 text-xs text-slate-400">总计 {{ formatBytes(currentAgent?.memory_total) }}</div>
             </el-card>
           </el-col>
           <el-col :span="8">
-            <el-card shadow="never" class="mini-stat">
-              <div class="mini-kicker">磁盘占用</div>
-              <div class="mini-value">{{ formatBytes(currentAgent?.disk_used) }}</div>
-              <div class="mini-sub">总计 {{ formatBytes(currentAgent?.disk_total) }}</div>
+            <el-card shadow="never" class="border-0 bg-slate-50 rounded-xl">
+              <div class="text-xs text-slate-500">磁盘占用</div>
+              <div class="mt-2 text-xl font-bold text-slate-800">{{ formatBytes(currentAgent?.disk_used) }}</div>
+              <div class="mt-1 text-xs text-slate-400">总计 {{ formatBytes(currentAgent?.disk_total) }}</div>
             </el-card>
           </el-col>
           <el-col :span="8">
-            <el-card shadow="never" class="mini-stat">
-              <div class="mini-kicker">最后心跳</div>
-              <div class="mini-value mini-time">{{ currentAgent?.last_heartbeat || '-' }}</div>
-              <div class="mini-sub">Agent 在线性</div>
+            <el-card shadow="never" class="border-0 bg-slate-50 rounded-xl">
+              <div class="text-xs text-slate-500">最后心跳</div>
+              <div class="mt-2 text-sm font-bold text-slate-800 h-[28px] flex items-center">{{ currentAgent?.last_heartbeat || '-' }}</div>
+              <div class="mt-1 text-xs text-slate-400">Agent 在线性</div>
             </el-card>
           </el-col>
         </el-row>
 
-        <div class="trend-grid">
-          <el-card v-for="metricType in ['cpu_usage', 'memory_usage', 'disk_usage']" :key="metricType" shadow="never" class="trend-card">
+        <div class="flex flex-col gap-4">
+          <el-card v-for="metricType in ['cpu_usage', 'memory_usage', 'disk_usage']" :key="metricType" shadow="never" class="border border-slate-100 rounded-xl">
             <template #header>
-              <div class="trend-head">
-                <span>{{ metricLabel(metricType) }}</span>
-                <span>{{ metricLatest(metricType) }}</span>
+              <div class="flex justify-between items-center font-medium text-sm">
+                <span class="text-slate-800">{{ metricLabel(metricType) }}</span>
+                <span class="text-indigo-600">{{ metricLatest(metricType) }}</span>
               </div>
             </template>
-            <div v-if="(trends[metricType] || []).length" class="trend-body">
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="trend-chart">
-                <path d="M 0 92 L 100 92" class="trend-axis" />
-                <path :d="metricPath(metricType)" class="trend-line" />
+            <div v-if="(trends[metricType] || []).length" class="flex flex-col gap-3">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="w-full h-32 rounded-lg bg-gradient-to-b from-indigo-50/50 to-transparent">
+                <path d="M 0 92 L 100 92" stroke="#e2e8f0" stroke-width="1" fill="none" />
+                <path :d="metricPath(metricType)" stroke="#4f46e5" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
-              <div class="trend-meta">
-                <span>最小 {{ metricMin(metricType) }}</span>
-                <span>最大 {{ metricMax(metricType) }}</span>
-                <span>最近 {{ latestPointTime(metricType) }}</span>
+              <div class="flex flex-wrap justify-between gap-3 text-xs text-slate-500">
+                <span>最小: <strong class="text-slate-700">{{ metricMin(metricType) }}</strong></span>
+                <span>最大: <strong class="text-slate-700">{{ metricMax(metricType) }}</strong></span>
+                <span>最近: {{ latestPointTime(metricType) }}</span>
               </div>
             </div>
             <el-empty v-else description="暂无趋势采样" :image-size="54" />
@@ -669,301 +705,10 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.monitor-page {
-  padding: 20px;
-  background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 30%),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 26%),
-    #f5f7fb;
-  min-height: 100%;
+:deep(.el-card__header) {
+  border-bottom: 1px solid #f1f5f9;
 }
-
-.hero-card,
-.panel-card,
-.stat-card,
-.mini-stat,
-.trend-card {
-  border: 1px solid #e7ecf3;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
-}
-
-.hero-card {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  padding: 20px 24px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #0f172a 0%, #102c57 55%, #0ea5e9 100%);
-  color: #fff;
-}
-
-.hero-title {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.hero-subtitle {
-  margin-top: 8px;
-  max-width: 720px;
-  color: rgba(255, 255, 255, 0.8);
-  line-height: 1.6;
-}
-
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.stat-grid,
-.panel-grid {
-  margin-top: 16px;
-}
-
-.stat-card {
-  border-radius: 16px;
-}
-
-.stat-card :deep(.el-card__body) {
-  padding: 18px 20px;
-}
-
-.stat-kicker {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: #64748b;
-  text-transform: uppercase;
-}
-
-.stat-value {
-  margin-top: 12px;
-  font-size: 30px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.stat-time {
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.stat-meta {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #64748b;
-}
-
-.stat-card.success .stat-value { color: #16a34a; }
-.stat-card.danger .stat-value { color: #dc2626; }
-.stat-card.warning .stat-value { color: #d97706; }
-
-.panel-card {
-  border-radius: 18px;
-}
-
-.aggregate-card {
-  height: 100%;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.panel-hint {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.table-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.rank-panel .rank-block + .rank-block {
-  margin-top: 18px;
-}
-
-.rank-title {
-  margin-bottom: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-}
-
-.rank-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rank-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #f8fafc;
-  color: #334155;
-}
-
-.event-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.event-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: #f8fafc;
-}
-
-.event-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.event-sub {
-  margin-top: 6px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.event-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.detail-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.detail-host {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.detail-sub {
-  margin-top: 6px;
-  color: #64748b;
-}
-
-.mini-stat {
-  border-radius: 14px;
-}
-
-.mini-kicker {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.mini-value {
-  margin-top: 10px;
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.mini-time {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.mini-sub {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.trend-grid {
-  display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.trend-card {
-  border-radius: 16px;
-}
-
-.trend-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-}
-
-.trend-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.trend-chart {
-  width: 100%;
-  height: 150px;
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.06), rgba(37, 99, 235, 0));
-  border-radius: 12px;
-}
-
-.trend-axis {
-  stroke: #cbd5e1;
-  stroke-width: 1;
-  fill: none;
-}
-
-.trend-line {
-  stroke: #2563eb;
-  stroke-width: 2.4;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.trend-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: #64748b;
-}
-
-@media (max-width: 960px) {
-  .hero-card,
-  .panel-header,
-  .detail-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .event-item {
-    flex-direction: column;
-  }
-
-  .event-side {
-    align-items: flex-start;
-  }
+:deep(.el-table) {
+  --el-table-border-color: #f1f5f9;
 }
 </style>

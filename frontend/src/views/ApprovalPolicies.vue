@@ -167,96 +167,108 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="page-head">
-          <span>审批策略</span>
-          <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增</el-button>
-        </div>
-      </template>
+  <div class="h-full flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+      <div class="text-lg font-bold text-gray-900">审批策略</div>
+      <el-button type="primary" @click="handleAdd"><el-icon class="mr-1"><Plus /></el-icon> 新增策略</el-button>
+    </div>
 
-      <el-table :data="tableData" v-loading="loading" stripe border>
+    <!-- Table -->
+    <div class="flex-1 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col overflow-hidden">
+      <el-table :data="tableData" v-loading="loading" class="flex-1 w-full" stripe>
         <el-table-column prop="name" label="名称" min-width="160" />
         <el-table-column prop="code" label="编码" width="140" />
-        <el-table-column prop="scope" label="范围" width="100" />
-        <el-table-column label="阶段数" width="90">
-          <template #default="{ row }">{{ row.stages?.length || 0 }}</template>
-        </el-table-column>
-        <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
-        <el-table-column label="操作" fixed="right" min-width="160">
+        <el-table-column prop="scope" label="范围" width="100" align="center">
           <template #default="{ row }">
-            <el-button link size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button link size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-tag size="small" type="info">{{ row.scope === 'change' ? '变更单' : '请求单' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="阶段数" width="90" align="center">
+          <template #default="{ row }">
+            <span class="font-bold text-gray-700">{{ row.stages?.length || 0 }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="text-gray-500 text-sm">{{ row.description || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" fixed="right" width="140" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="760px">
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="编码"><el-input v-model="form.code" /></el-form-item>
-        <el-form-item label="范围">
-          <el-select v-model="form.scope" style="width: 100%;">
-            <el-option v-for="item in scopeOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="描述"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
+    <!-- Dialog -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="760px" destroy-on-close align-center>
+      <div class="mb-4 pl-3 border-l-4 border-blue-500 text-sm font-bold text-gray-800">基础信息</div>
+      <el-form :model="form" label-width="100px" @submit.prevent>
+        <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+          <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
+          <el-form-item label="编码"><el-input v-model="form.code" /></el-form-item>
+          <el-form-item label="范围">
+            <el-select v-model="form.scope" class="w-full">
+              <el-option v-for="item in scopeOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <el-form-item label="描述" class="mt-2"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
       </el-form>
 
-      <div class="stage-head">
-        <span>审批阶段</span>
-        <el-button type="primary" plain @click="addStage">新增阶段</el-button>
+      <div class="flex items-center justify-between mb-4 mt-6">
+        <div class="pl-3 border-l-4 border-blue-500 text-sm font-bold text-gray-800">审批阶段</div>
+        <el-button link type="primary" @click="addStage"><el-icon class="mr-1"><Plus /></el-icon>新增阶段</el-button>
       </div>
 
-      <div class="stage-list">
-        <div v-for="(stage, index) in form.stages" :key="Number(index)" class="stage-card">
-          <div class="stage-card-head">
-            <span>阶段 {{ Number(index) + 1 }}</span>
+      <div class="flex flex-col gap-4 max-h-[420px] overflow-y-auto pr-2">
+        <div v-for="(stage, index) in form.stages" :key="Number(index)" class="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+          <div class="flex justify-between items-center mb-4">
+            <span class="font-bold text-gray-700 text-sm">阶段 {{ Number(index) + 1 }}</span>
             <el-button v-if="form.stages.length > 1" link type="danger" @click="removeStage(Number(index))">删除</el-button>
           </div>
-          <el-form :model="stage" label-width="90px">
-            <el-form-item label="名称"><el-input v-model="stage.name" /></el-form-item>
-            <el-form-item label="审批人类型">
-              <el-select v-model="stage.approver_type" style="width: 100%;">
-                <el-option v-for="item in approverTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="固定用户" v-if="stage.approver_type === 'fixed_user'">
-              <el-select v-model="stage.approver_config.user_ids" multiple clearable style="width: 100%;">
-                <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="固定角色" v-if="stage.approver_type === 'fixed_role'">
-              <el-select v-model="stage.approver_config.role_names" multiple clearable style="width: 100%;">
-                <el-option v-for="item in roleOptions" :key="item.id" :label="item.name" :value="item.name" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="通过规则">
-              <el-radio-group v-model="stage.pass_rule">
-                <el-radio value="all">全部通过</el-radio>
-                <el-radio value="any">任一通过</el-radio>
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="超时小时"><el-input-number v-model="stage.timeout_hours" :min="1" /></el-form-item>
+          <el-form :model="stage" label-width="90px" @submit.prevent>
+            <div class="grid grid-cols-2 gap-x-6">
+              <el-form-item label="名称"><el-input v-model="stage.name" /></el-form-item>
+              <el-form-item label="审批人类型">
+                <el-select v-model="stage.approver_type" class="w-full">
+                  <el-option v-for="item in approverTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="固定用户" v-if="stage.approver_type === 'fixed_user'">
+                <el-select v-model="stage.approver_config.user_ids" multiple clearable class="w-full">
+                  <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="固定角色" v-if="stage.approver_type === 'fixed_role'">
+                <el-select v-model="stage.approver_config.role_names" multiple clearable class="w-full">
+                  <el-option v-for="item in roleOptions" :key="item.id" :label="item.name" :value="item.name" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="通过规则">
+                <el-radio-group v-model="stage.pass_rule">
+                  <el-radio value="all">全部通过</el-radio>
+                  <el-radio value="any">任一通过</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="超时小时"><el-input-number v-model="stage.timeout_hours" :min="1" class="w-full" /></el-form-item>
+            </div>
           </el-form>
         </div>
       </div>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <div class="flex justify-end gap-2 pt-2">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitForm">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.page-head, .stage-head { display: flex; justify-content: space-between; align-items: center; }
-.stage-head { margin: 12px 0; }
-.stage-list { display: flex; flex-direction: column; gap: 12px; max-height: 420px; overflow: auto; }
-.stage-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; background: #fafafa; }
-.stage-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 700; }
 </style>

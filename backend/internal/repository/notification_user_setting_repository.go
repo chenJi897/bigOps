@@ -25,6 +25,7 @@ func (r *NotificationUserSettingRepository) Upsert(item *model.NotificationUserS
 	if err == nil {
 		existing.EnabledChannels = item.EnabledChannels
 		existing.SubscribedBizTypes = item.SubscribedBizTypes
+		existing.ChannelTargets = item.ChannelTargets
 		existing.Enabled = item.Enabled
 		return database.GetDB().Save(&existing).Error
 	}

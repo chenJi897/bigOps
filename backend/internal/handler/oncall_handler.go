@@ -5,8 +5,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/bigops/platform/internal/model"
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
 	"github.com/bigops/platform/internal/service"
 )
@@ -77,6 +79,7 @@ func (h *OnCallHandler) Create(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("创建值班计划", zap.String("operator", c.GetString("username")), zap.Int64("schedule_id", item.ID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "创建成功", item)
 }
 
@@ -109,6 +112,7 @@ func (h *OnCallHandler) Update(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新值班计划", zap.String("operator", c.GetString("username")), zap.Int64("schedule_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "更新成功", item)
 }
 
@@ -130,6 +134,7 @@ func (h *OnCallHandler) Delete(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("删除值班计划", zap.String("operator", c.GetString("username")), zap.Int64("schedule_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 

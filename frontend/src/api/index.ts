@@ -201,6 +201,9 @@ export const notificationApi = {
   testSend: (data: { title: string; content: string; channels: string[]; user_ids?: number[] }) => api.post('/notifications/test', data),
   events: () => api.get('/notifications/events'),
   retryEvent: (id: number) => api.post(`/notifications/events/${id}/retry`),
+  listTemplates: () => api.get('/notifications/templates'),
+  updateTemplate: (id: number, data: { title: string; content: string }) => api.post(`/notifications/templates/${id}`, data),
+  previewTemplate: (data: { title: string; content: string; variables: Record<string, any> }) => api.post('/notifications/templates/preview', data),
 }
 
 export const monitorApi = {

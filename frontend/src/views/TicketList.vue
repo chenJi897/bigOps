@@ -1,6 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'TicketList' })
 import { computed, ref, onActivated, onMounted } from 'vue'
+import { Plus, Search } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ticketApi, ticketTypeApi, userApi } from '../api'
 import { useViewStateStore } from '../stores/viewState'
@@ -178,80 +179,129 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
+  <div class="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+    <el-card shadow="never" class="border-0 shadow-sm ring-1 ring-gray-200/50 rounded-xl">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>{{ pageTitle }}</span>
-          <el-button v-if="showLaunchButton" type="primary" @click="openCreate">
-            <el-icon><Plus /></el-icon>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div class="flex items-center gap-3">
+            <h2 class="text-xl font-semibold text-gray-800 tracking-tight">{{ pageTitle }}</h2>
+            <el-badge v-if="total > 0" :value="total" :max="99" class="ml-2" type="primary" />
+          </div>
+          <el-button v-if="showLaunchButton" type="primary" @click="openCreate" class="shadow-sm">
+            <template #icon><el-icon><Plus /></el-icon></template>
             发起工单
           </el-button>
         </div>
       </template>
 
-      <div v-if="showScopeTabs" style="margin-bottom: 16px;">
-        <el-radio-group v-model="query.scope" @change="handleScopeChange">
-          <el-radio-button v-for="t in scopeTabs" :key="t.value" :value="t.value">{{ t.label }}</el-radio-button>
-        </el-radio-group>
+      <div class="flex flex-col space-y-5">
+        <!-- Filters Area -->
+        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-gray-50/50 p-4 rounded-lg border border-gray-100">
+          <div v-if="showScopeTabs" class="flex-shrink-0">
+            <el-radio-group v-model="query.scope" @change="handleScopeChange" size="default">
+              <el-radio-button v-for="t in scopeTabs" :key="t.value" :value="t.value">{{ t.label }}</el-radio-button>
+            </el-radio-group>
+          </div>
+          
+          <el-form :inline="true" @submit.prevent="handleSearch" class="flex flex-wrap gap-3 w-full xl:w-auto xl:justify-end" style="margin-bottom: 0;">
+            <el-select v-model="query.status" placeholder="所有状态" clearable class="w-28 sm:w-32">
+              <el-option v-for="(v, k) in statusMap" :key="k" :label="v.label" :value="k" />
+            </el-select>
+            
+            <el-select v-model="query.priority" placeholder="所有优先级" clearable class="w-28 sm:w-32">
+              <el-option v-for="(v, k) in priorityMap" :key="k" :label="v.label" :value="k" />
+            </el-select>
+            
+            <el-select v-model="query.type_id" placeholder="所有工单模板" clearable class="w-36 sm:w-44">
+              <el-option v-for="t in allTypes" :key="t.id" :label="t.name" :value="t.id" />
+            </el-select>
+            
+            <el-input v-model="query.keyword" placeholder="搜索标题或编号" clearable class="w-48 sm:w-64" @keyup.enter="handleSearch">
+              <template #prefix>
+                <el-icon class="text-gray-400"><Search /></el-icon>
+              </template>
+            </el-input>
+            
+            <div class="flex items-center gap-2">
+              <el-button type="primary" @click="handleSearch">搜索</el-button>
+              <el-button @click="handleReset" plain>重置</el-button>
+            </div>
+          </el-form>
+        </div>
+
+        <!-- Table Area -->
+        <el-table :data="tableData" v-loading="loading" stripe :border="false" class="w-full shadow-sm rounded-lg overflow-hidden border border-gray-100" @row-click="openDetail" style="cursor: pointer;">
+          <el-table-column prop="ticket_no" label="编号" width="160" />
+          <el-table-column prop="title" label="标题" min-width="240" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="font-medium text-gray-800 group-hover:text-indigo-600 transition-colors">{{ row.title }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="模板" width="140">
+            <template #default="{ row }">
+              <span class="text-gray-600">{{ row.request_template_name || row.type_name || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="优先级" width="90">
+            <template #default="{ row }">
+              <el-tag :type="priorityMap[row.priority]?.type || 'info'" size="small" effect="light" class="rounded-md">
+                {{ priorityMap[row.priority]?.label || row.priority }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="statusMap[row.status]?.type || 'info'" size="small" effect="light" class="rounded-md">
+                {{ statusMap[row.status]?.label || row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="creator_name" label="创建人" width="100">
+            <template #default="{ row }">
+              <span class="text-gray-700">{{ row.creator_name || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="assignee_name" label="处理人" width="100">
+            <template #default="{ row }">
+              <span class="text-gray-700">{{ row.assignee_name || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="来源" width="80">
+            <template #default="{ row }">
+              <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ sourceMap[row.source] || row.source }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="created_at" label="创建时间" width="170">
+            <template #default="{ row }">
+              <span class="text-gray-500 text-sm">{{ row.created_at }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="flex justify-end pt-4 pb-2">
+          <el-pagination 
+            v-if="total > 0" 
+            background 
+            layout="total, sizes, prev, pager, next, jumper" 
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total" 
+            v-model:page-size="query.size"
+            :current-page="query.page" 
+            @size-change="(s: number) => { query.size = s; handleSearch() }"
+            @current-change="(p: number) => { query.page = p; fetchData() }" 
+          />
+        </div>
       </div>
-
-      <el-form :inline="true" @submit.prevent="handleSearch" style="margin-bottom: 12px;">
-        <el-form-item>
-          <el-select v-model="query.status" placeholder="状态" clearable style="width: 110px;">
-            <el-option v-for="(v, k) in statusMap" :key="k" :label="v.label" :value="k" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-select v-model="query.priority" placeholder="优先级" clearable style="width: 100px;">
-            <el-option v-for="(v, k) in priorityMap" :key="k" :label="v.label" :value="k" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-select v-model="query.type_id" placeholder="工单模板" clearable style="width: 130px;">
-            <el-option v-for="t in allTypes" :key="t.id" :label="t.name" :value="t.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-input v-model="query.keyword" placeholder="搜索标题/编号" clearable style="width: 180px;" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table :data="tableData" v-loading="loading" stripe border @row-click="openDetail" style="cursor: pointer;">
-        <el-table-column prop="ticket_no" label="编号" width="160" />
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column label="模板" width="140">
-          <template #default="{ row }">{{ row.request_template_name || row.type_name || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="优先级" width="80">
-          <template #default="{ row }">
-            <el-tag :type="priorityMap[row.priority]?.type || 'info'" size="small">{{ priorityMap[row.priority]?.label || row.priority }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="statusMap[row.status]?.type || 'info'" size="small">{{ statusMap[row.status]?.label || row.status }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="creator_name" label="创建人" width="90" />
-        <el-table-column prop="assignee_name" label="处理人" width="90">
-          <template #default="{ row }">{{ row.assignee_name || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="来源" width="70">
-          <template #default="{ row }">{{ sourceMap[row.source] || row.source }}</template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="170" />
-      </el-table>
-
-      <el-pagination v-if="total > 0" style="margin-top: 16px; justify-content: flex-end;" background layout="total, prev, pager, next" :total="total" :page-size="query.size" :current-page="query.page" @current-change="(p: number) => { query.page = p; fetchData() }" />
     </el-card>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
+/* Scoped styles can be removed as we are using Tailwind utilities now */
+:deep(.el-table__row) {
+  @apply hover:bg-indigo-50/50 transition-colors duration-200;
+}
+:deep(.el-table th.el-table__cell) {
+  @apply bg-gray-50/80 text-gray-600 font-medium;
+}
 </style>

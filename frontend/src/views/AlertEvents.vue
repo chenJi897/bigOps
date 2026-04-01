@@ -121,101 +121,95 @@ onMounted(fetchEvents)
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="page-head">
-          <div>
-            <div class="page-title">告警事件中心</div>
-            <div class="page-subtitle">统一处理触发中的告警事件，支持确认、关闭和业务跳转。</div>
-          </div>
-          <div class="page-actions">
-            <el-button plain :disabled="!canBatchAck" @click="batchAcknowledge">批量确认</el-button>
-            <el-button type="warning" plain :disabled="!canBatchResolve" @click="batchResolve">批量关闭</el-button>
-            <el-button type="primary" plain @click="fetchEvents">刷新</el-button>
-          </div>
-        </div>
-      </template>
-
-      <el-form inline class="filter-row">
-        <el-form-item>
-          <el-input v-model="filters.keyword" placeholder="规则 / 主机 / IP" clearable style="width: 220px" @keyup.enter="applyFilters" />
-        </el-form-item>
-        <el-form-item>
-          <el-input v-model="filters.agent_id" placeholder="Agent ID" clearable style="width: 220px" @keyup.enter="applyFilters" />
-        </el-form-item>
-        <el-form-item>
-          <el-select v-model="filters.status" placeholder="状态" clearable style="width: 140px">
-            <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-select v-model="filters.severity" placeholder="级别" clearable style="width: 140px">
-            <el-option v-for="item in severityOptions" :key="item.label" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="applyFilters">筛选</el-button>
-          <el-button @click="resetFilters">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table :data="events" v-loading="loading" stripe border @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="48" />
-        <el-table-column prop="rule_name" label="规则" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="hostname" label="主机" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="agent_id" label="Agent ID" min-width="220" show-overflow-tooltip />
-        <el-table-column label="级别" width="90">
-          <template #default="{ row }">
-            <el-tag size="small" :type="severityTagType(row.severity)">{{ row.severity }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag size="small" :type="statusTagType(row.status)">{{ row.status }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="值 / 阈值" width="150">
-          <template #default="{ row }">{{ Number(row.metric_value || 0).toFixed(1) }} / {{ row.threshold }}</template>
-        </el-table-column>
-        <el-table-column prop="triggered_at" label="触发时间" width="180" />
-        <el-table-column label="关联" min-width="180">
-          <template #default="{ row }">
-            <el-button v-if="row.ticket_id" link type="primary" @click="goTicket(row.ticket_id)">工单 #{{ row.ticket_id }}</el-button>
-            <el-button v-if="row.task_execution_id" link type="warning" @click="goExecution(row.task_execution_id)">执行 #{{ row.task_execution_id }}</el-button>
-            <span v-if="!row.ticket_id && !row.task_execution_id">—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" :disabled="row.status !== 'firing'" @click="acknowledge(row)">确认</el-button>
-            <el-button link type="danger" :disabled="row.status === 'resolved'" @click="resolve(row)">关闭</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="table-footer">
-        <el-pagination
-          background
-          layout="total, sizes, prev, pager, next"
-          :total="pager.total"
-          :current-page="pager.page"
-          :page-size="pager.size"
-          :page-sizes="[10, 20, 50]"
-          @current-change="(page: number) => { pager.page = page; fetchEvents() }"
-          @size-change="(size: number) => { pager.size = size; pager.page = 1; fetchEvents() }"
-        />
+  <div class="h-full flex flex-col bg-gray-50">
+    <div class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">告警事件中心</h1>
+        <p class="text-sm text-gray-500 mt-1">统一处理触发中的告警事件，支持确认、关闭和业务跳转。</p>
       </div>
-    </el-card>
+      <div class="flex items-center gap-3">
+        <el-button plain :disabled="!canBatchAck" @click="batchAcknowledge">批量确认</el-button>
+        <el-button type="warning" plain :disabled="!canBatchResolve" @click="batchResolve">批量关闭</el-button>
+        <el-button type="primary" plain @click="fetchEvents">刷新</el-button>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-auto p-6">
+      <el-card shadow="never" class="border-gray-200">
+        <el-form inline class="mb-4 flex flex-wrap gap-2">
+          <el-form-item class="mb-0">
+            <el-input v-model="filters.keyword" placeholder="规则 / 主机 / IP" clearable class="w-56" @keyup.enter="applyFilters" />
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <el-input v-model="filters.agent_id" placeholder="Agent ID" clearable class="w-56" @keyup.enter="applyFilters" />
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <el-select v-model="filters.status" placeholder="状态" clearable class="w-36">
+              <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <el-select v-model="filters.severity" placeholder="级别" clearable class="w-36">
+              <el-option v-for="item in severityOptions" :key="item.label" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <el-button type="primary" @click="applyFilters">筛选</el-button>
+            <el-button @click="resetFilters">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <el-table :data="events" v-loading="loading" stripe border class="w-full" @selection-change="handleSelectionChange">
+          <el-table-column type="selection" width="48" align="center" />
+          <el-table-column prop="rule_name" label="规则" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="hostname" label="主机" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="agent_id" label="Agent ID" min-width="220" show-overflow-tooltip />
+          <el-table-column label="级别" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="severityTagType(row.severity)">{{ row.severity }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="statusTagType(row.status)">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="值 / 阈值" width="150" align="right">
+            <template #default="{ row }">{{ Number(row.metric_value || 0).toFixed(1) }} / {{ row.threshold }}</template>
+          </el-table-column>
+          <el-table-column prop="triggered_at" label="触发时间" width="180" align="center" />
+          <el-table-column label="关联" min-width="180">
+            <template #default="{ row }">
+              <el-button v-if="row.ticket_id" link type="primary" @click="goTicket(row.ticket_id)">工单 #{{ row.ticket_id }}</el-button>
+              <el-button v-if="row.task_execution_id" link type="warning" @click="goExecution(row.task_execution_id)">执行 #{{ row.task_execution_id }}</el-button>
+              <span v-if="!row.ticket_id && !row.task_execution_id" class="text-gray-400">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" :disabled="row.status !== 'firing'" @click="acknowledge(row)">确认</el-button>
+              <el-button link type="danger" :disabled="row.status === 'resolved'" @click="resolve(row)">关闭</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="mt-6 flex justify-end">
+          <el-pagination
+            background
+            layout="total, sizes, prev, pager, next"
+            :total="pager.total"
+            :current-page="pager.page"
+            :page-size="pager.size"
+            :page-sizes="[10, 20, 50]"
+            @current-change="(page: number) => { pager.page = page; fetchEvents() }"
+            @size-change="(size: number) => { pager.size = size; pager.page = 1; fetchEvents() }"
+          />
+        </div>
+      </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.page-title { font-size: 18px; font-weight: 700; color: #1f2937; }
-.page-subtitle { margin-top: 4px; color: #6b7280; }
-.page-actions { display: flex; gap: 8px; }
-.filter-row { margin-top: 8px; }
-.table-footer { margin-top: 16px; display: flex; justify-content: flex-end; }
+/* Scoped styles replaced with Tailwind utility classes */
 </style>

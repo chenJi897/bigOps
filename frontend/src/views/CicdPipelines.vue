@@ -349,137 +349,144 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="header-actions">
-          <span>CI/CD 流水线</span>
-          <el-button type="primary" @click="openCreate">新增流水线</el-button>
-        </div>
-      </template>
+  <div class="h-full flex flex-col bg-gray-50">
+    <div class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">CI/CD 流水线</h1>
+        <p class="text-sm text-gray-500 mt-1">配置流水线的构建、部署任务，审批模板以及环境变量和触发规则。</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <el-button type="primary" @click="openCreate">新增流水线</el-button>
+      </div>
+    </div>
 
-      <el-form :inline="true" class="filter-row" label-width="0" @submit.prevent="handleSearch">
-        <el-form-item>
-          <el-input v-model="keyword" placeholder="流水线/项目" clearable style="width: 220px" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item>
-          <el-select v-model="projectFilter" placeholder="项目" clearable style="width: 180px">
-            <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-select v-model="statusFilter" placeholder="状态" clearable style="width: 120px">
-            <el-option label="全部" value="" />
-            <el-option label="启用" value="1" />
-            <el-option label="停用" value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
+    <div class="flex-1 overflow-auto p-6 space-y-6">
+      <el-card shadow="never" class="border-gray-200">
+        <el-form :inline="true" class="mb-4 flex flex-wrap gap-2" label-width="0" @submit.prevent="handleSearch">
+          <el-form-item class="mb-0">
+            <el-input v-model="keyword" placeholder="流水线/项目" clearable class="w-56" @keyup.enter="handleSearch" />
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <el-select v-model="projectFilter" placeholder="项目" clearable class="w-48">
+              <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <el-select v-model="statusFilter" placeholder="状态" clearable class="w-32">
+              <el-option label="全部" value="" />
+              <el-option label="启用" value="1" />
+              <el-option label="停用" value="0" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <el-button type="primary" @click="handleSearch">搜索</el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
 
-      <el-table :data="pipelines" v-loading="loading" stripe border style="margin-top: 16px">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="name" label="流水线名称" min-width="180" />
-        <el-table-column prop="project_name" label="项目" min-width="160" />
-        <el-table-column label="配置概览" min-width="240">
-          <template #default="{ row }">
-            <div class="config-block">
-              <div class="config-tags">
-                <el-tag size="small" :type="Array.isArray(row.notify_channels) && row.notify_channels.includes('message_pusher') ? 'warning' : 'info'">
-                  {{ Array.isArray(row.notify_channels) && row.notify_channels.length ? row.notify_channels.join('/') : '默认通知' }}
-                </el-tag>
-                <el-tag size="small" :type="normalizeBoolFlag(row.webhook_enabled) ? 'success' : 'info'">
-                  {{ normalizeBoolFlag(row.webhook_enabled) ? 'Webhook' : '手动' }}
-                </el-tag>
-                <el-tag size="small" :type="row.build_task_id ? 'primary' : 'info'">
-                  {{ row.build_task_id ? '构建' : '无构建' }}
-                </el-tag>
-                <el-tag size="small" :type="row.request_template_id ? 'warning' : 'info'">
-                  {{ row.request_template_id ? '审批' : '免审批' }}
-                </el-tag>
-                <el-tag size="small" :type="row.deploy_task_id ? 'success' : 'info'">
-                  {{ row.deploy_task_id ? '部署' : '无部署' }}
-                </el-tag>
+        <el-table :data="pipelines" v-loading="loading" stripe border class="w-full">
+          <el-table-column prop="id" label="ID" width="70" align="center" />
+          <el-table-column prop="name" label="流水线名称" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="project_name" label="项目" min-width="160" show-overflow-tooltip />
+          <el-table-column label="配置概览" min-width="240">
+            <template #default="{ row }">
+              <div class="flex flex-col gap-1.5">
+                <div class="flex flex-wrap gap-1.5">
+                  <el-tag size="small" :type="Array.isArray(row.notify_channels) && row.notify_channels.includes('message_pusher') ? 'warning' : 'info'">
+                    {{ Array.isArray(row.notify_channels) && row.notify_channels.length ? row.notify_channels.join('/') : '默认通知' }}
+                  </el-tag>
+                  <el-tag size="small" :type="normalizeBoolFlag(row.webhook_enabled) ? 'success' : 'info'">
+                    {{ normalizeBoolFlag(row.webhook_enabled) ? 'Webhook' : '手动' }}
+                  </el-tag>
+                  <el-tag size="small" :type="row.build_task_id ? 'primary' : 'info'">
+                    {{ row.build_task_id ? '构建' : '无构建' }}
+                  </el-tag>
+                  <el-tag size="small" :type="row.request_template_id ? 'warning' : 'info'">
+                    {{ row.request_template_id ? '审批' : '免审批' }}
+                  </el-tag>
+                  <el-tag size="small" :type="row.deploy_task_id ? 'success' : 'info'">
+                    {{ row.deploy_task_id ? '部署' : '无部署' }}
+                  </el-tag>
+                </div>
+                <div class="text-xs text-gray-500">{{ configSummary(row) }}</div>
               </div>
-              <div class="muted">{{ configSummary(row) }}</div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="branch" label="分支" width="120" />
-        <el-table-column prop="environment" label="环境" width="100" />
-        <el-table-column label="最近运行" min-width="280">
-          <template #default="{ row }">
-            <div v-if="row.latest_run" class="latest-run">
-              <el-tag size="small" :type="statusTagType(row.latest_run.status)">
-                #{{ row.latest_run.run_number }} {{ statusLabel(row.latest_run.status) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="branch" label="分支" width="120" />
+          <el-table-column prop="environment" label="环境" width="100" />
+          <el-table-column label="最近运行" min-width="280">
+            <template #default="{ row }">
+              <div v-if="row.latest_run" class="flex flex-col gap-1.5">
+                <div>
+                  <el-tag size="small" :type="statusTagType(row.latest_run.status)">
+                    #{{ row.latest_run.run_number }} {{ statusLabel(row.latest_run.status) }}
+                  </el-tag>
+                </div>
+                <div class="text-sm text-gray-700 leading-snug">{{ row.latest_run.summary || '等待结果' }}</div>
+                <div><el-button link type="primary" size="small" @click="openLatestDetail(row.latest_run.id)">查看详情</el-button></div>
+              </div>
+              <span v-else class="text-gray-400">—</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="row.active === 1 ? 'success' : 'info'">
+                {{ row.active === 1 ? '启用' : '停用' }}
               </el-tag>
-              <div class="latest-summary">{{ row.latest_run.summary || '等待结果' }}</div>
-              <el-button type="text" size="small" @click="openLatestDetail(row.latest_run.id)">查看详情</el-button>
-            </div>
-            <span v-else>—</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag size="small" :type="row.active === 1 ? 'success' : 'info'">
-              {{ row.active === 1 ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="updated_at" label="更新时间" width="170" />
-        <el-table-column label="操作" width="320" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" size="small" @click="openEdit(row)">编辑</el-button>
-            <el-button size="small" @click="toggleStatus(row)">{{ row.active === 1 ? '停用' : '启用' }}</el-button>
-            <el-button type="info" size="small" @click="handleTrigger(row)">立即执行</el-button>
-            <el-button type="warning" size="small" @click="goToRuns(row)">运行记录</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+            </template>
+          </el-table-column>
+          <el-table-column prop="updated_at" label="更新时间" width="170" align="center" />
+          <el-table-column label="操作" width="300" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button link :type="row.active === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.active === 1 ? '停用' : '启用' }}</el-button>
+              <el-button link type="info" @click="handleTrigger(row)">触发</el-button>
+              <el-button link type="primary" @click="goToRuns(row)">运行记录</el-button>
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-      <el-pagination
-        v-if="total > 0"
-        style="margin-top: 16px; text-align: right"
-        :current-page="page"
-        :page-size="size"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="total"
-        show-size-picker
-        show-quick-jumper
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
-    </el-card>
+        <div v-if="total > 0" class="mt-6 flex justify-end">
+          <el-pagination
+            background
+            :current-page="page"
+            :page-size="size"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @size-change="handleSizeChange"
+            @current-change="handlePageChange"
+          />
+        </div>
+      </el-card>
+    </div>
 
-    <el-dialog v-model="formVisible" :title="isEdit ? '编辑流水线' : '新增流水线'" width="720px">
-      <el-form label-width="110px">
-        <el-form-item label="流水线名称">
+    <el-dialog v-model="formVisible" :title="isEdit ? '编辑流水线' : '新增流水线'" width="720px" destroy-on-close align-center>
+      <el-form label-width="100px" class="pr-6">
+        <el-form-item label="流水线名称" required>
           <el-input v-model="form.name" placeholder="填写流水线名称" />
         </el-form-item>
         <el-form-item label="流水线编码">
           <el-input v-model="form.code" placeholder="留空自动生成" />
         </el-form-item>
-        <el-form-item label="关联项目">
-          <el-select v-model="form.project_id" placeholder="选择项目">
+        <el-form-item label="关联项目" required>
+          <el-select v-model="form.project_id" placeholder="选择项目" class="w-full">
             <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="环境 / 分支">
-          <div class="inline-row">
-            <el-select v-model="form.environment" placeholder="环境">
+          <div class="flex gap-4 w-full">
+            <el-select v-model="form.environment" placeholder="环境" class="w-1/3">
               <el-option label="测试" value="test" />
               <el-option label="预发" value="staging" />
               <el-option label="生产" value="prod" />
             </el-select>
-            <el-input v-model="form.branch" placeholder="main" />
+            <el-input v-model="form.branch" placeholder="main" class="flex-1" />
           </div>
         </el-form-item>
         <el-form-item label="构建任务">
-          <el-select v-model="form.build_task_id" clearable filterable placeholder="可选">
+          <el-select v-model="form.build_task_id" clearable filterable placeholder="可选" class="w-full">
             <el-option v-for="task in taskOptions" :key="task.id" :label="task.name" :value="task.id" />
           </el-select>
         </el-form-item>
@@ -487,7 +494,7 @@ onMounted(async () => {
           <el-input v-model="form.build_hosts_text" type="textarea" :rows="3" placeholder="一行一个 IP，留空回退到目标主机" />
         </el-form-item>
         <el-form-item label="部署任务">
-          <el-select v-model="form.deploy_task_id" clearable filterable placeholder="可选">
+          <el-select v-model="form.deploy_task_id" clearable filterable placeholder="可选" class="w-full">
             <el-option v-for="task in taskOptions" :key="task.id" :label="task.name" :value="task.id" />
           </el-select>
         </el-form-item>
@@ -495,7 +502,7 @@ onMounted(async () => {
           <el-input v-model="form.target_hosts_text" type="textarea" :rows="3" placeholder="一行一个目标主机 IP" />
         </el-form-item>
         <el-form-item label="审批模板">
-          <el-select v-model="form.request_template_id" clearable filterable placeholder="可选">
+          <el-select v-model="form.request_template_id" clearable filterable placeholder="可选" class="w-full">
             <el-option v-for="item in templateOptions" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
@@ -503,15 +510,15 @@ onMounted(async () => {
           <el-input v-model="form.variables_text" type="textarea" :rows="4" placeholder="一行一个 KEY=VALUE" />
         </el-form-item>
         <el-form-item label="通知渠道">
-          <el-select v-model="form.notify_channels" multiple clearable filterable placeholder="为空则走系统默认" style="width: 100%;">
+          <el-select v-model="form.notify_channels" multiple clearable filterable placeholder="为空则走系统默认" class="w-full">
             <el-option v-for="item in notifyChannelOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="Webhook">
-          <div class="webhook-block">
-            <div class="webhook-row">
+          <div class="flex flex-col gap-2 w-full">
+            <div class="flex items-center gap-3">
               <el-switch v-model="form.webhook_enabled" :active-value="1" :inactive-value="0" />
-              <span class="muted">启用后可通过公开地址触发</span>
+              <span class="text-xs text-gray-500">启用后可通过公开地址触发</span>
             </div>
             <el-input v-model="form.webhook_secret" placeholder="可选，建议配置密钥" />
             <el-input :model-value="webhookPreviewUrl" readonly />
@@ -525,45 +532,47 @@ onMounted(async () => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="formVisible = false">取消</el-button>
-        <el-button type="primary" :loading="formLoading" @click="submitForm">保存</el-button>
+        <div class="flex justify-end pt-4">
+          <el-button @click="formVisible = false">取消</el-button>
+          <el-button type="primary" :loading="formLoading" @click="submitForm">保存</el-button>
+        </div>
       </template>
     </el-dialog>
 
     <el-drawer v-model="detailVisible" size="500px" direction="rtl" :with-header="false" @close="closeDetail">
-      <div v-if="selectedRunDetail?.run" class="drawer-head">
+      <div v-if="selectedRunDetail?.run" class="flex justify-between items-center mb-4 pb-4 border-b border-gray-100 px-6 pt-6">
         <div>
-          <div class="drawer-title">运行详情 #{{ selectedRunDetail.run.run_number }}</div>
-          <div class="muted">{{ selectedRunDetail.run.pipeline_name }}</div>
+          <div class="text-lg font-bold text-gray-900">运行详情 #{{ selectedRunDetail.run.run_number }}</div>
+          <div class="text-sm text-gray-500 mt-1">{{ selectedRunDetail.run.pipeline_name }}</div>
         </div>
         <el-tag :type="statusTagType(selectedRunDetail.run.status)">{{ statusLabel(selectedRunDetail.run.status) }}</el-tag>
       </div>
-      <el-card v-loading="detailLoading" shadow="never" body-style="padding: 16px">
+      <div v-loading="detailLoading" class="px-6 pb-6">
         <template v-if="selectedRunDetail?.run">
-          <el-descriptions size="small" :column="2" title="基本信息">
+          <el-descriptions size="small" :column="2" title="基本信息" border class="mb-6">
             <el-descriptions-item label="分支">{{ selectedRunDetail.run.branch || '—' }}</el-descriptions-item>
             <el-descriptions-item label="触发方式">{{ selectedRunDetail.run.trigger_type || '—' }}</el-descriptions-item>
             <el-descriptions-item label="提交">{{ selectedRunDetail.run.commit_id || '—' }}</el-descriptions-item>
             <el-descriptions-item label="审批单">{{ selectedRunDetail.run.approval_ticket_id || '—' }}</el-descriptions-item>
           </el-descriptions>
-          <el-divider />
-          <div class="detail-section">
-            <div class="section-title">阶段状态</div>
-            <div class="stage-grid">
-              <div class="stage-card">
-                <span class="stage-name">Build</span>
+          
+          <div class="flex flex-col gap-4">
+            <div class="font-semibold text-gray-900">阶段状态</div>
+            <div class="flex flex-col gap-3">
+              <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg bg-gray-50">
+                <span class="font-medium text-gray-800">Build</span>
                 <el-tag size="small" :type="statusTagType(selectedRunDetail.run.build_status || selectedRunDetail.run.build_stage_status)">
                   {{ statusLabel(selectedRunDetail.run.build_status || selectedRunDetail.run.build_stage_status) }}
                 </el-tag>
               </div>
-              <div class="stage-card">
-                <span class="stage-name">Approval</span>
+              <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg bg-gray-50">
+                <span class="font-medium text-gray-800">Approval</span>
                 <el-tag size="small" :type="statusTagType(selectedRunDetail.run.approval_status || selectedRunDetail.run.approval_stage_status)">
                   {{ statusLabel(selectedRunDetail.run.approval_status || selectedRunDetail.run.approval_stage_status) }}
                 </el-tag>
               </div>
-              <div class="stage-card">
-                <span class="stage-name">Deploy</span>
+              <div class="flex justify-between items-center p-3 border border-gray-200 rounded-lg bg-gray-50">
+                <span class="font-medium text-gray-800">Deploy</span>
                 <el-tag size="small" :type="statusTagType(selectedRunDetail.run.deploy_status || selectedRunDetail.run.deploy_stage_status)">
                   {{ statusLabel(selectedRunDetail.run.deploy_status || selectedRunDetail.run.deploy_stage_status) }}
                 </el-tag>
@@ -571,35 +580,11 @@ onMounted(async () => {
             </div>
           </div>
         </template>
-      </el-card>
+      </div>
     </el-drawer>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.header-actions { display: flex; justify-content: space-between; align-items: center; }
-.filter-row { margin-top: 8px; flex-wrap: wrap; }
-.config-block, .latest-run { display: flex; flex-direction: column; gap: 6px; }
-.config-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.muted { color: #909399; font-size: 12px; }
-.latest-summary { color: #606266; line-height: 1.5; }
-.inline-row { width: 100%; display: grid; grid-template-columns: 140px 1fr; gap: 12px; }
-.webhook-block { width: 100%; display: flex; flex-direction: column; gap: 10px; }
-.webhook-row { display: flex; align-items: center; gap: 12px; }
-.drawer-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.drawer-title { font-size: 16px; font-weight: 600; }
-.detail-section { display: flex; flex-direction: column; gap: 10px; }
-.section-title { font-size: 13px; font-weight: 600; color: #303133; }
-.stage-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.stage-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid #ebeef5;
-  border-radius: 10px;
-  background: #fafafa;
-}
-.stage-name { font-weight: 600; color: #303133; }
+/* Scoped styles replaced with Tailwind utility classes */
 </style>

@@ -79,64 +79,108 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
+  <div class="p-4 md:p-6 min-h-full flex flex-col">
+    <el-card shadow="never" class="border-0 shadow-sm flex-1 flex flex-col">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>部门管理</span>
-          <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增</el-button>
+        <div class="flex justify-between items-center">
+          <span class="text-base font-medium text-gray-800">部门管理</span>
+          <el-button type="primary" @click="handleAdd">
+            <el-icon class="mr-1"><Plus /></el-icon> 新增部门
+          </el-button>
         </div>
       </template>
 
-      <el-table :data="tableData" v-loading="loading" stripe border>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="部门名称" min-width="150" />
-        <el-table-column prop="code" label="编码" width="120" />
-        <el-table-column prop="manager_name" label="负责人" width="120">
-          <template #default="{ row }">{{ row.manager_name || '-' }}</template>
-        </el-table-column>
-        <el-table-column prop="user_count" label="人数" width="80" />
-        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="sort" label="排序" width="80" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" min-width="160" fixed="right">
+      <el-table :data="tableData" v-loading="loading" stripe border class="w-full">
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="name" label="部门名称" min-width="180">
           <template #default="{ row }">
-            <el-button link size="small" @click="handleEdit(row)"><el-icon><Edit /></el-icon> 编辑</el-button>
-            <el-button link size="small" type="danger" @click="handleDelete(row)"><el-icon><Delete /></el-icon> 删除</el-button>
+            <span class="font-medium text-gray-800">{{ row.name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="code" label="编码" width="140" align="center">
+          <template #default="{ row }">
+            <span class="font-mono text-gray-500 bg-gray-50 px-2 py-1 rounded text-xs">{{ row.code || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="manager_name" label="负责人" width="140" align="center">
+          <template #default="{ row }">
+            <span class="text-gray-700" v-if="row.manager_name">{{ row.manager_name }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="user_count" label="人数" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag type="info" size="small" effect="plain" round>{{ row.user_count }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="text-gray-500">{{ row.description || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="sort" label="排序" width="90" align="center" />
+        <el-table-column prop="created_at" label="创建时间" width="170" align="center" />
+        <el-table-column label="操作" width="180" fixed="right" align="center">
+          <template #default="{ row }">
+            <div class="flex items-center justify-center gap-1">
+              <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+              <el-divider direction="vertical" />
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
 
-      <el-pagination
-        v-if="total > 0"
-        style="margin-top: 16px; justify-content: flex-end;"
-        background layout="total, prev, pager, next"
-        :total="total" :page-size="size" :current-page="page"
-        @current-change="handlePageChange"
-      />
+      <div v-if="total > 0" class="mt-4 flex justify-end">
+        <el-pagination
+          background 
+          layout="total, prev, pager, next"
+          :total="total" 
+          :page-size="size" 
+          :current-page="page"
+          @current-change="handlePageChange"
+        />
+      </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px">
-      <el-form :model="form" label-width="80px">
-        <el-form-item label="名称"><el-input v-model="form.name" placeholder="如：运维部" /></el-form-item>
-        <el-form-item label="编码"><el-input v-model="form.code" placeholder="如：ops" /></el-form-item>
-        <el-form-item label="描述"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="480px" destroy-on-close align-center>
+      <el-form :model="form" label-width="90px" class="pr-6">
+        <el-form-item label="名称" required>
+          <el-input v-model="form.name" placeholder="如：运维部" />
+        </el-form-item>
+        <el-form-item label="编码">
+          <el-input v-model="form.code" placeholder="如：ops" />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="部门描述" />
+        </el-form-item>
         <el-form-item label="负责人">
-          <el-select v-model="form.manager_id" placeholder="选择负责人" clearable style="width: 100%;">
+          <el-select v-model="form.manager_id" placeholder="选择负责人" clearable class="w-full">
             <el-option label="无" :value="0" />
             <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="排序"><el-input-number v-model="form.sort" :min="0" /></el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="form.sort" :min="0" class="!w-32" />
+        </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitForm">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
+:deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+:deep(.el-table) {
+  flex: 1;
+}
 </style>

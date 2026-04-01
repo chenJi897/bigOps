@@ -379,29 +379,33 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="page-head">
-          <div class="page-head-title">
-            <span class="page-title">工单模板</span>
-            <span class="page-subtitle">按模板维护基础信息与审批节点</span>
-          </div>
-          <div class="page-head-actions">
-            <el-button @click="fetchData">刷新</el-button>
-            <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增工单模板</el-button>
-          </div>
-        </div>
-      </template>
+  <div class="h-full flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <div class="text-lg font-bold text-gray-900">工单模板</div>
+        <div class="text-xs text-gray-500 mt-1">按模板维护基础信息与审批节点</div>
+      </div>
+      <div class="flex gap-2">
+        <el-button @click="fetchData">刷新</el-button>
+        <el-button type="primary" @click="handleAdd"><el-icon class="mr-1"><Plus /></el-icon> 新增工单模板</el-button>
+      </div>
+    </div>
 
-      <el-table :data="tableData" v-loading="loading" stripe border>
-        <el-table-column prop="id" label="ID" width="80" />
+    <!-- Table -->
+    <div class="flex-1 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col overflow-hidden">
+      <el-table :data="tableData" v-loading="loading" class="flex-1 w-full" stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="name" label="模板名" min-width="180" />
-        <el-table-column prop="category" label="所属类别" width="120">
-          <template #default="{ row }">{{ formatCategory(row.category) }}</template>
+        <el-table-column prop="category" label="所属类别" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" type="info">{{ formatCategory(row.category) }}</el-tag>
+          </template>
         </el-table-column>
         <el-table-column label="节点列表" min-width="280" show-overflow-tooltip>
-          <template #default="{ row }">{{ buildStageSummary(row) }}</template>
+          <template #default="{ row }">
+            <span class="text-gray-600">{{ buildStageSummary(row) }}</span>
+          </template>
         </el-table-column>
         <el-table-column label="启用" width="90" align="center">
           <template #default="{ row }">
@@ -409,84 +413,96 @@ onMounted(fetchData)
           </template>
         </el-table-column>
         <el-table-column label="通知渠道" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">{{ formatNotifyChannels(row.notify_channels) }}</template>
+          <template #default="{ row }">
+            <span class="text-gray-500 text-sm">{{ formatNotifyChannels(row.notify_channels) }}</span>
+          </template>
         </el-table-column>
         <el-table-column prop="description" label="备注" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.description || '-' }}</template>
-        </el-table-column>
-        <el-table-column prop="updated_at" label="更新时间" width="180">
-          <template #default="{ row }">{{ row.updated_at || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" min-width="160">
           <template #default="{ row }">
-            <el-button link size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button link size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <span class="text-gray-500 text-sm">{{ row.description || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="updated_at" label="更新时间" width="170" align="center">
+          <template #default="{ row }">
+            <span class="text-gray-500 text-sm">{{ row.updated_at || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" fixed="right" width="140" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="980px">
-      <el-tabs v-model="activeTab">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="980px" destroy-on-close align-center>
+      <el-tabs v-model="activeTab" class="mb-4">
         <el-tab-pane label="基础信息" name="basic" />
         <el-tab-pane label="节点配置" name="nodes" />
       </el-tabs>
 
-      <div v-if="activeTab === 'basic'" class="template-section">
-        <div class="section-title">基础信息</div>
-        <el-form :model="form" label-width="100px">
-          <el-form-item label="模板类别"><el-select v-model="form.category" style="width: 100%;"><el-option v-for="item in templateCategoryOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
-          <el-form-item label="模板名称"><el-input v-model="form.name" /></el-form-item>
-          <el-form-item label="关联项目"><el-input v-model="form.project_name" placeholder="可选" /></el-form-item>
-          <el-form-item label="关联环境"><el-input v-model="form.environment_name" placeholder="可选" /></el-form-item>
-          <el-form-item label="模板排序"><el-input-number v-model="form.sort" :min="0" /></el-form-item>
-          <el-form-item label="默认优先级">
-            <el-select v-model="form.priority" style="width: 100%;">
-              <el-option label="低" value="low" />
-              <el-option label="中" value="medium" />
-              <el-option label="高" value="high" />
-              <el-option label="紧急" value="urgent" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="处理部门">
-            <el-select v-model="form.handle_dept_id" placeholder="可选" clearable style="width: 100%;">
-              <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="分派规则">
-            <el-select v-model="form.auto_assign_rule" style="width: 100%;">
-              <el-option label="手动指定" value="manual" />
-              <el-option label="资产负责人" value="resource_owner" />
-              <el-option label="服务树负责人" value="service_owner" />
-              <el-option label="部门默认人" value="dept_default" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="默认处理人" v-if="form.auto_assign_rule === 'dept_default'">
-            <el-select v-model="form.default_assignee" placeholder="选择处理人" clearable style="width: 100%;">
-              <el-option v-for="u in userOptions" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="通知渠道">
-            <el-select v-model="form.notify_channels" multiple clearable filterable style="width: 100%;" placeholder="为空则走系统默认">
-              <el-option v-for="item in notifyChannelOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="是否启用"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
-          <el-form-item label="备注"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
+      <div v-if="activeTab === 'basic'">
+        <div class="mb-4 pl-3 border-l-4 border-blue-500 text-sm font-bold text-gray-800">基础信息</div>
+        <el-form :model="form" label-width="100px" @submit.prevent>
+          <div class="grid grid-cols-2 gap-x-6 gap-y-2">
+            <el-form-item label="模板类别"><el-select v-model="form.category" class="w-full"><el-option v-for="item in templateCategoryOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+            <el-form-item label="模板名称"><el-input v-model="form.name" /></el-form-item>
+            <el-form-item label="关联项目"><el-input v-model="form.project_name" placeholder="可选" /></el-form-item>
+            <el-form-item label="关联环境"><el-input v-model="form.environment_name" placeholder="可选" /></el-form-item>
+            <el-form-item label="模板排序"><el-input-number v-model="form.sort" :min="0" class="w-full" /></el-form-item>
+            <el-form-item label="默认优先级">
+              <el-select v-model="form.priority" class="w-full">
+                <el-option label="低" value="low" />
+                <el-option label="中" value="medium" />
+                <el-option label="高" value="high" />
+                <el-option label="紧急" value="urgent" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="处理部门">
+              <el-select v-model="form.handle_dept_id" placeholder="可选" clearable class="w-full">
+                <el-option v-for="d in deptOptions" :key="d.id" :label="d.name" :value="d.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="分派规则">
+              <el-select v-model="form.auto_assign_rule" class="w-full">
+                <el-option label="手动指定" value="manual" />
+                <el-option label="资产负责人" value="resource_owner" />
+                <el-option label="服务树负责人" value="service_owner" />
+                <el-option label="部门默认人" value="dept_default" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="默认处理人" v-if="form.auto_assign_rule === 'dept_default'">
+              <el-select v-model="form.default_assignee" placeholder="选择处理人" clearable class="w-full">
+                <el-option v-for="u in userOptions" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="通知渠道">
+              <el-select v-model="form.notify_channels" multiple clearable filterable class="w-full" placeholder="为空则走系统默认">
+                <el-option v-for="item in notifyChannelOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="是否启用"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
+          </div>
+          <el-form-item label="备注" class="mt-2"><el-input v-model="form.description" type="textarea" :rows="3" /></el-form-item>
         </el-form>
       </div>
 
-      <div v-else class="template-section">
-        <div class="section-title section-head">
-          <span>节点配置</span>
-          <el-button link type="primary" @click="openNodeDialog()">添加节点</el-button>
+      <div v-else>
+        <div class="flex items-center justify-between mb-4">
+          <div class="pl-3 border-l-4 border-blue-500 text-sm font-bold text-gray-800">节点列表</div>
+          <el-button link type="primary" @click="openNodeDialog()">
+            <el-icon class="mr-1"><Plus /></el-icon>添加节点
+          </el-button>
         </div>
-        <el-table :data="templateNodes" border>
-          <el-table-column prop="name" label="节点名" min-width="160" />
-          <el-table-column label="审批方式" width="160">
-            <template #default="{ row }">{{ approveModeLabel(row.approve_mode) }}</template>
+        <el-table :data="templateNodes" border stripe>
+          <el-table-column prop="name" label="节点名" min-width="140" />
+          <el-table-column label="审批方式" width="140" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="row.approve_mode === 'none' ? 'info' : 'primary'">{{ approveModeLabel(row.approve_mode) }}</el-tag>
+            </template>
           </el-table-column>
-          <el-table-column label="字段数量" width="120">
+          <el-table-column label="字段数量" width="90" align="center">
             <template #default="{ row }">
               {{
                 (() => {
@@ -500,111 +516,70 @@ onMounted(fetchData)
               }}
             </template>
           </el-table-column>
-          <el-table-column label="处理成员" min-width="220">
-            <template #default="{ row }">{{ getUserNames(row.handler_ids) }}</template>
+          <el-table-column label="处理成员" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="text-sm text-gray-600">{{ getUserNames(row.handler_ids) }}</span>
+            </template>
           </el-table-column>
-          <el-table-column label="操作" width="140">
+          <el-table-column label="操作" width="120" align="center">
             <template #default="{ $index }">
-              <el-button link size="small" @click="openNodeDialog($index)">编辑</el-button>
-              <el-button link size="small" type="danger" @click="deleteNode($index)">删除</el-button>
+              <el-button link type="primary" size="small" @click="openNodeDialog($index)">编辑</el-button>
+              <el-button link type="danger" size="small" @click="deleteNode($index)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">提交</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitForm">提交</el-button>
+        </div>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="nodeDialogVisible" :title="nodeDialogTitle" width="860px">
-      <div class="template-section">
-        <div class="section-title">节点基础信息</div>
-        <el-form :model="nodeForm" label-width="110px">
-          <el-form-item label="节点名"><el-input v-model="nodeForm.name" /></el-form-item>
-          <el-form-item label="审批方式">
-            <el-radio-group v-model="nodeForm.approve_mode">
-              <el-radio value="or">或签(单一通过)</el-radio>
-              <el-radio value="and">会签(全部通过)</el-radio>
-              <el-radio value="none">无需审批</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="绑定处理成员">
-            <el-select v-model="nodeForm.handler_ids" multiple clearable style="width: 100%;">
-              <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="可选处理成员">
-            <el-select v-model="nodeForm.optional_handler_ids" multiple clearable style="width: 100%;">
-              <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="绑定通知成员">
-            <el-select v-model="nodeForm.notify_user_ids" multiple clearable style="width: 100%;">
-              <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="表单可视化设计">
-            <el-input v-model="nodeForm.node_form_schema" type="textarea" :rows="6" placeholder='{"fields":[]}' />
-          </el-form-item>
-          <el-form-item label="节点回调配置">
-            <el-input v-model="nodeForm.callback_config" type="textarea" :rows="4" placeholder="可选，回调配置 JSON" />
-          </el-form-item>
-        </el-form>
-      </div>
+    <el-dialog v-model="nodeDialogVisible" :title="nodeDialogTitle" width="860px" destroy-on-close align-center>
+      <div class="mb-4 pl-3 border-l-4 border-blue-500 text-sm font-bold text-gray-800">节点基础信息</div>
+      <el-form :model="nodeForm" label-width="110px" @submit.prevent>
+        <el-form-item label="节点名"><el-input v-model="nodeForm.name" /></el-form-item>
+        <el-form-item label="审批方式">
+          <el-radio-group v-model="nodeForm.approve_mode">
+            <el-radio value="or">或签(单一通过)</el-radio>
+            <el-radio value="and">会签(全部通过)</el-radio>
+            <el-radio value="none">无需审批</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="绑定处理成员">
+          <el-select v-model="nodeForm.handler_ids" multiple clearable class="w-full">
+            <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="可选处理成员">
+          <el-select v-model="nodeForm.optional_handler_ids" multiple clearable class="w-full">
+            <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="绑定通知成员">
+          <el-select v-model="nodeForm.notify_user_ids" multiple clearable class="w-full">
+            <el-option v-for="item in userOptions" :key="item.id" :label="item.real_name || item.username" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="表单可视化设计">
+          <el-input v-model="nodeForm.node_form_schema" type="textarea" :rows="6" placeholder='{"fields":[]}' class="font-mono text-sm" />
+        </el-form-item>
+        <el-form-item label="节点回调配置">
+          <el-input v-model="nodeForm.callback_config" type="textarea" :rows="4" placeholder="可选，回调配置 JSON" class="font-mono text-sm" />
+        </el-form-item>
+      </el-form>
       <template #footer>
-        <el-button @click="nodeDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveNode">应用</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="nodeDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveNode">应用</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-.page-head-title {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.page-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1f2937;
-}
-.page-subtitle {
-  font-size: 12px;
-  color: #6b7280;
-}
-.page-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.template-section {
-  padding-top: 8px;
-}
-.section-title {
-  margin-bottom: 14px;
-  padding-left: 10px;
-  border-left: 4px solid #0ea5e9;
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f2937;
-}
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-left: 0;
-  border-left: 0;
-}
 </style>

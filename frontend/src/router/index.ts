@@ -28,7 +28,8 @@ export const layoutRoute: RouteRecordRaw = {
 
 // 页面组件映射表：后端菜单 component 字段 → 前端组件
 const viewModules: Record<string, () => Promise<any>> = {
-  'Dashboard': () => import('../views/Dashboard.vue'),
+  'DashboardWorkbench': () => import('../views/dashboard/Workbench.vue'),
+  'DashboardOverview': () => import('../views/dashboard/Overview.vue'),
   'MonitorDashboard': () => import('../views/MonitorDashboard.vue'),
   'AlertRules': () => import('../views/AlertRules.vue'),
   'AgentDetail': () => import('../views/AgentDetail.vue'),
@@ -56,7 +57,7 @@ const viewModules: Record<string, () => Promise<any>> = {
   'RequestTemplates': () => import('../views/RequestTemplates.vue'),
   'ApprovalPolicies': () => import('../views/ApprovalPolicies.vue'),
   'NotificationConsole': () => import('../views/NotificationConsole.vue'),
-  'MyNotificationSettings': () => import('../views/MyNotificationSettings.vue'),
+  'UserSettings': () => import('../views/UserSettings.vue'),
   'TaskList': () => import('../views/TaskList.vue'),
   'TaskCreate': () => import('../views/TaskCreate.vue'),
   'TaskExecution': () => import('../views/TaskExecution.vue'),
@@ -67,8 +68,22 @@ const viewModules: Record<string, () => Promise<any>> = {
 const dashboardRoute: RouteRecordRaw = {
   path: 'dashboard',
   name: 'Dashboard',
-  component: viewModules.Dashboard,
-  meta: { title: '仪表盘', icon: 'Odometer', componentName: 'Dashboard' },
+  redirect: '/dashboard/workbench',
+  meta: { title: '仪表盘', icon: 'Odometer' },
+  children: [
+    {
+      path: 'workbench',
+      name: 'DashboardWorkbench',
+      component: viewModules.DashboardWorkbench,
+      meta: { title: '工作台', componentName: 'DashboardWorkbench', activeMenu: '/dashboard' },
+    },
+    {
+      path: 'overview',
+      name: 'DashboardOverview',
+      component: viewModules.DashboardOverview,
+      meta: { title: '概览', componentName: 'DashboardOverview', activeMenu: '/dashboard' },
+    },
+  ],
 }
 
 const router = createRouter({
@@ -256,15 +271,15 @@ function ensureCompanionRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
     component: viewModules.NotificationConsole,
     title: '通知配置中心',
     componentName: 'NotificationConsole',
-    activeMenu: templatesActiveMenu,
+    activeMenu: '/notification/console',
   })
 
   ensureHiddenRoute(nextRoutes, {
-    path: 'notification/preferences',
-    name: 'MyNotificationSettings',
-    component: viewModules.MyNotificationSettings,
-    title: '我的通知设置',
-    componentName: 'MyNotificationSettings',
+    path: 'user/settings',
+    name: 'UserSettings',
+    component: viewModules.UserSettings,
+    title: '个人设置',
+    componentName: 'UserSettings',
     activeMenu: '/dashboard',
   })
 

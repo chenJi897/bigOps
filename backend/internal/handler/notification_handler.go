@@ -5,9 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/config"
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
 	"github.com/bigops/platform/internal/service"
 )
@@ -23,30 +25,16 @@ func NewNotificationHandler() *NotificationHandler {
 }
 
 type NotificationConfigRequest struct {
-	DefaultChannels          []string `json:"default_channels"`
-	MaxRetries               int      `json:"max_retries"`
-	RetryIntervalSeconds     int      `json:"retry_interval_seconds"`
-	RetryScanIntervalSeconds int      `json:"retry_scan_interval_seconds"`
-	Webhook struct {
-		Enabled        bool   `json:"enabled"`
-		URL            string `json:"url"`
-		Secret         string `json:"secret"`
-		TimeoutSeconds int    `json:"timeout_seconds"`
-	} `json:"webhook"`
-	Email struct {
-		Enabled  bool   `json:"enabled"`
-		Host     string `json:"host"`
-		Port     int    `json:"port"`
-		Username string `json:"username"`
-		Password string `json:"password"`
-		From     string `json:"from"`
-	} `json:"email"`
-	MessagePusher struct {
+	DefaultChannels          []string          `json:"default_channels"`
+	MaxRetries               int               `json:"max_retries"`
+	RetryIntervalSeconds     int               `json:"retry_interval_seconds"`
+	RetryScanIntervalSeconds int               `json:"retry_scan_interval_seconds"`
+	ChannelMapping           map[string]string `json:"channel_mapping"`
+	MessagePusher            struct {
 		Enabled        bool   `json:"enabled"`
 		Server         string `json:"server"`
 		Username       string `json:"username"`
 		Token          string `json:"token"`
-		Channel        string `json:"channel"`
 		TimeoutSeconds int    `json:"timeout_seconds"`
 	} `json:"message_pusher"`
 }
@@ -72,26 +60,12 @@ func (h *NotificationHandler) UpdateConfig(c *gin.Context) {
 		MaxRetries:               req.MaxRetries,
 		RetryIntervalSeconds:     req.RetryIntervalSeconds,
 		RetryScanIntervalSeconds: req.RetryScanIntervalSeconds,
-		Webhook: config.NotificationWebhookConfig{
-			Enabled:        req.Webhook.Enabled,
-			URL:            req.Webhook.URL,
-			Secret:         req.Webhook.Secret,
-			TimeoutSeconds: req.Webhook.TimeoutSeconds,
-		},
-		Email: config.NotificationEmailConfig{
-			Enabled:  req.Email.Enabled,
-			Host:     req.Email.Host,
-			Port:     req.Email.Port,
-			Username: req.Email.Username,
-			Password: req.Email.Password,
-			From:     req.Email.From,
-		},
+		ChannelMapping:           req.ChannelMapping,
 		MessagePusher: config.MessagePusherConfig{
 			Enabled:        req.MessagePusher.Enabled,
 			Server:         req.MessagePusher.Server,
 			Username:       req.MessagePusher.Username,
 			Token:          req.MessagePusher.Token,
-			Channel:        req.MessagePusher.Channel,
 			TimeoutSeconds: req.MessagePusher.TimeoutSeconds,
 		},
 	}
@@ -99,6 +73,7 @@ func (h *NotificationHandler) UpdateConfig(c *gin.Context) {
 		response.Error(c, 500, err.Error())
 		return
 	}
+	logger.Info("更新通知配置", zap.String("operator", c.GetString("username")), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "通知配置已更新", cfg)
 }
 
@@ -133,6 +108,7 @@ func (h *NotificationHandler) MarkRead(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("标记通知已读", zap.String("operator", c.GetString("username")), zap.Int64("notification_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "已标记为已读", nil)
 }
 
@@ -143,6 +119,7 @@ func (h *NotificationHandler) MarkAllRead(c *gin.Context) {
 		response.InternalServerError(c, "批量已读失败")
 		return
 	}
+	logger.Info("标记全部通知已读", zap.String("operator", c.GetString("username")), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "已全部标记为已读", nil)
 }
 
@@ -154,6 +131,7 @@ func (h *NotificationHandler) ClearRead(c *gin.Context) {
 		response.InternalServerError(c, "清空已读失败")
 		return
 	}
+	logger.Info("清除已读通知", zap.String("operator", c.GetString("username")), zap.Int64("count", count), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "已清空已读通知", gin.H{"count": count})
 }
 
@@ -165,9 +143,12 @@ type NotificationTestRequest struct {
 }
 
 type NotificationPreferenceRequest struct {
-	EnabledChannels   []string `json:"enabled_channels"`
+	EnabledChannels    []string `json:"enabled_channels"`
 	SubscribedBizTypes []string `json:"subscribed_biz_types"`
-	Enabled           int8     `json:"enabled"`
+	// ChannelTargets 表示“个人通道按业务 -> Message Pusher 通道名”的映射
+	// 例如：{"alert_event":{"lark":"lark-ops-group-001"},"cicd_pipeline":{"lark":"lark-dev-group-002"}}
+	ChannelTargets map[string]map[string]string `json:"channel_targets"`
+	Enabled            int8     `json:"enabled"`
 }
 
 func (h *NotificationHandler) GetPreference(c *gin.Context) {
@@ -191,16 +172,19 @@ func (h *NotificationHandler) UpdatePreference(c *gin.Context) {
 	}
 	channels, _ := json.Marshal(req.EnabledChannels)
 	bizTypes, _ := json.Marshal(req.SubscribedBizTypes)
+	channelTargets, _ := json.Marshal(req.ChannelTargets)
 	item := &model.NotificationUserSetting{
 		UserID:             currentUserID,
 		EnabledChannels:    string(channels),
 		SubscribedBizTypes: string(bizTypes),
+		ChannelTargets:     string(channelTargets),
 		Enabled:            req.Enabled,
 	}
 	if err := h.svc.SaveUserPreference(item); err != nil {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新通知偏好", zap.String("operator", c.GetString("username")), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "个人通知设置已保存", item)
 }
 
@@ -220,14 +204,15 @@ func (h *NotificationHandler) TestSend(c *gin.Context) {
 		userIDs = []int64{currentUserID}
 	}
 	eventID, err := h.svc.Publish(service.NotificationPublishRequest{
-		EventType: "notification_test",
-		BizType:   "notification",
-		BizID:     currentUserID,
-		Title:     req.Title,
-		Content:   req.Content,
-		Level:     "info",
-		UserIDs:   userIDs,
-		Channels:  req.Channels,
+		EventType:      "notification_test",
+		BizType:        "notification",
+		BizID:          currentUserID,
+		Title:          req.Title,
+		Content:        req.Content,
+		Level:          "info",
+		UserIDs:        userIDs,
+		Channels:       req.Channels,
+		SkipPreference: true,
 		Payload: map[string]interface{}{
 			"title":    req.Title,
 			"content":  req.Content,
@@ -238,6 +223,7 @@ func (h *NotificationHandler) TestSend(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("发送测试通知", zap.String("operator", c.GetString("username")), zap.Int64("event_id", eventID), zap.Strings("channels", req.Channels), zap.Int("user_count", len(userIDs)), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "测试消息已发送", gin.H{"event_id": eventID})
 }
 
@@ -263,5 +249,60 @@ func (h *NotificationHandler) RetryEvent(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("重试通知事件", zap.String("operator", c.GetString("username")), zap.Int64("event_id", id), zap.Int("retry_count", count), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "已触发重试", gin.H{"delivery_count": count})
+}
+
+func (h *NotificationHandler) ListTemplates(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	items, err := h.svc.ListTemplates()
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, items)
+}
+
+func (h *NotificationHandler) UpdateTemplate(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var req struct {
+		Title   string `json:"title" binding:"required"`
+		Content string `json:"content" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	if err := h.svc.UpdateTemplate(id, req.Title, req.Content); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	logger.Info("更新通知模板", zap.String("operator", c.GetString("username")), zap.Int64("template_id", id), zap.String("ip", c.ClientIP()))
+	response.SuccessWithMessage(c, "模板已更新", nil)
+}
+
+func (h *NotificationHandler) PreviewTemplate(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	var req struct {
+		Title     string                 `json:"title" binding:"required"`
+		Content   string                 `json:"content" binding:"required"`
+		Variables map[string]interface{} `json:"variables"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	rendered, err := h.svc.RenderTemplate(req.Title, req.Content, req.Variables)
+	if err != nil {
+		response.Error(c, 400, "模板渲染失败: "+err.Error())
+		return
+	}
+	response.Success(c, gin.H{"title": rendered.Title, "content": rendered.Content})
 }

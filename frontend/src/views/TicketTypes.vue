@@ -122,25 +122,25 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>工单类型管理</span>
-          <div style="display: flex; gap: 8px;">
-            <el-button plain @click="router.push('/request/templates')">请求模板</el-button>
-            <el-button plain @click="router.push('/approval/policies')">审批策略</el-button>
-            <el-button plain @click="router.push('/notification/console')">通知联调</el-button>
-            <el-button type="primary" @click="handleAdd"><el-icon><Plus /></el-icon> 新增</el-button>
-          </div>
-        </div>
-      </template>
+  <div class="h-full flex flex-col">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+      <div class="text-lg font-bold text-gray-900">工单类型管理</div>
+      <div class="flex gap-2">
+        <el-button plain @click="router.push('/request/templates')">请求模板</el-button>
+        <el-button plain @click="router.push('/approval/policies')">审批策略</el-button>
+        <el-button plain @click="router.push('/notification/console')">通知联调</el-button>
+        <el-button type="primary" @click="handleAdd"><el-icon class="mr-1"><Plus /></el-icon> 新增</el-button>
+      </div>
+    </div>
 
-      <el-table :data="tableData" v-loading="loading" stripe border>
-        <el-table-column prop="id" label="ID" width="60" />
+    <!-- Table -->
+    <div class="flex-1 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col overflow-hidden">
+      <el-table :data="tableData" v-loading="loading" class="flex-1 w-full" stripe>
+        <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="name" label="类型名称" min-width="120" />
         <el-table-column prop="code" label="编码" width="100" />
-        <el-table-column label="默认优先级" width="100">
+        <el-table-column label="默认优先级" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="(row.priority === 'urgent' ? 'danger' : row.priority === 'high' ? 'warning' : 'info') as any" size="small">{{ priorityLabel(row.priority) }}</el-tag>
           </template>
@@ -148,58 +148,63 @@ onActivated(() => {
         <el-table-column label="分派规则" width="120">
           <template #default="{ row }">{{ ruleLabel(row.auto_assign_rule) }}</template>
         </el-table-column>
-        <el-table-column prop="handle_dept_name" label="默认处理部门" width="130">
+        <el-table-column prop="handle_dept_name" label="默认处理部门" width="150">
           <template #default="{ row }">{{ row.handle_dept_name || '-' }}</template>
         </el-table-column>
         <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="sort" label="排序" width="70" />
-        <el-table-column label="操作" min-width="140" fixed="right">
+        <el-table-column prop="sort" label="排序" width="80" align="center" />
+        <el-table-column label="操作" min-width="140" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link size="small" @click="handleEdit(row)"><el-icon><Edit /></el-icon> 编辑</el-button>
-            <el-button link size="small" type="danger" @click="handleDelete(row)"><el-icon><Delete /></el-icon> 删除</el-button>
+            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <el-pagination v-if="total > 0" style="margin-top: 16px; justify-content: flex-end;" background layout="total, prev, pager, next" :total="total" :page-size="size" :current-page="page" @current-change="(p: number) => { page = p; fetchData() }" />
-    </el-card>
+      <!-- Pagination -->
+      <div v-if="total > 0" class="p-4 border-t border-gray-100 flex justify-end bg-gray-50">
+        <el-pagination background layout="total, prev, pager, next" :total="total" :page-size="size" :current-page="page" @current-change="(p: number) => { page = p; fetchData() }" />
+      </div>
+    </div>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px">
-      <el-form :model="form" label-width="100px">
+    <!-- Dialog -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" destroy-on-close align-center>
+      <el-form :model="form" label-width="100px" @submit.prevent>
         <el-form-item label="类型名称"><el-input v-model="form.name" placeholder="如：故障报修" /></el-form-item>
         <el-form-item label="编码"><el-input v-model="form.code" placeholder="如：incident" /></el-form-item>
         <el-form-item label="图标"><el-input v-model="form.icon" placeholder="Element Plus 图标名" /></el-form-item>
         <el-form-item label="描述"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
         <el-form-item label="默认优先级">
-          <el-select v-model="form.priority" style="width: 100%;">
+          <el-select v-model="form.priority" class="w-full">
             <el-option v-for="o in priorityOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="分派规则">
-          <el-select v-model="form.auto_assign_rule" style="width: 100%;">
+          <el-select v-model="form.auto_assign_rule" class="w-full">
             <el-option v-for="o in assignRuleOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="处理部门">
-          <el-select v-model="form.handle_dept_id" placeholder="选择部门" clearable style="width: 100%;">
+          <el-select v-model="form.handle_dept_id" placeholder="选择部门" clearable class="w-full">
             <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="默认处理人" v-if="form.auto_assign_rule === 'dept_default'">
-          <el-select v-model="form.default_assignee" placeholder="选择处理人" clearable style="width: 100%;">
+          <el-select v-model="form.default_assignee" placeholder="选择处理人" clearable class="w-full">
             <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="排序"><el-input-number v-model="form.sort" :min="0" /></el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForm">确定</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitForm">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
 </style>

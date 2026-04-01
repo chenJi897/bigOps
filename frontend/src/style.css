@@ -1,5 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, -apple-system, sans-serif; background: #f5f7fa; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #333; }
+
+/* Custom scrollbar utility for tags bar */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Element Plus 主题定制 */
+:root {
+  /* 主色调改为更现代的靛蓝/钴蓝 */
+  --el-color-primary: #4f46e5;
+  --el-color-primary-light-3: #818cf8;
+  --el-color-primary-light-5: #a5b4fc;
+  --el-color-primary-light-7: #c7d2fe;
+  --el-color-primary-light-8: #e0e7ff;
+  --el-color-primary-light-9: #eef2ff;
+  --el-color-primary-dark-2: #4338ca;
+  
+  /* 圆角和边框阴影变得更加柔和 */
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 20px;
+  
+  --el-box-shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --el-box-shadow-base: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+}
 
 /* 全局表格优化 */
 .el-table th.el-table__cell > .cell,
@@ -10,7 +43,31 @@ body { font-family: system-ui, -apple-system, sans-serif; background: #f5f7fa; }
 .el-table--border .el-table__cell {
   border-right: 1px solid #ebeef5;
 }
+.el-table th.el-table__cell {
+  background-color: #f8fafc !important; /* 表头浅灰色背景 */
+  color: #475569;
+  font-weight: 600;
+}
+
 /* 拖拽列宽时的视觉反馈 */
 .el-table th.el-table__cell .el-table__column-resize-proxy {
-  border-left: 1px solid #409eff;
+  border-left: 1px solid var(--el-color-primary);
+}
+
+/* 页面/卡片基础样式 (用于取代 Tailwind 的简单效果) */
+.page-container {
+  padding: 20px;
+}
+.page-card {
+  background: #ffffff;
+  border-radius: var(--el-border-radius-base);
+  box-shadow: var(--el-box-shadow-light);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 16px;
 }
