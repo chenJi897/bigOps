@@ -76,6 +76,19 @@ interface RequestFormField {
   default?: string | number | boolean
 }
 
+const categoryOptions = [
+  { label: '发版申请', value: 'release' },
+  { label: '权限申请', value: 'access' },
+  { label: '数据库上线', value: 'db_release' },
+  { label: '代码仓库', value: 'repo' },
+  { label: '其他', value: 'other' },
+]
+
+const categoryLabelMap = categoryOptions.reduce<Record<string, string>>((acc, item) => {
+  acc[item.value] = item.label
+  return acc
+}, {})
+
 const requestSchemaFields = computed<RequestFormField[]>(() => {
   if (!selectedTemplate.value?.form_schema) return []
   try {
@@ -85,6 +98,17 @@ const requestSchemaFields = computed<RequestFormField[]>(() => {
   } catch {
     return []
   }
+})
+
+const groupedTemplates = computed(() => {
+  const groups: Record<string, any[]> = {}
+  for (const tpl of allRequestTemplates.value) {
+    const rawCat = tpl.category || 'other'
+    const catName = categoryLabelMap[rawCat] || rawCat
+    if (!groups[catName]) groups[catName] = []
+    groups[catName].push(tpl)
+  }
+  return groups
 })
 
 async function loadTicketTypes() {
@@ -336,154 +360,239 @@ onActivated(() => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header><span>发起工单</span></template>
-
-      <!-- Step 1: 选择模板 -->
-      <div v-if="step === 1">
-        <p style="margin-bottom: 16px; color: #606266;">请选择工单模板：</p>
-        <el-row :gutter="16">
-          <el-col :span="6" v-for="template in allRequestTemplates" :key="'template-' + template.id">
-            <el-card shadow="hover" class="type-card request-card" @click="selectRequestTemplate(template)" style="cursor: pointer; margin-bottom: 16px;">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <el-icon size="24" color="#16a34a"><component :is="template.icon || 'DocumentAdd'" /></el-icon>
-                <div>
-                  <div style="font-weight: 600;">{{ template.name }}</div>
-                  <div style="font-size: 12px; color: #909399;">{{ template.description || template.category }}</div>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
-        <el-empty v-if="allRequestTemplates.length === 0" description="暂无工单模板，请先创建" />
+  <div class="h-full flex flex-col">
+    <div class="mb-6 flex items-start flex-col gap-2">
+      <el-button v-if="step === 2" link @click="step = 1" class="!text-gray-500 hover:!text-indigo-600 transition-colors -ml-1">
+        <el-icon class="mr-1"><ArrowLeft /></el-icon> 返回模板列表
+      </el-button>
+      <div class="flex items-center justify-between w-full">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 tracking-tight">发起工单</h1>
+          <p class="text-sm text-gray-500 mt-1">按步骤选择服务模板并填写详细请求信息</p>
+        </div>
       </div>
+    </div>
 
-      <!-- Step 2: 填写表单 -->
-      <div v-if="step === 2">
-        <el-button link @click="step = 1" style="margin-bottom: 16px;"><el-icon><ArrowLeft /></el-icon> 返回模板列表</el-button>
-        <el-tag style="margin-left: 8px;">{{ selectedTemplate?.name }}</el-tag>
-        <el-tag v-if="selectedTemplate" type="success" style="margin-left: 8px;">工单模板</el-tag>
-
-        <el-form :model="form" label-width="100px" style="max-width: 700px; margin-top: 16px;">
-          <el-form-item label="标题"><el-input v-model="form.title" placeholder="简明描述问题" /></el-form-item>
-          <el-form-item label="优先级">
-            <el-select v-model="form.priority" style="width: 100%;">
-              <el-option v-for="o in priorityOptions" :key="o.value" :label="o.label" :value="o.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="描述">
-            <el-input v-model="form.description" type="textarea" :rows="4" placeholder="详细描述问题、影响范围、期望处理方式" />
-          </el-form-item>
-          <template v-for="field in requestSchemaFields" :key="field.key">
-            <el-form-item :label="field.label">
-              <el-input
-                v-if="field.type === 'text'"
-                v-model="requestFormData[field.key]"
-                :placeholder="field.placeholder || `请输入${field.label}`"
-              />
-              <el-input
-                v-else-if="field.type === 'textarea'"
-                v-model="requestFormData[field.key]"
-                type="textarea"
-                :rows="field.rows || 3"
-                :placeholder="field.placeholder || `请输入${field.label}`"
-              />
-              <el-input-number
-                v-else-if="field.type === 'number'"
-                v-model="requestFormData[field.key]"
-                style="width: 100%;"
-              />
-              <el-select
-                v-else-if="field.type === 'select'"
-                v-model="requestFormData[field.key]"
-                clearable
-                :placeholder="field.placeholder || `请选择${field.label}`"
-                style="width: 100%;"
-              >
-                <el-option v-for="option in field.options || []" :key="String(option.value)" :label="option.label" :value="option.value" />
-              </el-select>
-              <el-switch
-                v-else-if="field.type === 'switch'"
-                v-model="requestFormData[field.key]"
-              />
-              <el-input
-                v-else
-                v-model="requestFormData[field.key]"
-                :placeholder="field.placeholder || `请输入${field.label}`"
-              />
-            </el-form-item>
-          </template>
-          <el-form-item label="关联资源">
-            <el-select v-model="form.resource_type" placeholder="选择资源类型" clearable style="width: 160px; margin-right: 8px;" @change="handleResourceTypeChange">
-              <el-option v-for="o in resourceTypeOptions" :key="o.value" :label="o.label" :value="o.value" />
-            </el-select>
-            <!-- 资产选择器 -->
-            <div v-if="form.resource_type === 'asset'" class="resource-selector">
-              <div
-                class="asset-selection-panel"
-                :class="{ 'is-empty': !selectedAssets.length }"
-                @click="openAssetDialog"
-              >
-                <div class="asset-selection-head">
-                  <div class="asset-selection-meta">
-                    <span class="asset-selection-label">主机资产</span>
-                    <span class="asset-selection-count">
-                      {{ selectedAssets.length ? `已选 ${selectedAssets.length} 台` : '未选择' }}
-                    </span>
-                  </div>
-                  <span class="asset-selection-action">
-                    {{ selectedAssets.length ? '点击重新选择' : '点击选择主机资产' }}
-                  </span>
+    <!-- Step 1: 选择模板 -->
+    <div v-if="step === 1" class="space-y-6">
+      <div v-if="Object.keys(groupedTemplates).length > 0">
+        <div v-for="(templates, category) in groupedTemplates" :key="category" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+          <h3 class="text-base font-medium text-gray-800 mb-4 flex items-center gap-2">
+            <span class="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
+            {{ category }}
+            <span class="text-xs font-normal text-gray-400 ml-2 bg-gray-100 px-2 py-0.5 rounded-full">{{ templates.length }}</span>
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div 
+              v-for="template in templates" 
+              :key="'template-' + template.id"
+              class="group relative bg-white border border-gray-200 rounded-xl p-5 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all duration-300 flex flex-col gap-3"
+              @click="selectRequestTemplate(template)"
+            >
+              <div class="flex items-center justify-between">
+                <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                  <el-icon class="text-2xl"><component :is="template.icon || 'DocumentAdd'" /></el-icon>
                 </div>
-
-                <div v-if="selectedAssets.length" class="asset-selection-tags">
-                  <span
-                    v-for="asset in selectedAssets"
-                    :key="asset.id"
-                    class="asset-selection-tag"
-                    :title="`${asset.hostname} (${asset.ip})`"
-                  >
-                    {{ asset.hostname }}({{ asset.ip }})
-                  </span>
-                </div>
-                <div v-else class="asset-selection-empty-text">
-                  资源类型切换后会自动弹出选择窗口，后续可在这里继续调整。
-                </div>
+                <el-icon class="text-gray-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:text-indigo-500 transition-all text-xl"><ArrowRight /></el-icon>
+              </div>
+              <div>
+                <h4 class="text-base font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors">{{ template.name }}</h4>
+                <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ template.description || '暂无描述信息' }}</p>
               </div>
             </div>
-            <!-- 云账号 -->
-            <el-select v-if="form.resource_type === 'cloud_account'" v-model="form.resource_id" placeholder="选择云账号" style="flex: 1;">
-              <el-option v-for="a in cloudAccountOptions" :key="a.id" :label="a.label" :value="a.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="处理部门">
-            <el-select v-model="form.handle_dept_id" placeholder="选择部门" clearable style="width: 100%;">
-              <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="处理人">
-            <el-select v-model="form.assignee_id" placeholder="可留空（自动分派）" clearable style="width: 100%;">
-              <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" :loading="submitting" @click="submitForm">提交工单</el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-    </el-card>
-
-    <el-dialog v-model="assetDialogVisible" title="资产管理" width="1040px" top="6vh" class="asset-picker-dialog">
-      <div class="asset-picker">
-        <aside class="asset-picker-sidebar">
-          <div class="picker-tabs">
-            <span class="picker-tab active">资产树</span>
           </div>
-          <div class="picker-tree-toolbar">
+        </div>
+      </div>
+      
+      <div v-else class="flex flex-col items-center justify-center py-16 bg-white shadow-sm rounded-xl border border-dashed border-gray-200">
+        <el-icon class="text-gray-300 text-5xl mb-3"><DocumentDelete /></el-icon>
+        <p class="text-gray-500 text-sm">暂无工单模板，请联系管理员创建</p>
+      </div>
+    </div>
+
+    <!-- Step 2: 填写表单 -->
+    <div v-if="step === 2" class="space-y-6">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 relative overflow-hidden">
+        <!-- 装饰背景 -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-bl-full -mr-16 -mt-16 opacity-50 z-0 pointer-events-none"></div>
+        
+        <div class="relative z-10">
+          <div class="flex items-center gap-3 mb-8 pb-4 border-b border-gray-100">
+            <div class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+              <el-icon class="text-xl"><EditPen /></el-icon>
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-gray-800">{{ selectedTemplate?.name }}</h2>
+              <p class="text-xs text-gray-500 mt-0.5">请详细填写以下申请信息，带 * 为必填项</p>
+            </div>
+          </div>
+
+          <el-form :model="form" label-width="110px" class="w-full" label-position="right" require-asterisk-position="right">
+            <el-form-item label="工单标题" required class="font-medium">
+              <el-input v-model="form.title" placeholder="请简明扼要地描述您的申请或问题" size="large" class="!rounded-md" />
+            </el-form-item>
+            
+            <el-form-item label="优先级">
+              <el-select v-model="form.priority" class="w-full" size="large">
+                <template #prefix>
+                  <el-icon class="text-gray-400"><WarnTriangleFilled /></el-icon>
+                </template>
+                <el-option v-for="o in priorityOptions" :key="o.value" :label="o.label" :value="o.value">
+                  <span class="flex items-center justify-between w-full">
+                    <span>{{ o.label }}</span>
+                    <span class="w-2 h-2 rounded-full" :class="{'bg-red-500': o.value==='high', 'bg-orange-400': o.value==='medium', 'bg-green-500': o.value==='low'}"></span>
+                  </span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+            
+            <el-form-item label="详细描述">
+              <el-input v-model="form.description" type="textarea" :rows="4" placeholder="请详细描述问题背景、影响范围或期望达到的处理结果..." class="!rounded-md font-normal text-sm" />
+            </el-form-item>
+            
+            <div v-if="requestSchemaFields.length > 0" class="my-8 pt-6 border-t border-gray-100">
+              <h3 class="text-sm font-semibold text-gray-700 mb-6 flex items-center gap-2">
+                <el-icon class="text-indigo-500"><Document /></el-icon> 附加表单信息
+              </h3>
+              
+              <template v-for="field in requestSchemaFields" :key="field.key">
+                <el-form-item :label="field.label" :required="field.required">
+                  <el-input
+                    v-if="field.type === 'text'"
+                    v-model="requestFormData[field.key]"
+                    :placeholder="field.placeholder || `请输入${field.label}`"
+                    size="large"
+                  />
+                  <el-input
+                    v-else-if="field.type === 'textarea'"
+                    v-model="requestFormData[field.key]"
+                    type="textarea"
+                    :rows="field.rows || 3"
+                    :placeholder="field.placeholder || `请输入${field.label}`"
+                  />
+                  <el-input-number
+                    v-else-if="field.type === 'number'"
+                    v-model="requestFormData[field.key]"
+                    class="!w-full"
+                    size="large"
+                  />
+                  <el-select
+                    v-else-if="field.type === 'select'"
+                    v-model="requestFormData[field.key]"
+                    clearable
+                    :placeholder="field.placeholder || `请选择${field.label}`"
+                    class="w-full"
+                    size="large"
+                  >
+                    <el-option v-for="option in field.options || []" :key="String(option.value)" :label="option.label" :value="option.value" />
+                  </el-select>
+                  <el-switch
+                    v-else-if="field.type === 'switch'"
+                    v-model="requestFormData[field.key]"
+                    class="mt-1.5"
+                  />
+                  <el-input
+                    v-else
+                    v-model="requestFormData[field.key]"
+                    :placeholder="field.placeholder || `请输入${field.label}`"
+                    size="large"
+                  />
+                </el-form-item>
+              </template>
+            </div>
+
+            <div class="my-8 pt-6 border-t border-gray-100">
+              <h3 class="text-sm font-semibold text-gray-700 mb-6 flex items-center gap-2">
+                <el-icon class="text-indigo-500"><Connection /></el-icon> 资源与派发
+              </h3>
+              
+              <el-form-item label="关联资源">
+                <div class="flex flex-col sm:flex-row gap-3 w-full">
+                  <el-select v-model="form.resource_type" placeholder="选择资源类型" clearable class="w-full sm:w-40 flex-shrink-0" size="large" @change="handleResourceTypeChange">
+                    <el-option v-for="o in resourceTypeOptions" :key="o.value" :label="o.label" :value="o.value" />
+                  </el-select>
+                  
+                  <!-- 资产选择器 -->
+                  <div v-if="form.resource_type === 'asset'" class="w-full">
+                    <div
+                      class="flex flex-col border border-gray-200 rounded-lg p-3 cursor-pointer transition-all hover:border-indigo-400 group bg-gray-50/50 hover:bg-indigo-50/30"
+                      :class="{ 'border-dashed border-gray-300 bg-gray-50': !selectedAssets.length }"
+                      @click="openAssetDialog"
+                    >
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2 text-sm">
+                          <el-icon class="text-gray-400 group-hover:text-indigo-500"><Monitor /></el-icon>
+                          <span class="font-medium text-gray-700">主机资产</span>
+                          <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 ml-2">
+                            {{ selectedAssets.length ? `已选 ${selectedAssets.length} 台` : '未选择' }}
+                          </span>
+                        </div>
+                        <span class="text-xs text-indigo-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                          {{ selectedAssets.length ? '重新选择' : '点击选择' }} <el-icon><ArrowRight /></el-icon>
+                        </span>
+                      </div>
+
+                      <div v-if="selectedAssets.length" class="flex flex-wrap gap-2 mt-2">
+                        <span
+                          v-for="asset in selectedAssets"
+                          :key="asset.id"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white border border-gray-200 text-xs text-gray-600 shadow-sm"
+                          :title="`${asset.hostname} (${asset.ip})`"
+                        >
+                          <el-icon class="text-green-500"><CircleCheckFilled /></el-icon>
+                          {{ asset.hostname }} <span class="text-gray-400 ml-1">{{ asset.ip }}</span>
+                        </span>
+                      </div>
+                      <div v-else class="text-xs text-gray-400 mt-1 pl-6">
+                        点击此处打开资产选择窗口，选择关联的主机设备。
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 云账号 -->
+                  <el-select v-if="form.resource_type === 'cloud_account'" v-model="form.resource_id" placeholder="请选择云账号" class="w-full" size="large">
+                    <el-option v-for="a in cloudAccountOptions" :key="a.id" :label="a.label" :value="a.id" />
+                  </el-select>
+                </div>
+              </el-form-item>
+              
+              <el-form-item label="处理部门">
+                <el-select v-model="form.handle_dept_id" placeholder="可留空，若不选将根据路由规则指派" clearable class="w-full" size="large">
+                  <template #prefix><el-icon class="text-gray-400"><OfficeBuilding /></el-icon></template>
+                  <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
+                </el-select>
+              </el-form-item>
+              
+              <el-form-item label="处理人">
+                <el-select v-model="form.assignee_id" placeholder="可留空，自动分派给部门人员" clearable class="w-full" size="large">
+                  <template #prefix><el-icon class="text-gray-400"><User /></el-icon></template>
+                  <el-option v-for="u in allUsers" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
+                </el-select>
+              </el-form-item>
+            </div>
+
+            <div class="mt-10 pt-6 border-t border-gray-100 flex items-center justify-end gap-4">
+              <el-button @click="step = 1" size="large">取消</el-button>
+              <el-button type="primary" :loading="submitting" @click="submitForm" size="large" class="!px-8 !rounded-md shadow-sm shadow-indigo-200">
+                <el-icon class="mr-2"><Promotion /></el-icon> 提交工单申请
+              </el-button>
+            </div>
+          </el-form>
+        </div>
+      </div>
+    </div>
+
+    <el-dialog v-model="assetDialogVisible" title="资产管理" width="1040px" top="6vh" class="!rounded-xl overflow-hidden" :body-style="{ padding: '0px' }">
+      <div class="flex h-[600px] bg-white">
+        <aside class="w-72 border-r border-slate-200 flex flex-col bg-slate-50">
+          <div class="flex border-b border-slate-200 bg-white">
+            <span class="flex-1 text-center py-3 text-sm cursor-pointer border-b-2 border-indigo-500 text-indigo-600 font-bold">资产树</span>
+          </div>
+          <div class="p-3 bg-white border-b border-slate-100">
             <el-button link :type="!selectedServiceTreeNode ? 'primary' : 'default'" @click="resetAssetTreeFilter">全部资产</el-button>
           </div>
-          <el-scrollbar class="picker-tree-scroll">
+          <el-scrollbar class="flex-1 p-2">
             <el-tree
               :data="serviceTreeOptions"
               node-key="id"
@@ -495,21 +604,22 @@ onActivated(() => {
               @node-click="handleAssetTreeClick"
             >
               <template #default="{ data }">
-                <div class="picker-tree-node">
-                  <span class="picker-tree-label">{{ data.name }}</span>
-                  <span class="picker-tree-count">{{ getNodeAssetCount(data) }}</span>
+                <div class="w-full flex items-center justify-between gap-2 pr-1.5">
+                  <span class="truncate">{{ data.name }}</span>
+                  <span class="min-w-[22px] h-[22px] px-1.5 rounded-full bg-emerald-50 text-teal-700 text-xs leading-[22px] text-center">{{ getNodeAssetCount(data) }}</span>
                 </div>
               </template>
             </el-tree>
           </el-scrollbar>
         </aside>
 
-        <section class="asset-picker-main">
-          <div class="picker-toolbar">
+        <section class="flex-1 p-5 bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col overflow-hidden">
+          <div class="flex items-center gap-3 mb-4">
             <el-input
               v-model="assetDialogQuery.keyword"
               placeholder="搜索主机名 / IP"
               clearable
+              class="max-w-xs"
               @keyup.enter="handleAssetDialogSearch"
             >
               <template #prefix><el-icon><Search /></el-icon></template>
@@ -522,7 +632,7 @@ onActivated(() => {
             :data="assetDialogData"
             v-loading="assetDialogLoading"
             border
-            height="420"
+            class="flex-1 h-0 shadow-sm rounded-lg"
             row-key="id"
             @selection-change="handleAssetSelectionChange"
             @row-dblclick="handleAssetRowDoubleClick"
@@ -538,13 +648,13 @@ onActivated(() => {
             <el-table-column prop="service_tree_name" label="归属服务" min-width="160" show-overflow-tooltip />
           </el-table>
 
-          <div class="picker-footer">
-            <div class="picker-selection">
-              <span class="picker-selection-label">已选资产</span>
-              <span v-if="Object.keys(draftSelectedAssets).length" class="picker-selection-value">
+          <div class="flex items-center justify-between gap-4 mt-4">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-slate-500 text-sm">已选资产</span>
+              <span v-if="Object.keys(draftSelectedAssets).length" class="text-slate-800 font-semibold">
                 {{ Object.keys(draftSelectedAssets).length }} 台
               </span>
-              <span v-else class="picker-selection-empty">未选择</span>
+              <span v-else class="text-slate-400">未选择</span>
             </div>
             <el-pagination
               v-if="assetDialogTotal > 0"
@@ -562,225 +672,15 @@ onActivated(() => {
       </div>
 
       <template #footer>
-        <el-button @click="assetDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmSelectedAsset">确认</el-button>
+        <div class="border-t border-slate-100 pt-3 flex justify-end gap-2 pr-2">
+          <el-button @click="assetDialogVisible = false" class="!rounded-lg">取消</el-button>
+          <el-button type="primary" @click="confirmSelectedAsset" class="!rounded-lg">确认</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.type-card:hover { border-color: #409eff; }
-
-.resource-selector {
-  flex: 1;
-  min-width: 0;
-}
-
-.asset-selection-panel {
-  width: 100%;
-  min-width: 0;
-  border: 1px solid #d7dee7;
-  border-radius: 12px;
-  background: #fff;
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.asset-selection-panel:hover {
-  border-color: #a9c2de;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
-}
-
-.asset-selection-panel.is-empty {
-  border-style: dashed;
-  background: #fafcff;
-}
-
-.asset-selection-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.asset-selection-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.asset-selection-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #233548;
-}
-
-.asset-selection-count {
-  font-size: 12px;
-  color: #66788a;
-}
-
-.asset-selection-action {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: #2563eb;
-}
-
-.asset-selection-tags {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-height: 92px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.asset-selection-tag {
-  max-width: 100%;
-  padding: 7px 12px;
-  border-radius: 10px;
-  border: 1px solid #dde3ea;
-  background: #f3f4f6;
-  color: #3f4d5a;
-  font-size: 12px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.asset-selection-empty-text {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.asset-picker {
-  display: flex;
-  min-height: 540px;
-  background: #f5f7fb;
-  border: 1px solid #e6edf5;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.asset-picker-sidebar {
-  width: 270px;
-  background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
-  border-right: 1px solid #e5ebf2;
-  display: flex;
-  flex-direction: column;
-}
-
-.picker-tabs {
-  display: flex;
-  padding: 14px 16px 0;
-  border-bottom: 1px solid #edf2f7;
-}
-
-.picker-tab {
-  position: relative;
-  padding: 10px 12px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #243447;
-}
-
-.picker-tab.active::after {
-  content: '';
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 0;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #14b8a6 0%, #0ea5e9 100%);
-}
-
-.picker-tree-toolbar {
-  padding: 12px 16px 4px;
-}
-
-.picker-tree-scroll {
-  flex: 1;
-  padding: 4px 10px 12px 12px;
-}
-
-.picker-tree-node {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding-right: 6px;
-}
-
-.picker-tree-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.picker-tree-count {
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #0f766e;
-  font-size: 12px;
-  line-height: 22px;
-  text-align: center;
-}
-
-.asset-picker-main {
-  flex: 1;
-  padding: 18px;
-  background: linear-gradient(180deg, #f9fbfd 0%, #f4f7fb 100%);
-}
-
-.picker-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.picker-toolbar .el-input {
-  max-width: 320px;
-}
-
-.picker-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 14px;
-}
-
-.picker-selection {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.picker-selection-label {
-  color: #6b7a89;
-  font-size: 13px;
-}
-
-.picker-selection-value {
-  color: #213547;
-  font-weight: 600;
-}
-
-.picker-selection-empty {
-  color: #98a2b3;
-}
+/* Scoped styles removed in favor of Tailwind */
 </style>

@@ -90,53 +90,114 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
+  <div class="p-4 md:p-6 min-h-full flex flex-col bg-slate-50">
+    <el-card shadow="never" class="border-0 shadow-sm rounded-2xl flex-1 flex flex-col">
       <template #header>
-        <div class="page-head">
-          <span class="page-title">监控数据源</span>
-          <el-button type="primary" @click="openAdd">新增数据源</el-button>
+        <div class="flex justify-between items-center">
+          <span class="text-xl font-bold text-slate-800">监控数据源</span>
+          <el-button type="primary" @click="openAdd">
+            <el-icon class="mr-1"><Plus /></el-icon> 新增数据源
+          </el-button>
         </div>
       </template>
-      <el-table :data="tableData" v-loading="loading" stripe border>
-        <el-table-column prop="name" label="名称" min-width="180" />
-        <el-table-column prop="type" label="类型" width="120" />
-        <el-table-column prop="base_url" label="地址" min-width="260" show-overflow-tooltip />
-        <el-table-column prop="auth_type" label="认证" width="100" />
-        <el-table-column prop="status" label="状态" width="100" />
-        <el-table-column label="操作" width="220" fixed="right">
+      <el-table :data="tableData" v-loading="loading" stripe border class="w-full">
+        <el-table-column prop="name" label="名称" min-width="180">
           <template #default="{ row }">
-            <el-button link type="primary" @click="healthCheck(row)">健康检查</el-button>
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+            <span class="font-medium text-slate-800">{{ row.name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="type" label="类型" width="140" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" type="info" effect="plain" round>{{ row.type }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="base_url" label="地址" min-width="260" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="font-mono text-slate-600 text-sm bg-slate-50 px-2 py-1 rounded">{{ row.base_url }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="auth_type" label="认证" width="100" align="center" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small" effect="light">
+              {{ row.status === 'active' ? '启用' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="240" fixed="right" align="center">
+          <template #default="{ row }">
+            <div class="flex items-center justify-center gap-1">
+              <el-button link type="success" @click="healthCheck(row)">健康检查</el-button>
+              <el-divider direction="vertical" />
+              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-divider direction="vertical" />
+              <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑数据源' : '新增数据源'" width="560px">
-      <el-form label-width="100px">
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="类型"><el-select v-model="form.type"><el-option label="Prometheus" value="prometheus" /></el-select></el-form-item>
-        <el-form-item label="地址"><el-input v-model="form.base_url" placeholder="http://prometheus:9090" /></el-form-item>
-        <el-form-item label="访问方式"><el-select v-model="form.access_type"><el-option label="Proxy" value="proxy" /></el-select></el-form-item>
-        <el-form-item label="认证方式"><el-select v-model="form.auth_type"><el-option label="无" value="none" /><el-option label="Basic" value="basic" /></el-select></el-form-item>
-        <el-form-item label="用户名"><el-input v-model="form.username" /></el-form-item>
-        <el-form-item label="密码"><el-input v-model="form.password" type="password" show-password /></el-form-item>
-        <el-form-item label="请求头 JSON"><el-input v-model="form.headers_json" type="textarea" :rows="4" /></el-form-item>
-        <el-form-item label="状态"><el-select v-model="form.status"><el-option label="active" value="active" /><el-option label="inactive" value="inactive" /></el-select></el-form-item>
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑数据源' : '新增数据源'" width="560px" destroy-on-close align-center>
+      <el-form label-width="110px" class="pr-6">
+        <el-form-item label="名称" required>
+          <el-input v-model="form.name" placeholder="例如：Prometheus-Prod" />
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="form.type" class="w-full">
+            <el-option label="Prometheus" value="prometheus" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="地址" required>
+          <el-input v-model="form.base_url" placeholder="http://prometheus:9090" />
+        </el-form-item>
+        <el-form-item label="访问方式">
+          <el-select v-model="form.access_type" class="w-full">
+            <el-option label="Proxy" value="proxy" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="认证方式">
+          <el-select v-model="form.auth_type" class="w-full">
+            <el-option label="无" value="none" />
+            <el-option label="Basic" value="basic" />
+          </el-select>
+        </el-form-item>
+        <template v-if="form.auth_type === 'basic'">
+          <el-form-item label="用户名">
+            <el-input v-model="form.username" placeholder="Basic Auth 用户名" />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input v-model="form.password" type="password" show-password placeholder="Basic Auth 密码" />
+          </el-form-item>
+        </template>
+        <el-form-item label="请求头 JSON">
+          <el-input v-model="form.headers_json" type="textarea" :rows="4" placeholder="{&quot;X-Custom-Header&quot;: &quot;value&quot;}" class="font-mono text-sm" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="form.status" class="w-full">
+            <el-option label="启用" value="active" />
+            <el-option label="禁用" value="inactive" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="dialogLoading" @click="submit">保存</el-button>
+        <div class="flex justify-end gap-2">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="dialogLoading" @click="submit">保存</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; }
-.page-title { font-size: 18px; font-weight: 700; color: #1f2937; }
+:deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+:deep(.el-table) {
+  flex: 1;
+}
 </style>
 

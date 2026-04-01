@@ -151,56 +151,56 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never">
-      <template #header>
-        <div class="page-head">
-          <div>
-            <div class="page-title">OnCall 值班</div>
-            <div class="page-subtitle">配置值班轮转、升级时间和通知渠道，用于告警升级和职责归属。</div>
-          </div>
-          <div class="page-actions">
-            <el-button plain @click="fetchData">刷新</el-button>
-            <el-button type="primary" @click="openAdd">新增值班表</el-button>
-          </div>
-        </div>
-      </template>
+  <div class="h-full flex flex-col bg-gray-50">
+    <div class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">OnCall 值班</h1>
+        <p class="text-sm text-gray-500 mt-1">配置值班轮转、升级时间和通知渠道，用于告警升级和职责归属。</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <el-button plain @click="fetchData">刷新</el-button>
+        <el-button type="primary" @click="openAdd">新增值班表</el-button>
+      </div>
+    </div>
 
-      <el-table :data="rows" v-loading="loading" stripe border>
-        <el-table-column prop="name" label="值班表" min-width="180" show-overflow-tooltip />
-        <el-table-column label="当前值班" min-width="160" show-overflow-tooltip>
-          <template #default="{ row }">{{ currentOnCall(row) }}</template>
-        </el-table-column>
-        <el-table-column label="轮转周期" width="100">
-          <template #default="{ row }">{{ row.rotation_days }} 天</template>
-        </el-table-column>
-        <el-table-column label="升级" width="110">
-          <template #default="{ row }">{{ Number(row.escalation_minutes || 0) }} 分钟</template>
-        </el-table-column>
-        <el-table-column label="通知渠道" min-width="220" show-overflow-tooltip>
-          <template #default="{ row }">{{ parseJSON(row.notify_channels_json).join(' / ') || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="成员" min-width="260" show-overflow-tooltip>
-          <template #default="{ row }">{{ userNames(parseJSON(row.users_json)) }}</template>
-        </el-table-column>
-        <el-table-column label="启用" width="90">
-          <template #default="{ row }">
-            <el-tag size="small" :type="Number(row.enabled) === 1 ? 'success' : 'info'">
-              {{ Number(row.enabled) === 1 ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link type="danger" @click="removeRow(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <div class="flex-1 overflow-auto p-6">
+      <el-card shadow="never" class="border-gray-200">
+        <el-table :data="rows" v-loading="loading" stripe border class="w-full">
+          <el-table-column prop="name" label="值班表" min-width="180" show-overflow-tooltip />
+          <el-table-column label="当前值班" min-width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ currentOnCall(row) }}</template>
+          </el-table-column>
+          <el-table-column label="轮转周期" width="100" align="center">
+            <template #default="{ row }">{{ row.rotation_days }} 天</template>
+          </el-table-column>
+          <el-table-column label="升级" width="110" align="center">
+            <template #default="{ row }">{{ Number(row.escalation_minutes || 0) }} 分钟</template>
+          </el-table-column>
+          <el-table-column label="通知渠道" min-width="220" show-overflow-tooltip>
+            <template #default="{ row }">{{ parseJSON(row.notify_channels_json).join(' / ') || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="成员" min-width="260" show-overflow-tooltip>
+            <template #default="{ row }">{{ userNames(parseJSON(row.users_json)) }}</template>
+          </el-table-column>
+          <el-table-column label="启用" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="Number(row.enabled) === 1 ? 'success' : 'info'">
+                {{ Number(row.enabled) === 1 ? '启用' : '停用' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑 OnCall 值班表' : '新增 OnCall 值班表'" width="640px">
-      <el-form label-width="110px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑 OnCall 值班表' : '新增 OnCall 值班表'" width="640px" destroy-on-close align-center>
+      <el-form label-width="110px" class="pr-6">
         <el-form-item label="值班表名称" required>
           <el-input v-model="form.name" placeholder="例如：平台运维值班" />
         </el-form-item>
@@ -211,20 +211,24 @@ onMounted(async () => {
           <el-input v-model="form.timezone" placeholder="Asia/Shanghai" />
         </el-form-item>
         <el-form-item label="值班成员" required>
-          <el-select v-model="form.user_ids" multiple filterable clearable style="width: 100%;">
+          <el-select v-model="form.user_ids" multiple filterable clearable class="w-full">
             <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="轮转周期">
-          <el-input-number v-model="form.rotation_days" :min="1" :max="90" />
-          <span class="help-text">单位：天</span>
+          <div class="flex items-center gap-2">
+            <el-input-number v-model="form.rotation_days" :min="1" :max="90" />
+            <span class="text-xs text-gray-500">单位：天</span>
+          </div>
         </el-form-item>
         <el-form-item label="升级时间">
-          <el-input-number v-model="form.escalation_minutes" :min="0" :step="5" />
-          <span class="help-text">单位：分钟，0 表示不升级</span>
+          <div class="flex items-center gap-2">
+            <el-input-number v-model="form.escalation_minutes" :min="0" :step="5" />
+            <span class="text-xs text-gray-500">单位：分钟，0 表示不升级</span>
+          </div>
         </el-form-item>
         <el-form-item label="通知渠道">
-          <el-select v-model="form.notify_channels" multiple clearable filterable style="width: 100%;">
+          <el-select v-model="form.notify_channels" multiple clearable filterable class="w-full">
             <el-option v-for="item in channelOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -233,18 +237,15 @@ onMounted(async () => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+        <div class="flex justify-end pt-4">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.page-title { font-size: 18px; font-weight: 700; color: #1f2937; }
-.page-subtitle { margin-top: 4px; color: #6b7280; }
-.page-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.help-text { margin-left: 8px; font-size: 12px; color: #6b7280; }
+/* Scoped styles replaced with Tailwind utility classes */
 </style>

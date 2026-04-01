@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { authApi, notificationApi } from '../api'
+import { notificationApi } from '../api'
 import { useUserStore } from '../stores/user'
 import { usePermissionStore } from '../stores/permission'
 import { useTagsViewStore } from '../stores/tagsView'
@@ -20,10 +20,6 @@ const notifications = ref<any[]>([])
 const unreadCount = ref(0)
 const notificationFilter = ref<'unread' | 'all'>('unread')
 let notificationTimer: number | undefined
-
-// 修改密码
-const pwdVisible = ref(false)
-const pwdForm = ref({ old_password: '', new_password: '', confirm_password: '' })
 
 const activeMenu = computed(() => {
   if (route.name === 'TicketDetail') {
@@ -65,6 +61,14 @@ watch(() => route.path, (path) => {
 const cachedViews = computed(() =>
   tagsStore.visitedViews.map(v => v.componentName).filter(Boolean) as string[]
 )
+
+const tagsBarRef = ref<HTMLElement | null>(null)
+
+function handleTagsScroll(e: WheelEvent) {
+  if (tagsBarRef.value) {
+    tagsBarRef.value.scrollLeft += e.deltaY > 0 ? 50 : -50
+  }
+}
 
 // 右键菜单
 const ctxMenuVisible = ref(false)
@@ -118,7 +122,74 @@ function handleTabRemove(path: string) {
   if (next !== route.path) router.push(next)
 }
 
+
+// Command Palette
+const cmdPaletteVisible = ref(false)
+const searchQuery = ref('')
+const searchInputRef = ref<any>(null)
+const selectedIndex = ref(0)
+
+watch(searchQuery, () => {
+  selectedIndex.value = 0
+})
+
+const flatMenus = computed(() => {
+  const result: any[] = []
+  function flatten(menus: any[]) {
+    for (const menu of menus) {
+      if (menu.path && menu.title) {
+        result.push(menu)
+      }
+      if (menu.children && menu.children.length) {
+        flatten(menu.children)
+      }
+    }
+  }
+  flatten(menuTree.value)
+  return result
+})
+
+const filteredMenus = computed(() => {
+  if (!searchQuery.value) return flatMenus.value.slice(0, 10)
+  return flatMenus.value.filter(m => m.title.toLowerCase().includes(searchQuery.value.toLowerCase())).slice(0, 10)
+})
+
+function handleCmdK(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    cmdPaletteVisible.value = true
+    searchQuery.value = ''
+    selectedIndex.value = 0
+    setTimeout(() => {
+      searchInputRef.value?.focus()
+    }, 100)
+  }
+}
+
+function handleSelectCommand(menu: any) {
+  cmdPaletteVisible.value = false
+  router.push(menu.path)
+}
+
+function handleCommandKeydown(e: KeyboardEvent) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    if (filteredMenus.value.length > 0) {
+      selectedIndex.value = (selectedIndex.value + 1) % filteredMenus.value.length
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    if (filteredMenus.value.length > 0) {
+      selectedIndex.value = (selectedIndex.value - 1 + filteredMenus.value.length) % filteredMenus.value.length
+    }
+  } else if (e.key === 'Enter' && filteredMenus.value.length > 0) {
+    e.preventDefault()
+    handleSelectCommand(filteredMenus.value[selectedIndex.value])
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('keydown', handleCmdK)
   if (!userStore.userInfo) {
     try {
       await userStore.fetchUserInfo()
@@ -133,6 +204,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleCmdK)
   if (notificationTimer) {
     window.clearInterval(notificationTimer)
   }
@@ -231,6 +303,10 @@ function resolveNotificationTarget(item: any) {
     case 'task_execution':
     case 'execution':
       return `/task/execution/${item.biz_id}`
+    case 'cicd_pipeline':
+      return `/cicd/runs?pipeline_id=${item.biz_id}`
+    case 'approval':
+      return `/approval/inbox`
     case 'alert_event':
       return '/monitor/alert-rules'
     case 'notification':
@@ -249,41 +325,17 @@ async function handleNotificationClick(item: any) {
   }
 }
 
-function openPwdDialog() {
-  pwdForm.value = { old_password: '', new_password: '', confirm_password: '' }
-  pwdVisible.value = true
-}
-
 function openMyNotificationSettings() {
-  router.push('/notification/preferences')
-}
-
-function openNotificationConfig() {
-  router.push('/notification/console')
-}
-
-async function submitPwd() {
-  const { old_password, new_password, confirm_password } = pwdForm.value
-  if (!old_password || !new_password) { ElMessage.warning('请填写完整'); return }
-  if (new_password !== confirm_password) { ElMessage.warning('两次密码不一致'); return }
-  try {
-    await authApi.changePassword(old_password, new_password)
-    ElMessage.success('密码修改成功，请重新登录')
-    pwdVisible.value = false
-    userStore.clearToken()
-    permissionStore.reset()
-    tagsStore.reset()
-    resetRouter()
-    router.push('/login')
-  } catch {}
+  notificationVisible.value = false
+  router.push('/user/settings')
 }
 </script>
 
 <template>
-  <el-container class="layout">
-    <el-aside :width="isCollapse ? '64px' : '200px'" class="aside">
-      <div class="logo">{{ isCollapse ? 'B' : 'BigOps' }}</div>
-      <el-scrollbar class="menu-scroll">
+  <el-container class="layout h-screen bg-gray-100">
+    <el-aside :width="isCollapse ? '64px' : '240px'" class="aside transition-all duration-300 bg-[#304156] shadow-xl z-20">
+      <div class="logo h-14 flex items-center justify-center text-white text-xl font-bold bg-[#2b3643] shadow-sm">{{ isCollapse ? 'B' : 'BigOps' }}</div>
+      <el-scrollbar class="menu-scroll h-[calc(100vh-3.5rem)]">
         <el-menu
           :default-active="activeMenu"
           router
@@ -292,11 +344,6 @@ async function submitPwd() {
           text-color="#bfcbd9"
           active-text-color="#409eff"
         >
-          <el-menu-item index="/dashboard">
-            <el-icon><Odometer /></el-icon>
-            <template #title>仪表盘</template>
-          </el-menu-item>
-
           <template v-for="menu in menuTree" :key="menu.id">
             <el-sub-menu v-if="menu.children?.length && menu.type !== 3" :index="menu.path || String(menu.id)">
               <template #title>
@@ -319,10 +366,10 @@ async function submitPwd() {
       </el-scrollbar>
     </el-aside>
 
-    <el-container>
-      <el-header class="header">
-        <div class="header-left">
-          <el-icon class="collapse-btn" @click="isCollapse = !isCollapse">
+    <el-container class="flex-col overflow-hidden">
+      <el-header class="header h-14 bg-white flex items-center justify-between px-4 shadow-sm z-10">
+        <div class="header-left flex items-center gap-4">
+          <el-icon class="collapse-btn text-xl cursor-pointer text-gray-500 hover:text-indigo-600 transition-colors" @click="isCollapse = !isCollapse">
             <Fold v-if="!isCollapse" /><Expand v-else />
           </el-icon>
           <el-breadcrumb separator="/" class="breadcrumb">
@@ -332,23 +379,24 @@ async function submitPwd() {
             </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
-        <div class="header-right">
-          <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="notice-badge">
-            <el-button circle text @click="openNotifications">
-              <el-icon><Bell /></el-icon>
-            </el-button>
+        <div class="header-right flex items-center gap-3 pr-4">
+          <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="notice-badge mt-1">
+            <el-tooltip content="消息通知" placement="bottom" :show-after="300">
+              <el-button circle text @click="openNotifications" class="hover:bg-gray-100 transition-colors text-gray-600 hover:text-indigo-600">
+                <el-icon><Bell /></el-icon>
+              </el-button>
+            </el-tooltip>
           </el-badge>
-          <el-dropdown trigger="click">
-            <span class="user-drop">
+          
+          <el-dropdown trigger="click" class="cursor-pointer ml-3">
+            <span class="user-drop flex items-center gap-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors p-1 rounded-md hover:bg-indigo-50">
               <el-icon><User /></el-icon>
               {{ userStore.userInfo?.username }}
               <el-icon><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="openMyNotificationSettings"><el-icon><Bell /></el-icon>我的通知设置</el-dropdown-item>
-                <el-dropdown-item v-if="userStore.userInfo?.username === 'admin'" @click="openNotificationConfig"><el-icon><Setting /></el-icon>通知配置中心</el-dropdown-item>
-                <el-dropdown-item @click="openPwdDialog"><el-icon><Lock /></el-icon>修改密码</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/user/settings')"><el-icon><UserFilled /></el-icon>个人设置</el-dropdown-item>
                 <el-dropdown-item divided @click="handleLogout"><el-icon><SwitchButton /></el-icon>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -357,19 +405,23 @@ async function submitPwd() {
       </el-header>
 
       <!-- 标签页 -->
-      <div class="tags-bar">
-        <div class="tags-scroll">
+      <div 
+        class="tags-bar bg-white border-t border-gray-100 shadow-sm px-4 py-2 flex items-center overflow-x-auto whitespace-nowrap scrollbar-hide"
+        ref="tagsBarRef"
+        @wheel.prevent="handleTagsScroll"
+      >
+        <div class="tags-scroll flex gap-2 w-max min-w-full">
           <div
             v-for="tag in tagsStore.visitedViews"
             :key="tag.path"
-            class="tag-item"
-            :class="{ active: tag.path === route.path }"
+            class="tag-item flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-md cursor-pointer transition-all duration-200 hover:text-indigo-600 hover:border-indigo-300 bg-white shadow-sm"
+            :class="{ 'active !bg-indigo-50 !text-indigo-600 !border-indigo-500 font-medium': tag.path === route.path }"
             @click="router.push(tag.path)"
             @contextmenu="onTagContextMenu(tag.path, $event)"
           >
-            <span class="tag-dot" />
-            <span class="tag-title">{{ tag.title }}</span>
-            <el-icon v-if="tag.closable" class="tag-close" @click.stop="handleTabRemove(tag.path)"><Close /></el-icon>
+            <span v-if="tag.path === route.path" class="w-2 h-2 rounded-full bg-indigo-500 mr-1 shadow-sm"></span>
+            <span class="tag-title tracking-wide truncate max-w-[150px]">{{ tag.title }}</span>
+            <el-icon v-if="tag.closable" class="tag-close hover:bg-indigo-100 hover:text-indigo-700 p-0.5 rounded-full transition-colors" @click.stop="handleTabRemove(tag.path)"><Close /></el-icon>
           </div>
         </div>
       </div>
@@ -378,209 +430,175 @@ async function submitPwd() {
       <teleport to="body">
         <div
           v-if="ctxMenuVisible"
-          class="ctx-menu"
+          class="fixed z-[9999] bg-white rounded-lg shadow-xl border border-gray-100 py-1.5 min-w-[120px] text-sm text-gray-700 font-medium"
           :style="{ left: ctxMenuX + 'px', top: ctxMenuY + 'px' }"
         >
-          <div class="ctx-item" @click="ctxAction('closeCurrent')">关闭当前</div>
-          <div class="ctx-item" @click="ctxAction('closeOthers')">关闭其他</div>
-          <div class="ctx-item" @click="ctxAction('closeLeft')">关闭左侧</div>
-          <div class="ctx-item" @click="ctxAction('closeRight')">关闭右侧</div>
-          <div class="ctx-item" @click="ctxAction('closeAll')">关闭全部</div>
+          <div class="px-4 py-2 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer transition-colors flex items-center gap-2" @click="ctxAction('closeCurrent')">关闭当前</div>
+          <div class="px-4 py-2 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer transition-colors flex items-center gap-2" @click="ctxAction('closeOthers')">关闭其他</div>
+          <div class="px-4 py-2 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer transition-colors flex items-center gap-2" @click="ctxAction('closeLeft')">关闭左侧</div>
+          <div class="px-4 py-2 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer transition-colors flex items-center gap-2" @click="ctxAction('closeRight')">关闭右侧</div>
+          <div class="h-px bg-gray-100 my-1"></div>
+          <div class="px-4 py-2 hover:bg-red-50 hover:text-red-600 cursor-pointer transition-colors flex items-center gap-2" @click="ctxAction('closeAll')">关闭全部</div>
         </div>
       </teleport>
 
-      <el-main class="main">
-        <router-view v-slot="{ Component }">
-          <keep-alive :include="cachedViews">
-            <component :is="Component" :key="route.path" />
-          </keep-alive>
-        </router-view>
+      <el-main class="main bg-slate-50 relative p-5 overflow-auto flex-1">
+        <!-- SVG Dot Matrix Background -->
+        <div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image: radial-gradient(circle at 1px 1px, #000 1px, transparent 0); background-size: 24px 24px;"></div>
+        
+        <div class="relative z-10 min-h-full">
+          <router-view v-slot="{ Component }">
+            <transition name="fade-transform" mode="out-in">
+              <keep-alive :include="cachedViews">
+                <component :is="Component" :key="route.path" class="bg-white rounded-lg shadow-sm p-6 min-h-full border border-gray-100" />
+              </keep-alive>
+            </transition>
+          </router-view>
+        </div>
       </el-main>
     </el-container>
 
-    <el-dialog v-model="pwdVisible" title="修改密码" width="400px">
-      <el-form label-width="80px">
-        <el-form-item label="原密码"><el-input v-model="pwdForm.old_password" type="password" show-password /></el-form-item>
-        <el-form-item label="新密码"><el-input v-model="pwdForm.new_password" type="password" show-password /></el-form-item>
-        <el-form-item label="确认密码"><el-input v-model="pwdForm.confirm_password" type="password" show-password @keyup.enter="submitPwd" /></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="pwdVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitPwd">确定</el-button>
-      </template>
-    </el-dialog>
+    <el-drawer v-model="notificationVisible" size="420px" :with-header="false">
+      <div class="flex flex-col h-full overflow-hidden">
+        <!-- Drawer Custom Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
+          <div class="text-lg font-bold text-gray-900">站内通知</div>
+          <el-button link type="primary" class="!text-gray-500 hover:!text-indigo-600 transition-colors" @click="openMyNotificationSettings">
+            <el-icon class="mr-1.5"><Setting /></el-icon>接收设置
+          </el-button>
+        </div>
 
-    <el-drawer v-model="notificationVisible" title="站内通知" size="420px">
-      <div class="notification-toolbar">
-        <el-radio-group v-model="notificationFilter" size="small">
-          <el-radio-button label="unread">未读</el-radio-button>
-          <el-radio-button label="all">全部</el-radio-button>
-        </el-radio-group>
-        <div class="notification-actions">
-          <el-button size="small" text @click="loadNotifications">刷新</el-button>
-          <el-button size="small" text @click="markAllNotificationsRead">全部已读</el-button>
-          <el-button size="small" text @click="clearReadNotifications">清空已读</el-button>
+        <div class="flex flex-col flex-1 overflow-hidden p-4 pt-2">
+          <!-- Toolbar -->
+          <div class="flex items-center justify-between pb-3 mb-2 px-1">
+          <el-radio-group v-model="notificationFilter" size="small">
+            <el-radio-button label="unread">未读</el-radio-button>
+            <el-radio-button label="all">全部</el-radio-button>
+          </el-radio-group>
+          <div class="flex items-center gap-1">
+            <el-button size="small" text @click="loadNotifications" class="!px-2">刷新</el-button>
+            <el-button size="small" text @click="markAllNotificationsRead" class="!px-2">全部已读</el-button>
+            <el-button size="small" text type="danger" @click="clearReadNotifications" class="!px-2">清空已读</el-button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto pr-1 space-y-3" v-loading="notificationLoading">
+          <div
+            v-for="item in notifications"
+            :key="item.id"
+            class="p-4 rounded-xl border transition-all duration-200 cursor-pointer relative z-10 hover:z-20"
+            :class="!item.read_at ? 'bg-indigo-50/50 border-indigo-100 shadow-sm hover:shadow-md' : 'bg-gray-50 border-gray-100 opacity-70 hover:opacity-100'"
+            @click.stop="handleNotificationClick(item)"
+          >
+            <div v-if="!item.read_at" class="absolute top-4 left-0 w-1 h-10 bg-indigo-500 rounded-r-md"></div>
+            <div class="flex justify-between items-start mb-2">
+              <span class="font-bold text-gray-800 flex-1 pr-3 break-all" :class="{ 'text-indigo-900': !item.read_at }">{{ item.title }}</span>
+              <el-tag v-if="!item.read_at" size="small" type="danger" effect="light" class="rounded-md shrink-0">未读</el-tag>
+              <el-tag v-else size="small" type="info" effect="plain" class="rounded-md shrink-0">已读</el-tag>
+            </div>
+            <div class="text-sm text-gray-600 mb-3 whitespace-pre-wrap break-words leading-relaxed">{{ item.content }}</div>
+            <div class="flex items-center justify-between text-xs text-gray-400">
+              <span class="flex items-center gap-1"><el-icon><Calendar /></el-icon>{{ item.created_at }}</span>
+              <el-tag size="small" type="info" class="!bg-transparent !border-none !text-gray-400">{{ item.level }}</el-tag>
+            </div>
+          </div>
+          <el-empty v-if="!notificationLoading && notifications.length === 0" description="暂无通知" :image-size="60" class="mt-12" />
         </div>
       </div>
-      <div class="notification-list" v-loading="notificationLoading">
-        <div
-          v-for="item in notifications"
-          :key="item.id"
-          class="notification-item"
-          :class="{ unread: !item.read_at }"
-          @click="handleNotificationClick(item)"
-        >
-          <div class="notification-title-row">
-            <span class="notification-title">{{ item.title }}</span>
-            <el-tag v-if="!item.read_at" size="small" type="danger">未读</el-tag>
-            <el-tag v-else size="small" type="info">已读</el-tag>
-          </div>
-          <div class="notification-content">{{ item.content }}</div>
-          <div class="notification-meta">
-            <span>{{ item.created_at }}</span>
-            <span>{{ item.level }}</span>
-          </div>
-        </div>
-        <el-empty v-if="!notificationLoading && notifications.length === 0" description="暂无通知" />
       </div>
     </el-drawer>
+
+    <!-- Command Palette Dialog -->
+    <el-dialog
+      v-model="cmdPaletteVisible"
+      :show-close="false"
+      class="cmd-palette-dialog"
+      modal-class="cmd-backdrop"
+      width="600px"
+      align-center
+    >
+      <div class="flex flex-col rounded-xl overflow-hidden bg-white shadow-2xl ring-1 ring-black/5" @keydown="handleCommandKeydown">
+        <div class="p-4 border-b border-gray-100 flex items-center gap-3">
+          <el-icon class="text-xl text-gray-400"><Search /></el-icon>
+          <input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            class="flex-1 bg-transparent border-none outline-none text-lg text-gray-700 placeholder-gray-400"
+            placeholder="Search commands or jump to..."
+            @keydown="handleCommandKeydown"
+          />
+          <div class="flex items-center gap-1 text-xs text-gray-400 font-mono bg-gray-100 px-2 py-1 rounded">
+            <span>ESC</span>
+          </div>
+        </div>
+        <div class="max-h-[60vh] overflow-y-auto p-2">
+          <div
+            v-for="(menu, index) in filteredMenus"
+            :key="menu.path"
+            class="flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors duration-150 group hover:bg-indigo-50/80"
+            :class="{ 'bg-indigo-50 border-l-2 border-indigo-500': index === selectedIndex }"
+            @click="handleSelectCommand(menu)"
+            @mouseenter="selectedIndex = index"
+          >
+            <div class="flex items-center gap-3">
+              <el-icon class="text-gray-400 group-hover:text-indigo-500" :class="{ 'text-indigo-500': index === selectedIndex }"><component :is="menu.icon || 'Document'" /></el-icon>
+              <span class="text-gray-700 font-medium group-hover:text-indigo-700" :class="{ 'text-indigo-700': index === selectedIndex }">{{ menu.title }}</span>
+            </div>
+            <span class="text-xs text-gray-400 font-mono group-hover:text-indigo-400" :class="{ 'text-indigo-400': index === selectedIndex }">{{ menu.path }}</span>
+          </div>
+          <div v-if="filteredMenus.length === 0" class="p-8 text-center text-gray-400">
+            No commands found.
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </el-container>
 </template>
 
+
+
+<style>
+.cmd-backdrop {
+  backdrop-filter: blur(4px);
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+.cmd-palette-dialog {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.cmd-palette-dialog .el-dialog__header {
+  display: none !important;
+}
+.cmd-palette-dialog .el-dialog__body {
+  padding: 0 !important;
+  background: transparent !important;
+}
+</style>
+
 <style scoped>
-.layout { height: 100vh; }
-.aside { background: #304156; transition: width 0.3s; overflow: hidden; }
-.logo { height: 50px; line-height: 50px; text-align: center; color: #fff; font-size: 18px; font-weight: 600; background: #263445; }
+
+/* Remove old layout CSS properties that conflict with tailwind */
+.layout {
+  width: 100vw;
+}
 .menu-scroll {
-  height: calc(100vh - 50px);
+  border-right: none;
 }
-.header { background: #fff; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 0 16px; height: 50px; }
-.header-left { display: flex; align-items: center; gap: 12px; }
-.collapse-btn { font-size: 20px; cursor: pointer; }
-.breadcrumb { margin-left: 4px; }
-.header-right { display: flex; align-items: center; gap: 12px; }
-.user-drop { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 14px; color: #606266; }
-.main { background: #f0f2f5; }
-.el-menu { border-right: none; }
-.notice-badge :deep(.el-badge__content) { top: 6px; right: 6px; }
-
-/* 标签栏 */
-.tags-bar {
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 4px 8px;
-}
-.tags-scroll {
-  display: flex; align-items: center;
-  gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.tags-scroll::-webkit-scrollbar { display: none; }
-
-.tag-item {
-  display: inline-flex; align-items: center; gap: 4px;
-  height: 26px; padding: 0 10px;
-  border: 1px solid #d8dce5; border-radius: 3px;
-  font-size: 12px; color: #495060;
-  cursor: pointer; white-space: nowrap;
-  transition: all 0.2s;
-  user-select: none;
-}
-.tag-item:hover { color: #409eff; border-color: #b3d8ff; }
-.tag-item.active { background: #409eff; color: #fff; border-color: #409eff; }
-.tag-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #e4e7ed;
-}
-.tag-item.active .tag-dot { background: #fff; }
-.tag-close { font-size: 12px; border-radius: 50%; transition: all 0.15s; }
-.tag-close:hover { background: rgba(0,0,0,0.15); color: #fff; }
-.tag-item.active .tag-close:hover { background: rgba(255,255,255,0.3); }
-
-/* 右键菜单 */
-.ctx-menu {
-  position: fixed; z-index: 9999;
-  background: #fff;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-  padding: 4px 0;
-  min-width: 120px;
-}
-.ctx-item {
-  padding: 6px 16px;
-  font-size: 13px; color: #606266;
-  cursor: pointer;
-}
-.ctx-item:hover { background: #ecf5ff; color: #409eff; }
-
-.notification-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: calc(100vh - 170px);
-  overflow-y: auto;
-  padding-right: 4px;
+.el-menu {
+  border-right: none;
 }
 
-.notification-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #fff;
-  padding-bottom: 8px;
+/* Custom fade-transform transition */
+.fade-transform-leave-active,
+.fade-transform-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.notification-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.fade-transform-enter-from {
+  opacity: 0;
+  transform: translateX(-15px);
 }
-
-.notification-item {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fff;
-  cursor: pointer;
-}
-
-.notification-item.unread {
-  border-color: #93c5fd;
-  background: #f8fbff;
-}
-
-.notification-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.notification-title {
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.notification-content {
-  margin-top: 6px;
-  color: #4b5563;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.notification-meta {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-  color: #9ca3af;
-  font-size: 12px;
+.fade-transform-leave-to {
+  opacity: 0;
+  transform: translateX(15px);
 }
 </style>

@@ -4,7 +4,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
 	"github.com/bigops/platform/internal/service"
 )
@@ -62,6 +64,7 @@ func (h *ApprovalHandler) Approve(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("审批通过", zap.String("operator", c.GetString("username")), zap.Int64("instance_id", instanceID), zap.String("ip", c.ClientIP()))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "approval_instance")
 	c.Set("audit_resource_id", instanceID)
@@ -92,6 +95,7 @@ func (h *ApprovalHandler) Reject(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("审批拒绝", zap.String("operator", c.GetString("username")), zap.Int64("instance_id", instanceID), zap.String("ip", c.ClientIP()))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "approval_instance")
 	c.Set("audit_resource_id", instanceID)

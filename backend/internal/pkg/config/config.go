@@ -38,29 +38,12 @@ type AliyunConfig struct {
 
 // NotificationConfig 通知中心配置。
 type NotificationConfig struct {
-	DefaultChannels          []string                  `mapstructure:"default_channels" json:"default_channels"`
-	MaxRetries               int                       `mapstructure:"max_retries" json:"max_retries"`
-	RetryIntervalSeconds     int                       `mapstructure:"retry_interval_seconds" json:"retry_interval_seconds"`
-	RetryScanIntervalSeconds int                       `mapstructure:"retry_scan_interval_seconds" json:"retry_scan_interval_seconds"`
-	Webhook                  NotificationWebhookConfig `mapstructure:"webhook" json:"webhook"`
-	Email                    NotificationEmailConfig   `mapstructure:"email" json:"email"`
-	MessagePusher            MessagePusherConfig       `mapstructure:"message_pusher" json:"message_pusher"`
-}
-
-type NotificationWebhookConfig struct {
-	Enabled        bool   `mapstructure:"enabled" json:"enabled"`
-	URL            string `mapstructure:"url" json:"url"`
-	Secret         string `mapstructure:"secret" json:"secret"`
-	TimeoutSeconds int    `mapstructure:"timeout_seconds" json:"timeout_seconds"`
-}
-
-type NotificationEmailConfig struct {
-	Enabled  bool   `mapstructure:"enabled" json:"enabled"`
-	Host     string `mapstructure:"host" json:"host"`
-	Port     int    `mapstructure:"port" json:"port"`
-	Username string `mapstructure:"username" json:"username"`
-	Password string `mapstructure:"password" json:"password"`
-	From     string `mapstructure:"from" json:"from"`
+	DefaultChannels          []string            `mapstructure:"default_channels" json:"default_channels"`
+	MaxRetries               int                 `mapstructure:"max_retries" json:"max_retries"`
+	RetryIntervalSeconds     int                 `mapstructure:"retry_interval_seconds" json:"retry_interval_seconds"`
+	RetryScanIntervalSeconds int                 `mapstructure:"retry_scan_interval_seconds" json:"retry_scan_interval_seconds"`
+	MessagePusher            MessagePusherConfig `mapstructure:"message_pusher" json:"message_pusher"`
+	ChannelMapping           map[string]string   `mapstructure:"channel_mapping" json:"channel_mapping"`
 }
 
 type MessagePusherConfig struct {
@@ -68,7 +51,6 @@ type MessagePusherConfig struct {
 	Server         string `mapstructure:"server" json:"server"`
 	Username       string `mapstructure:"username" json:"username"`
 	Token          string `mapstructure:"token" json:"token"`
-	Channel        string `mapstructure:"channel" json:"channel"`
 	TimeoutSeconds int    `mapstructure:"timeout_seconds" json:"timeout_seconds"`
 }
 
@@ -167,21 +149,11 @@ func UpdateNotificationConfig(notificationCfg NotificationConfig) error {
 	v.Set("notification.max_retries", notificationCfg.MaxRetries)
 	v.Set("notification.retry_interval_seconds", notificationCfg.RetryIntervalSeconds)
 	v.Set("notification.retry_scan_interval_seconds", notificationCfg.RetryScanIntervalSeconds)
-	v.Set("notification.webhook.enabled", notificationCfg.Webhook.Enabled)
-	v.Set("notification.webhook.url", notificationCfg.Webhook.URL)
-	v.Set("notification.webhook.secret", notificationCfg.Webhook.Secret)
-	v.Set("notification.webhook.timeout_seconds", notificationCfg.Webhook.TimeoutSeconds)
-	v.Set("notification.email.enabled", notificationCfg.Email.Enabled)
-	v.Set("notification.email.host", notificationCfg.Email.Host)
-	v.Set("notification.email.port", notificationCfg.Email.Port)
-	v.Set("notification.email.username", notificationCfg.Email.Username)
-	v.Set("notification.email.password", notificationCfg.Email.Password)
-	v.Set("notification.email.from", notificationCfg.Email.From)
+	v.Set("notification.channel_mapping", notificationCfg.ChannelMapping)
 	v.Set("notification.message_pusher.enabled", notificationCfg.MessagePusher.Enabled)
 	v.Set("notification.message_pusher.server", notificationCfg.MessagePusher.Server)
 	v.Set("notification.message_pusher.username", notificationCfg.MessagePusher.Username)
 	v.Set("notification.message_pusher.token", notificationCfg.MessagePusher.Token)
-	v.Set("notification.message_pusher.channel", notificationCfg.MessagePusher.Channel)
 	v.Set("notification.message_pusher.timeout_seconds", notificationCfg.MessagePusher.TimeoutSeconds)
 
 	if err := v.WriteConfigAs(currentConfigPath); err != nil {

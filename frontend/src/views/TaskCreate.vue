@@ -84,51 +84,75 @@ onMounted(() => { loadTask() })
 </script>
 
 <template>
-  <div class="page">
-    <el-card shadow="never" v-loading="loading">
+  <div class="p-4 md:p-6 min-h-full flex flex-col">
+    <el-card shadow="never" class="border-0 shadow-sm flex-1 flex flex-col" v-loading="loading">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>{{ isEdit ? '编辑任务' : '创建任务' }}</span>
-          <el-button @click="goBack">返回</el-button>
+        <div class="flex items-center gap-3">
+          <el-button link @click="goBack" class="text-gray-500 hover:text-gray-700 -ml-2">
+            <el-icon class="text-lg"><Back /></el-icon>
+          </el-button>
+          <span class="text-base font-medium text-gray-800">{{ isEdit ? '编辑任务' : '创建任务' }}</span>
         </div>
       </template>
 
-      <el-form :model="form" label-width="100px" style="max-width: 700px;">
-        <el-form-item label="任务名称" required>
-          <el-input v-model="form.name" placeholder="请输入任务名称" maxlength="200" />
-        </el-form-item>
-        <el-form-item label="任务类型">
-          <el-select v-model="form.task_type" style="width: 200px;">
-            <el-option v-for="o in taskTypeOptions" :key="o.value" :label="o.label" :value="o.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="脚本类型" v-if="form.task_type !== 'file_transfer'">
-          <el-select v-model="form.script_type" style="width: 200px;">
-            <el-option v-for="o in scriptTypeOptions" :key="o.value" :label="o.label" :value="o.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="脚本内容" v-if="form.task_type !== 'file_transfer'" required>
-          <el-input v-model="form.script_content" type="textarea" :rows="12" placeholder="请输入脚本内容" style="font-family: 'Courier New', Consolas, monospace;" />
-        </el-form-item>
-        <el-form-item label="超时时间">
-          <el-input-number v-model="form.timeout" :min="1" :max="86400" :step="10" />
-          <span style="margin-left: 8px; color: #909399;">秒</span>
-        </el-form-item>
-        <el-form-item label="执行用户">
-          <el-input v-model="form.run_as_user" placeholder="留空则使用 Agent 运行用户" style="width: 200px;" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="任务描述（可选）" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="submitting" @click="handleSubmit">{{ isEdit ? '保存修改' : '创建任务' }}</el-button>
-          <el-button @click="goBack">取消</el-button>
-        </el-form-item>
-      </el-form>
+      <div class="max-w-3xl">
+        <el-form :model="form" label-width="120px" class="mt-4" label-position="right">
+          <el-form-item label="任务名称" required>
+            <el-input v-model="form.name" placeholder="请输入任务名称" maxlength="200" />
+          </el-form-item>
+          
+          <el-form-item label="任务类型">
+            <el-select v-model="form.task_type" class="w-56">
+              <el-option v-for="o in taskTypeOptions" :key="o.value" :label="o.label" :value="o.value" />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="脚本类型" v-if="form.task_type !== 'file_transfer'">
+            <el-select v-model="form.script_type" class="w-56">
+              <el-option v-for="o in scriptTypeOptions" :key="o.value" :label="o.label" :value="o.value" />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="脚本内容" v-if="form.task_type !== 'file_transfer'" required>
+            <el-input 
+              v-model="form.script_content" 
+              type="textarea" 
+              :rows="14" 
+              placeholder="请输入脚本内容" 
+              class="font-mono text-sm shadow-inner"
+              input-style="background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', Consolas, monospace;"
+            />
+          </el-form-item>
+          
+          <el-form-item label="超时时间">
+            <div class="flex items-center gap-3">
+              <el-input-number v-model="form.timeout" :min="1" :max="86400" :step="10" />
+              <span class="text-gray-500 text-sm">秒</span>
+            </div>
+          </el-form-item>
+          
+          <el-form-item label="执行用户">
+            <el-input v-model="form.run_as_user" placeholder="留空则使用 Agent 运行用户" class="w-56" />
+          </el-form-item>
+          
+          <el-form-item label="描述">
+            <el-input v-model="form.description" type="textarea" :rows="3" placeholder="任务描述（可选）" />
+          </el-form-item>
+          
+          <el-form-item class="mt-8">
+            <el-button type="primary" :loading="submitting" @click="handleSubmit" class="w-32">
+              {{ isEdit ? '保存修改' : '创建任务' }}
+            </el-button>
+            <el-button @click="goBack" class="w-24">取消</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
     </el-card>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
+:deep(.el-card__body) {
+  flex: 1;
+}
 </style>

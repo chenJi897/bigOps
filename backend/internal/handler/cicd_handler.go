@@ -157,6 +157,7 @@ func (h *CICDHandler) UpdateProject(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新CI/CD项目", zap.String("operator", c.GetString("username")), zap.Int64("project_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
@@ -169,6 +170,7 @@ func (h *CICDHandler) DeleteProject(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("删除CI/CD项目", zap.String("operator", c.GetString("username")), zap.Int64("project_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
@@ -207,6 +209,7 @@ func (h *CICDHandler) UpdateProjectStatus(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新CI/CD项目状态", zap.String("operator", c.GetString("username")), zap.Int64("project_id", id), zap.Int8("status", nextStatus), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "状态更新成功", nil)
 }
 
@@ -252,6 +255,7 @@ func (h *CICDHandler) CreatePipeline(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("创建流水线", zap.String("operator", c.GetString("username")), zap.Int64("pipeline_id", item.ID), zap.Int64("project_id", item.ProjectID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "创建成功", normalizePipeline(item, nil))
 }
 
@@ -270,6 +274,7 @@ func (h *CICDHandler) UpdatePipeline(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新流水线", zap.String("operator", c.GetString("username")), zap.Int64("pipeline_id", id), zap.Int64("project_id", item.ProjectID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
@@ -282,6 +287,7 @@ func (h *CICDHandler) DeletePipeline(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("删除流水线", zap.String("operator", c.GetString("username")), zap.Int64("pipeline_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
@@ -299,6 +305,7 @@ func (h *CICDHandler) TriggerPipeline(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("触发流水线", zap.String("operator", c.GetString("username")), zap.Int64("pipeline_id", id), zap.Int64("project_id", run.ProjectID), zap.Int64("run_id", run.ID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "已触发流水线", run)
 }
 
@@ -314,6 +321,7 @@ func (h *CICDHandler) RetryRun(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("重试流水线运行", zap.String("operator", c.GetString("username")), zap.Int64("run_id", run.ID), zap.Int64("pipeline_id", run.PipelineID), zap.Int64("project_id", run.ProjectID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "已重试运行", normalizeRunSummary(run))
 }
 
@@ -329,6 +337,7 @@ func (h *CICDHandler) RollbackRun(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("回滚流水线运行", zap.String("operator", c.GetString("username")), zap.Int64("run_id", run.ID), zap.Int64("pipeline_id", run.PipelineID), zap.Int64("project_id", run.ProjectID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "已触发回滚", normalizeRunSummary(run))
 }
 
@@ -341,6 +350,7 @@ func (h *CICDHandler) TriggerByWebhook(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("Webhook触发流水线", zap.String("webhook_code", c.Param("code")), zap.Int64("pipeline_id", run.PipelineID), zap.Int64("project_id", run.ProjectID), zap.Int64("run_id", run.ID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "Webhook 已触发流水线", normalizeRunSummary(run))
 }
 

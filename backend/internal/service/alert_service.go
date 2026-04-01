@@ -244,7 +244,11 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 				Channels:  channels,
 				Payload: map[string]interface{}{
 					"alert_event_id": alertEvent.ID,
+					"rule_id":        rule.ID,
+					"rule_name":      rule.Name,
 					"agent_id":       agent.AgentID,
+					"hostname":       agent.Hostname,
+					"ip":             agent.IP,
 					"metric_type":    rule.MetricType,
 					"metric_value":   value,
 					"threshold":      rule.Threshold,
@@ -293,7 +297,11 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 				Channels:  channels,
 				Payload: map[string]interface{}{
 					"alert_event_id": event.ID,
+					"rule_id":        rule.ID,
+					"rule_name":      rule.Name,
 					"agent_id":       agent.AgentID,
+					"hostname":       agent.Hostname,
+					"ip":             agent.IP,
 					"metric_type":    rule.MetricType,
 					"metric_value":   value,
 					"threshold":      rule.Threshold,

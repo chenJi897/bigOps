@@ -28,6 +28,7 @@ type CICDPipeline struct {
 	Concurrency         int            `gorm:"default:1" json:"concurrency"`
 	Status              int8           `gorm:"default:1;index" json:"status"` // 1=启用 0=禁用
 	ConfigJSON          string         `gorm:"type:json" json:"config_json"`
+	NotifyTemplate      string         `gorm:"type:text" json:"notify_template"`
 	CreatedAt           LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	UpdatedAt           LocalTime      `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`

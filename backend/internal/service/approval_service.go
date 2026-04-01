@@ -342,11 +342,12 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 			UserIDs:   nextApproverIDs,
 			Channels:  channels,
 			Payload: map[string]interface{}{
-				"ticket_id":   ticket.ID,
-				"ticket_no":   ticket.TicketNo,
-				"instance_id": instance.ID,
-				"stage_no":    nextStage.StageNo,
-				"stage_name":  nextStage.Name,
+				"ticket_id":    ticket.ID,
+				"ticket_no":    ticket.TicketNo,
+				"ticket_title": ticket.Title,
+				"instance_id":  instance.ID,
+				"stage_no":     nextStage.StageNo,
+				"stage_name":   nextStage.Name,
 			},
 		})
 		return notifyErr

@@ -119,8 +119,9 @@ func (r *NotificationRepository) ListDeliveriesByEventIDAndStatuses(eventID int6
 func (r *NotificationRepository) ListRetryableDeliveries(now model.LocalTime, limit int) ([]*model.NotificationDelivery, error) {
 	var items []*model.NotificationDelivery
 	db := database.GetDB().Where(
-		"status IN ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
+		"status IN ? AND channel != ? AND (next_retry_at IS NULL OR next_retry_at <= ?)",
 		[]string{"pending", "failed"},
+		"in_app",
 		now,
 	).Order("id ASC")
 	if limit > 0 {

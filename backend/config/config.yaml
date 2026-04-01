@@ -3,7 +3,7 @@ aliyun:
 database:
     charset: utf8mb4
     database: bigops2
-    host: localhost
+    host: 192.168.0.197
     password: DBB4CuIwxc
     port: 3306
     username: root
@@ -24,32 +24,24 @@ log:
 notification:
     default_channels:
         - in_app
-    email:
-        enabled: false
-        from: ""
-        host: ""
-        password: ""
-        port: 25
-        username: ""
     max_retries: 3
-    message_pusher:
-        channel: ""
-        enabled: false
-        server: ""
-        timeout_seconds: 10
-        token: ""
-        username: ""
     retry_interval_seconds: 60
     retry_scan_interval_seconds: 60
-    webhook:
+    message_pusher:
         enabled: false
-        secret: ""
+        server: ""
+        username: ""
+        token: ""
         timeout_seconds: 10
-        url: ""
+    channel_mapping:
+        wecom: "corp"
+        dingtalk: "ding"
+        lark: "lark"
+        webhook: "custom"
 redis:
     db: 0
-    host: localhost
-    password: ""
+    host: 192.168.0.197
+    password: foobared
     port: 6379
 server:
     mode: debug

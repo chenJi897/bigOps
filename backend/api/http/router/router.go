@@ -149,6 +149,9 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/notifications/test", notificationHandler.TestSend)
 			authGroup.GET("/notifications/events", notificationHandler.ListEvents)
 			authGroup.POST("/notifications/events/:id/retry", notificationHandler.RetryEvent)
+			authGroup.GET("/notifications/templates", notificationHandler.ListTemplates)
+			authGroup.POST("/notifications/templates/:id", notificationHandler.UpdateTemplate)
+			authGroup.POST("/notifications/templates/preview", notificationHandler.PreviewTemplate)
 
 			// --- 部门管理 ---
 			departmentHandler := handler.NewDepartmentHandler()

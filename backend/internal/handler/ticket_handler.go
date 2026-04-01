@@ -257,6 +257,7 @@ func (h *TicketHandler) Assign(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("分派工单", zap.String("operator", c.GetString("username")), zap.Int64("ticket_id", id), zap.String("ip", c.ClientIP()))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "ticket")
 	c.Set("audit_resource_id", id)
@@ -287,6 +288,7 @@ func (h *TicketHandler) Process(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("处理工单", zap.String("operator", c.GetString("username")), zap.Int64("ticket_id", id), zap.String("ip", c.ClientIP()))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "ticket")
 	c.Set("audit_resource_id", id)
@@ -317,6 +319,7 @@ func (h *TicketHandler) Close(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("关闭工单", zap.String("operator", c.GetString("username")), zap.Int64("ticket_id", id), zap.String("ip", c.ClientIP()))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "ticket")
 	c.Set("audit_resource_id", id)
@@ -347,6 +350,7 @@ func (h *TicketHandler) Reopen(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("重开工单", zap.String("operator", c.GetString("username")), zap.Int64("ticket_id", id), zap.String("ip", c.ClientIP()))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "ticket")
 	c.Set("audit_resource_id", id)
@@ -377,6 +381,7 @@ func (h *TicketHandler) Comment(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("工单评论", zap.String("operator", c.GetString("username")), zap.Int64("ticket_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "评论成功", nil)
 }
 
@@ -403,6 +408,7 @@ func (h *TicketHandler) Transfer(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("转交工单", zap.String("operator", c.GetString("username")), zap.Int64("ticket_id", id), zap.String("ip", c.ClientIP()))
 	c.Set("audit_action", "update")
 	c.Set("audit_resource", "ticket")
 	c.Set("audit_resource_id", id)

@@ -3,18 +3,15 @@ package service
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/smtp"
 	"net/textproto"
-	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/bigops/platform/internal/pkg/config"
@@ -28,15 +25,16 @@ import (
 )
 
 type NotificationPublishRequest struct {
-	EventType string
-	BizType   string
-	BizID     int64
-	Title     string
-	Content   string
-	Level     string
-	UserIDs   []int64
-	Payload   interface{}
-	Channels  []string
+	EventType      string
+	BizType        string
+	BizID          int64
+	Title          string
+	Content        string
+	Level          string
+	UserIDs        []int64
+	Payload        interface{}
+	Channels       []string
+	SkipPreference bool
 }
 
 type NotificationDispatchResult struct {
@@ -56,22 +54,22 @@ type NotificationScheduler struct {
 }
 
 type NotificationService struct {
-	userRepo   *repository.UserRepository
 	repo       *repository.NotificationRepository
 	prefRepo   *repository.NotificationUserSettingRepository
+	tmplRepo   *repository.NotificationTemplateRepository
 	httpClient *http.Client
 }
 
 func NewNotificationService() *NotificationService {
 	timeout := 10 * time.Second
 	cfg := config.Get()
-	if cfg.Notification.Webhook.TimeoutSeconds > 0 {
-		timeout = time.Duration(cfg.Notification.Webhook.TimeoutSeconds) * time.Second
+	if cfg.Notification.MessagePusher.TimeoutSeconds > 0 {
+		timeout = time.Duration(cfg.Notification.MessagePusher.TimeoutSeconds) * time.Second
 	}
 	return &NotificationService{
-		userRepo:   repository.NewUserRepository(),
 		repo:       repository.NewNotificationRepository(),
 		prefRepo:   repository.NewNotificationUserSettingRepository(),
+		tmplRepo:   repository.NewNotificationTemplateRepository(),
 		httpClient: &http.Client{Timeout: timeout},
 	}
 }
@@ -83,7 +81,7 @@ func (s *NotificationService) PublishTx(tx *gorm.DB, req NotificationPublishRequ
 		return 0, nil
 	}
 
-	channelRecipients, effectiveChannels := s.resolveRecipientsByPreference(userIDs, req.BizType, channels)
+	channelRecipients, effectiveChannels := s.resolveRecipientsByPreference(userIDs, req.BizType, channels, req.SkipPreference)
 	if len(channelRecipients) == 0 && len(effectiveChannels) == 0 {
 		return 0, nil
 	}
@@ -107,9 +105,10 @@ func (s *NotificationService) PublishTx(tx *gorm.DB, req NotificationPublishRequ
 		return 0, err
 	}
 
+	settings, _ := s.prefRepo.ListByUserIDs(userIDs)
+
 	for _, channel := range effectiveChannels {
-		switch channel {
-		case "in_app":
+		if channel == "in_app" {
 			for _, userID := range channelRecipients["in_app"] {
 				delivery := &model.NotificationDelivery{
 					EventID:   event.ID,
@@ -132,45 +131,54 @@ func (s *NotificationService) PublishTx(tx *gorm.DB, req NotificationPublishRequ
 					return 0, err
 				}
 			}
-		case "email":
-			for _, userID := range channelRecipients["email"] {
-				now := model.LocalTime(time.Now())
-				delivery := &model.NotificationDelivery{
+		} else {
+			// 外部通道：按“最终 Message Pusher 通道名”去重，避免同一钉钉被重复发送。
+			distinctTargets := map[string]struct{}{}
+			recipients := channelRecipients[channel]
+			for _, userID := range recipients {
+				mpCh := ""
+				if setting := settings[userID]; setting != nil {
+					// bizType -> channelType -> mpChannel
+					var targets map[string]map[string]string
+					_ = json.Unmarshal([]byte(setting.ChannelTargets), &targets)
+					if byChannel := targets[req.BizType]; byChannel != nil {
+						if v := strings.TrimSpace(byChannel[channel]); v != "" {
+							mpCh = v
+						}
+					}
+				}
+				if strings.TrimSpace(mpCh) == "" {
+					mpCh = config.Get().Notification.ChannelMapping[channel]
+				}
+				distinctTargets[mpCh] = struct{}{}
+			}
+
+			now := model.LocalTime(time.Now())
+			for mpCh := range distinctTargets {
+				if err := tx.Create(&model.NotificationDelivery{
 					EventID:     event.ID,
-					Channel:     "email",
-					Recipient:   fmt.Sprintf("%d", userID),
+					Channel:     channel,
+					Recipient:   mpCh, // 空表示走 Message Pusher 默认
 					Status:      "pending",
 					NextRetryAt: &now,
-				}
-				if err := tx.Create(delivery).Error; err != nil {
+				}).Error; err != nil {
 					return 0, err
 				}
 			}
-		case "webhook":
-			now := model.LocalTime(time.Now())
-			if err := tx.Create(&model.NotificationDelivery{
-				EventID:     event.ID,
-				Channel:     "webhook",
-				Recipient:   "system",
-				Status:      "pending",
-				NextRetryAt: &now,
-			}).Error; err != nil {
-				return 0, err
-			}
-		case "message_pusher":
-			if len(channelRecipients["message_pusher"]) == 0 {
-				continue
-			}
-			now := model.LocalTime(time.Now())
-			if err := tx.Create(&model.NotificationDelivery{
-				EventID:     event.ID,
-				Channel:     "message_pusher",
-				Recipient:   "system",
-				Status:      "pending",
-				NextRetryAt: &now,
-			}).Error; err != nil {
-				return 0, err
-			}
+		}
+	}
+
+	allInApp := true
+	for _, ch := range effectiveChannels {
+		if ch != "in_app" {
+			allInApp = false
+			break
+		}
+	}
+	if allInApp {
+		event.Status = "sent"
+		if err := tx.Save(event).Error; err != nil {
+			return 0, err
 		}
 	}
 
@@ -184,8 +192,9 @@ func (s *NotificationService) GetUserPreference(userID int64) (*model.Notificati
 	}
 	return &model.NotificationUserSetting{
 		UserID:             userID,
-		EnabledChannels:    "[\"in_app\",\"email\",\"message_pusher\"]",
+		EnabledChannels:    "[\"in_app\",\"wecom\",\"dingtalk\",\"lark\"]",
 		SubscribedBizTypes: "[\"alert_event\",\"ticket\",\"cicd_pipeline\",\"task_execution\",\"notification\"]",
+		ChannelTargets:     "{}",
 		Enabled:            1,
 	}, nil
 }
@@ -193,6 +202,7 @@ func (s *NotificationService) GetUserPreference(userID int64) (*model.Notificati
 func (s *NotificationService) SaveUserPreference(item *model.NotificationUserSetting) error {
 	item.EnabledChannels = normalizeNotifyJSONList(item.EnabledChannels)
 	item.SubscribedBizTypes = normalizeNotifyJSONList(item.SubscribedBizTypes)
+	item.ChannelTargets = normalizeNotifyJSONBizMap(item.ChannelTargets)
 	if item.Enabled != 0 {
 		item.Enabled = 1
 	}
@@ -349,14 +359,14 @@ func (s *NotificationService) dispatchDelivery(event *model.NotificationEvent, d
 
 	var outcome deliveryDispatchOutcome
 	switch delivery.Channel {
-	case "email":
-		outcome = s.sendEmail(event, delivery)
-	case "webhook":
-		outcome = s.sendWebhook(event, delivery)
-	case "message_pusher":
-		outcome = s.sendMessagePusher(event, delivery)
-	default:
+	case "in_app":
+		delivery.Status = "sent"
+		delivery.SentAt = &now
+		delivery.NextRetryAt = nil
+		_ = s.repo.UpdateDelivery(delivery)
 		return
+	default:
+		outcome = s.pushViaMessagePusher(event, delivery)
 	}
 
 	delivery.RetryCount += 1
@@ -510,21 +520,57 @@ func normalizeNotifyJSONList(raw string) string {
 	return string(data)
 }
 
-func (s *NotificationService) resolveRecipientsByPreference(userIDs []int64, bizType string, channels []string) (map[string][]int64, []string) {
+func normalizeNotifyJSONBizMap(raw string) string {
+	if strings.TrimSpace(raw) == "" || strings.TrimSpace(raw) == "null" {
+		return "{}"
+	}
+	// 外部通道的目标映射：bizType -> channelType -> message-pusher-channel-name
+	var m map[string]map[string]string
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		return "{}"
+	}
+	// 清理空键/空值，避免覆盖逻辑里误用空字符串。
+	clean := make(map[string]map[string]string)
+	for bizType, byChannel := range m {
+		bizType = strings.TrimSpace(bizType)
+		if bizType == "" || byChannel == nil {
+			continue
+		}
+		for ch, target := range byChannel {
+			ch = strings.TrimSpace(ch)
+			target = strings.TrimSpace(target)
+			if ch == "" || target == "" {
+				continue
+			}
+			if _, ok := clean[bizType]; !ok {
+				clean[bizType] = make(map[string]string)
+			}
+			clean[bizType][ch] = target
+		}
+	}
+	data, err := json.Marshal(clean)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
+}
+
+func (s *NotificationService) resolveRecipientsByPreference(userIDs []int64, bizType string, channels []string, skipPreference bool) (map[string][]int64, []string) {
 	recipients := map[string][]int64{
-		"in_app":         {},
-		"email":          {},
-		"message_pusher": {},
+		"in_app": {},
 	}
 	if len(channels) == 0 {
+		return recipients, channels
+	}
+	if skipPreference {
+		for _, channel := range channels {
+			recipients[channel] = append(recipients[channel], userIDs...)
+		}
 		return recipients, channels
 	}
 	settings, err := s.prefRepo.ListByUserIDs(userIDs)
 	if err != nil {
 		for _, channel := range channels {
-			if channel == "webhook" {
-				continue
-			}
 			recipients[channel] = append(recipients[channel], userIDs...)
 		}
 		return recipients, channels
@@ -536,9 +582,11 @@ func (s *NotificationService) resolveRecipientsByPreference(userIDs []int64, biz
 			continue
 		}
 		allowedChannels := map[string]bool{
-			"in_app":         true,
-			"email":          true,
-			"message_pusher": true,
+			"in_app":  true,
+			"wecom":   true,
+			"dingtalk": true,
+			"lark":    true,
+			"webhook": true,
 		}
 		allowedBizTypes := map[string]bool{}
 		if setting != nil {
@@ -560,10 +608,6 @@ func (s *NotificationService) resolveRecipientsByPreference(userIDs []int64, biz
 			continue
 		}
 		for _, channel := range channels {
-			if channel == "webhook" {
-				channelEnabled[channel] = true
-				continue
-			}
 			if allowedChannels[channel] {
 				recipients[channel] = append(recipients[channel], userID)
 				channelEnabled[channel] = true
@@ -572,7 +616,7 @@ func (s *NotificationService) resolveRecipientsByPreference(userIDs []int64, biz
 	}
 	finalChannels := make([]string, 0, len(channels))
 	for _, channel := range channels {
-		if channel == "webhook" || channelEnabled[channel] {
+		if channelEnabled[channel] {
 			finalChannels = append(finalChannels, channel)
 		}
 	}
@@ -601,93 +645,90 @@ func normalizeLevel(level string) string {
 	}
 }
 
-func (s *NotificationService) sendEmail(event *model.NotificationEvent, delivery *model.NotificationDelivery) deliveryDispatchOutcome {
-	cfg := config.Get().Notification.Email
-	if !cfg.Enabled || cfg.Host == "" || cfg.Port == 0 || cfg.From == "" {
-		return deliveryDispatchOutcome{response: "email channel not configured"}
-	}
-	userID, err := strconv.ParseInt(delivery.Recipient, 10, 64)
-	if err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	user, err := s.userRepo.GetByID(userID)
-	if err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	if user.Email == nil || *user.Email == "" {
-		return deliveryDispatchOutcome{response: "recipient email is empty"}
-	}
-
-	auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
-	msg := []byte("To: " + *user.Email + "\r\n" +
-		"Subject: " + event.Title + "\r\n" +
-		"Content-Type: text/plain; charset=UTF-8\r\n\r\n" +
-		event.Payload)
-
-	if err := smtp.SendMail(
-		fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		auth,
-		cfg.From,
-		[]string{*user.Email},
-		msg,
-	); err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	return deliveryDispatchOutcome{
-		success:  true,
-		response: fmt.Sprintf("smtp delivered to %s", *user.Email),
-	}
+type RenderedTemplate struct {
+	Title   string
+	Content string
 }
 
-func (s *NotificationService) sendWebhook(event *model.NotificationEvent, _ *model.NotificationDelivery) deliveryDispatchOutcome {
-	cfg := config.Get().Notification.Webhook
-	if !cfg.Enabled || cfg.URL == "" {
-		return deliveryDispatchOutcome{response: "webhook channel not configured"}
-	}
-	body := map[string]interface{}{
-		"event_type": event.EventType,
-		"biz_type":   event.BizType,
-		"biz_id":     event.BizID,
-		"title":      event.Title,
-		"payload":    json.RawMessage(event.Payload),
-		"timestamp":  time.Now().Unix(),
-	}
-	data, err := json.Marshal(body)
-	if err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	req, err := http.NewRequest(http.MethodPost, cfg.URL, bytes.NewBuffer(data))
-	if err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if cfg.Secret != "" {
-		mac := hmac.New(sha256.New, []byte(cfg.Secret))
-		mac.Write(data)
-		req.Header.Set("X-BigOps-Signature", fmt.Sprintf("%x", mac.Sum(nil)))
-	}
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	defer resp.Body.Close()
-	return buildHTTPOutcome("webhook", resp)
+func (s *NotificationService) ListTemplates() ([]*model.NotificationTemplate, error) {
+	return s.tmplRepo.List()
 }
 
-func (s *NotificationService) sendMessagePusher(event *model.NotificationEvent, _ *model.NotificationDelivery) deliveryDispatchOutcome {
+func (s *NotificationService) UpdateTemplate(id int64, title, content string) error {
+	item, err := s.tmplRepo.GetByID(id)
+	if err != nil {
+		return errors.New("模板不存在")
+	}
+	item.Title = title
+	item.Content = content
+	return s.tmplRepo.Update(item)
+}
+
+func (s *NotificationService) RenderTemplate(titleTpl, contentTpl string, vars map[string]interface{}) (*RenderedTemplate, error) {
+	if vars == nil {
+		vars = map[string]interface{}{}
+	}
+	renderedTitle, err := executeTemplate(titleTpl, vars)
+	if err != nil {
+		return nil, fmt.Errorf("title template error: %w", err)
+	}
+	renderedContent, err := executeTemplate(contentTpl, vars)
+	if err != nil {
+		return nil, fmt.Errorf("content template error: %w", err)
+	}
+	return &RenderedTemplate{Title: renderedTitle, Content: renderedContent}, nil
+}
+
+func executeTemplate(tplStr string, vars map[string]interface{}) (string, error) {
+	t, err := template.New("").Option("missingkey=zero").Parse(tplStr)
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, vars); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+func (s *NotificationService) renderEventContent(event *model.NotificationEvent) (string, string) {
+	tmpl, err := s.tmplRepo.GetByEventType(event.EventType)
+	if err != nil || tmpl == nil {
+		return event.Title, event.Payload
+	}
+	var vars map[string]interface{}
+	_ = json.Unmarshal([]byte(event.Payload), &vars)
+	if vars == nil {
+		vars = map[string]interface{}{}
+	}
+	rendered, err := s.RenderTemplate(tmpl.Title, tmpl.Content, vars)
+	if err != nil {
+		return event.Title, event.Payload
+	}
+	return rendered.Title, rendered.Content
+}
+
+func (s *NotificationService) pushViaMessagePusher(event *model.NotificationEvent, delivery *model.NotificationDelivery) deliveryDispatchOutcome {
 	cfg := config.Get().Notification.MessagePusher
 	if !cfg.Enabled || cfg.Server == "" || cfg.Username == "" || cfg.Token == "" {
 		return deliveryDispatchOutcome{response: "message_pusher channel not configured"}
 	}
+	renderedTitle, renderedContent := s.renderEventContent(event)
 	server := strings.TrimRight(cfg.Server, "/")
 	body := map[string]interface{}{
-		"title":       event.Title,
-		"description": event.Title,
-		"content":     event.Payload,
+		"title":       renderedTitle,
+		"description": renderedTitle,
+		"content":     renderedContent,
 		"token":       cfg.Token,
 	}
-	if cfg.Channel != "" {
-		body["channel"] = cfg.Channel
+	// 外部投递：优先使用 delivery.Recipient 里的“最终 Message Pusher 通道名”，
+	// 否则回退到平台全局的 channel_mapping（兼容旧数据 Recipient="system"）。
+	mpCh := strings.TrimSpace(delivery.Recipient)
+	if mpCh == "" || mpCh == "system" {
+		mpCh = config.Get().Notification.ChannelMapping[delivery.Channel]
+	}
+	if strings.TrimSpace(mpCh) != "" {
+		body["channel"] = mpCh
 	}
 	data, err := json.Marshal(body)
 	if err != nil {

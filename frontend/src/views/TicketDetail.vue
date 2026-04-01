@@ -3,6 +3,7 @@ defineOptions({ name: 'TicketDetail' })
 import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { User, Check, Switch, Select, RefreshRight, ChatDotSquare } from '@element-plus/icons-vue'
 import { ticketApi, userApi } from '../api'
 import { useViewStateStore } from '../stores/viewState'
 
@@ -245,132 +246,139 @@ watch(() => route.params.id, (newId, oldId) => {
 </script>
 
 <template>
-  <div class="page" v-loading="loading">
-    <el-button link @click="router.back()" style="margin-bottom: 12px;"><el-icon><ArrowLeft /></el-icon> 返回</el-button>
+  <div class="p-4 md:p-6 min-h-full">
+    <el-button link @click="router.back()" class="mb-4 !text-slate-500 hover:!text-indigo-600 transition-colors">
+      <el-icon class="mr-1"><ArrowLeft /></el-icon> 返回
+    </el-button>
 
     <template v-if="ticket">
-      <el-row :gutter="16">
+      <div class="flex flex-col lg:flex-row gap-4 xl:gap-6">
         <!-- 左侧主区域 -->
-        <el-col :span="17">
-          <el-card shadow="never">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-              <el-tag>{{ ticket.ticket_no }}</el-tag>
-              <el-tag type="info" v-if="ticket.type_name">{{ ticket.type_name }}</el-tag>
-              <el-tag :type="(statusMap[ticket.status]?.type as any)" size="default">{{ statusMap[ticket.status]?.label }}</el-tag>
-              <el-tag :color="priorityMap[ticket.priority]?.color" style="color: #fff; border: none;" size="small">{{ priorityMap[ticket.priority]?.label }}</el-tag>
-            </div>
-            <h3 style="margin: 0 0 16px 0;">{{ ticket.title }}</h3>
-            <div style="white-space: pre-wrap; color: #606266; line-height: 1.8; min-height: 60px;">{{ ticket.description || '无描述' }}</div>
-
-            <div v-if="requestFormEntries.length" class="request-form-panel">
-              <div class="request-form-panel-head">
-                <span>请求表单</span>
-                <el-tag size="small" type="info">
-                  {{ ticket.request_template_name || ticketKindMap[ticket.ticket_kind] || '流程单' }}
+        <div class="flex-1 min-w-0">
+          <el-card shadow="never" class="border-0 ring-1 ring-slate-100 rounded-xl bg-white mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 mb-6 gap-4">
+              <div class="flex items-center gap-2 flex-wrap">
+                <el-tag size="large" effect="dark" class="!rounded-md font-bold tracking-wide !bg-slate-700 !border-slate-700">{{ ticket.ticket_no }}</el-tag>
+                <el-tag type="info" size="large" v-if="ticket.type_name" class="!rounded-md">{{ ticket.type_name }}</el-tag>
+                <el-tag :type="(statusMap[ticket.status]?.type as any)" size="large" effect="light" class="!rounded-md">
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="{
+                      'bg-red-500': ticket.status === 'open',
+                      'bg-orange-400': ticket.status === 'processing',
+                      'bg-blue-500': ticket.status === 'resolved',
+                      'bg-green-500': ticket.status === 'closed',
+                      'bg-slate-500': ticket.status === 'rejected'
+                    }"></span>
+                    {{ statusMap[ticket.status]?.label }}
+                  </span>
                 </el-tag>
+                <el-tag :color="priorityMap[ticket.priority]?.color" class="!text-white !border-none !rounded-md" size="large">{{ priorityMap[ticket.priority]?.label }}</el-tag>
               </div>
-              <div class="request-form-grid">
-                <div v-for="item in requestFormEntries" :key="item.key" class="request-form-item">
-                  <div class="request-form-label">{{ item.label }}</div>
-                  <div class="request-form-value">{{ item.value }}</div>
+              
+              <div class="flex items-center gap-2 flex-wrap">
+                <el-button v-if="ticket.status === 'open'" type="primary" @click="openAction('assign')" :icon="User" class="!rounded-lg shadow-sm">分配处理人</el-button>
+                <el-button v-if="ticket.status === 'processing'" type="success" @click="openAction('process')" :icon="Check" class="!rounded-lg shadow-sm">处理工单</el-button>
+                <el-button v-if="ticket.status === 'processing'" @click="openAction('transfer')" :icon="Switch" class="!rounded-lg">转交</el-button>
+                <el-button v-if="ticket.status === 'resolved' || ticket.status === 'rejected'" type="primary" @click="openAction('close')" :icon="Select" class="!rounded-lg shadow-sm">确认关闭</el-button>
+                <el-button v-if="ticket.status === 'closed' || ticket.status === 'rejected'" @click="openAction('reopen')" :icon="RefreshRight" class="!rounded-lg">重新打开</el-button>
+                <el-button @click="openAction('comment')" :icon="ChatDotSquare" class="!rounded-lg hover:!text-indigo-600 hover:!border-indigo-300">评论</el-button>
+              </div>
+            </div>
+            
+            <h2 class="text-xl font-semibold text-slate-800 mb-4">{{ ticket.title }}</h2>
+            <div class="bg-slate-50 p-4 rounded-lg text-slate-700 leading-relaxed min-h-[80px] text-sm whitespace-pre-wrap border border-slate-100/60">{{ ticket.description || '无详细描述' }}</div>
+
+            <!-- 请求表单 -->
+            <div v-if="requestFormEntries.length" class="mt-6 p-4 border border-slate-100 rounded-xl bg-gradient-to-b from-white to-slate-50/50 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <span class="font-semibold text-slate-700">请求表单</span>
+                <el-tag size="small" type="info" class="!rounded">{{ ticket.request_template_name || ticketKindMap[ticket.ticket_kind] || '流程单' }}</el-tag>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div v-for="item in requestFormEntries" :key="item.key" class="p-3 rounded-lg bg-white border border-slate-100 shadow-sm transition-shadow hover:shadow-md">
+                  <div class="text-xs text-slate-500 mb-1.5">{{ item.label }}</div>
+                  <div class="text-slate-800 whitespace-pre-wrap break-words leading-relaxed text-sm font-medium">{{ item.value }}</div>
                 </div>
               </div>
             </div>
 
             <!-- 关联资源 -->
-            <div v-if="ticket.resource_type" style="margin-top: 20px; padding: 12px; background: #f5f7fa; border-radius: 4px;">
-              <span style="color: #909399; font-size: 13px;">关联资源：</span>
-              <el-tag size="small" style="margin-left: 4px;">{{ ticket.resource_type }}</el-tag>
-              <span style="margin-left: 8px; font-weight: 500;">{{ resourceSummary }}</span>
+            <div v-if="ticket.resource_type" class="mt-6 p-4 bg-slate-50/80 rounded-lg border border-slate-100 flex items-center gap-3">
+              <span class="text-slate-500 text-sm">关联资源：</span>
+              <el-tag size="small" class="!rounded-md">{{ ticket.resource_type }}</el-tag>
+              <span class="font-medium text-slate-700">{{ resourceSummary }}</span>
             </div>
-            <div v-if="ticket.resource_type === 'asset' && relatedAssets.length" class="related-assets">
-              <div class="related-assets-title">关联主机</div>
-              <div class="related-assets-list">
-                <div v-for="asset in relatedAssets" :key="asset.id" class="related-asset-item">
-                  <div class="related-asset-top">
-                    <span class="related-asset-name">{{ asset.hostname }}</span>
-                    <el-tag size="small" type="info">{{ asset.ip }}</el-tag>
-                    <el-tag size="small" :type="asset.status === 'online' ? 'success' : 'danger'">
+            <div v-if="ticket.resource_type === 'asset' && relatedAssets.length" class="mt-4 p-4 border border-slate-100 rounded-xl bg-gradient-to-b from-white to-slate-50/50 shadow-sm">
+              <div class="font-semibold text-slate-700 mb-3 text-sm">关联主机</div>
+              <div class="flex flex-col gap-3">
+                <div v-for="asset in relatedAssets" :key="asset.id" class="p-3 rounded-lg bg-white border border-slate-100 shadow-sm hover:border-indigo-100 transition-colors">
+                  <div class="flex items-center gap-2 flex-wrap mb-2">
+                    <span class="font-semibold text-slate-800">{{ asset.hostname }}</span>
+                    <el-tag size="small" type="info" class="!font-mono">{{ asset.ip }}</el-tag>
+                    <el-tag size="small" :type="asset.status === 'online' ? 'success' : 'danger'" class="!rounded-md">
                       {{ asset.status === 'online' ? '在线' : '离线' }}
                     </el-tag>
                   </div>
-                  <div class="related-asset-meta">
-                    <span>{{ asset.service_tree_path || asset.service_tree_name || '未归属服务树' }}</span>
-                    <span>{{ asset.os || '未知系统' }}</span>
+                  <div class="flex items-center gap-3 flex-wrap text-xs text-slate-500">
+                    <span class="flex items-center gap-1"><el-icon><Folder /></el-icon>{{ asset.service_tree_path || asset.service_tree_name || '未归属服务树' }}</span>
+                    <span class="flex items-center gap-1"><el-icon><Monitor /></el-icon>{{ asset.os || '未知系统' }}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- 处理结果 -->
-            <div v-if="ticket.resolution" style="margin-top: 12px; padding: 12px; background: #f0f9eb; border-radius: 4px;">
-              <span style="color: #67c23a; font-weight: 600;">处理结果：{{ ticket.resolution }}</span>
-              <span v-if="ticket.resolution_note" style="margin-left: 12px; color: #606266;">{{ ticket.resolution_note }}</span>
+            <div v-if="ticket.resolution" class="mt-6 p-4 bg-green-50 border border-green-100 rounded-lg flex flex-col sm:flex-row sm:items-center gap-2">
+              <span class="text-green-700 font-semibold flex items-center gap-1.5"><el-icon><SuccessFilled /></el-icon> 处理结果：{{ ticket.resolution }}</span>
+              <span v-if="ticket.resolution_note" class="text-green-600/80 text-sm mt-1 sm:mt-0 sm:ml-2">{{ ticket.resolution_note }}</span>
             </div>
 
-            <div v-if="ticket.ticket_kind !== 'incident'" class="approval-panel">
-              <div class="approval-panel-head">
-                <span>审批信息</span>
-                <el-tag size="small" :type="ticket.approval_status === 'approved' ? 'success' : ticket.approval_status === 'rejected' ? 'danger' : 'warning'">
+            <!-- 审批信息 -->
+            <div v-if="ticket.ticket_kind !== 'incident'" class="mt-6 p-4 border border-slate-100 rounded-xl bg-gradient-to-b from-white to-slate-50/50 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <span class="font-semibold text-slate-700">审批信息</span>
+                <el-tag size="small" :type="ticket.approval_status === 'approved' ? 'success' : ticket.approval_status === 'rejected' ? 'danger' : 'warning'" class="!rounded">
                   {{ approvalStatusMap[ticket.approval_status] || ticket.approval_status || '未开始' }}
                 </el-tag>
               </div>
-              <div v-if="approvalInstance" class="approval-panel-body">
-                <div class="approval-meta">
-                  <span>审批策略：{{ approvalInstance.policy_name || '-' }}</span>
-                  <span>当前阶段：{{ approvalInstance.current_stage_name || approvalInstance.current_stage_no || '-' }}</span>
+              <div v-if="approvalInstance">
+                <div class="flex flex-wrap gap-4 text-sm text-slate-500 mb-4 bg-white p-3 rounded-lg border border-slate-100">
+                  <span class="flex items-center gap-1.5"><el-icon><Guide /></el-icon> 审批策略：<span class="font-medium text-slate-700">{{ approvalInstance.policy_name || '-' }}</span></span>
+                  <span class="flex items-center gap-1.5"><el-icon><Target /></el-icon> 当前阶段：<span class="font-medium text-slate-700">{{ approvalInstance.current_stage_name || approvalInstance.current_stage_no || '-' }}</span></span>
                 </div>
-                <div class="approval-records">
-                  <div v-for="record in approvalInstance.records || []" :key="record.id" class="approval-record">
-                    <div class="approval-record-top">
-                      <span class="approval-record-name">{{ record.approver_name || `用户#${record.approver_id}` }}</span>
-                      <el-tag size="small" :type="(approvalRecordTagTypeMap[record.status] as any)">
+                <div class="flex flex-col gap-3">
+                  <div v-for="record in approvalInstance.records || []" :key="record.id" class="p-3 rounded-lg bg-white border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="font-semibold text-slate-800 flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                          {{ (record.approver_name || 'U')[0].toUpperCase() }}
+                        </div>
+                        {{ record.approver_name || `用户#${record.approver_id}` }}
+                      </span>
+                      <el-tag size="small" :type="(approvalRecordTagTypeMap[record.status] as any)" class="!rounded-md">
                         {{ approvalRecordStatusMap[record.status] || record.status }}
                       </el-tag>
                     </div>
-                    <div class="approval-record-meta">
+                    <div class="flex justify-between text-xs text-slate-400 mt-2">
                       <span>阶段 {{ record.stage_no }}</span>
                       <span>{{ record.acted_at || record.created_at }}</span>
                     </div>
-                    <div v-if="record.comment" class="approval-record-comment">{{ record.comment }}</div>
+                    <div v-if="record.comment" class="mt-3 text-sm text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100 whitespace-pre-wrap">{{ record.comment }}</div>
                   </div>
                 </div>
               </div>
-              <div v-else class="approval-panel-empty">该工单暂未生成审批实例。</div>
+              <div v-else class="text-sm text-slate-400 py-4 text-center bg-white rounded-lg border border-slate-100 border-dashed">该工单暂未生成审批实例。</div>
             </div>
           </el-card>
-
-          <!-- 操作按钮 -->
-          <div style="margin: 16px 0; display: flex; gap: 8px;">
-            <el-button v-if="ticket.status === 'open'" type="primary" @click="openAction('assign')">分配处理人</el-button>
-            <el-button v-if="ticket.status === 'processing'" type="success" @click="openAction('process')">处理</el-button>
-            <el-button v-if="ticket.status === 'processing'" @click="openAction('transfer')">转交</el-button>
-            <el-button v-if="ticket.status === 'resolved' || ticket.status === 'rejected'" type="primary" @click="openAction('close')">确认关闭</el-button>
-            <el-button v-if="ticket.status === 'closed' || ticket.status === 'rejected'" @click="openAction('reopen')">重新打开</el-button>
-            <el-button @click="openAction('comment')">评论</el-button>
-          </div>
-
-          <!-- 活动时间线 -->
-          <el-card shadow="never">
-            <template #header><span style="font-weight: 600;">活动记录</span></template>
-            <el-timeline>
-              <el-timeline-item v-for="a in activities" :key="a.id" :timestamp="a.created_at" placement="top" :type="a.is_system ? 'primary' : ''">
-                <div>
-                  <span style="font-weight: 600; margin-right: 8px;">{{ a.is_system ? '系统' : a.user_name }}</span>
-                  <el-tag size="small" type="info">{{ activityTypeMap[a.type] || a.type }}</el-tag>
-                  <span v-if="a.old_value || a.new_value" style="margin-left: 8px; color: #909399; font-size: 12px;">{{ a.old_value }} → {{ a.new_value }}</span>
-                </div>
-                <p v-if="a.content" style="margin: 8px 0 0; color: #606266; white-space: pre-wrap;">{{ a.content }}</p>
-              </el-timeline-item>
-            </el-timeline>
-            <el-empty v-if="activities.length === 0" description="暂无活动记录" :image-size="60" />
-          </el-card>
-        </el-col>
+        </div>
 
         <!-- 右侧信息栏 -->
-        <el-col :span="7">
-          <el-card shadow="never">
-            <el-descriptions :column="1" size="small">
+        <div class="w-full lg:w-80 xl:w-96 flex-shrink-0 flex flex-col gap-6">
+          <el-card shadow="never" class="border-0 ring-1 ring-slate-100 rounded-xl bg-white">
+            <template #header>
+              <div class="font-semibold text-slate-800 text-sm">工单属性</div>
+            </template>
+            <el-descriptions :column="1" size="small" class="!mt-2" label-class-name="!text-slate-500 !w-20" content-class-name="!text-slate-800 !font-medium">
               <el-descriptions-item label="单据类型">{{ ticketKindMap[ticket.ticket_kind] || ticket.ticket_kind }}</el-descriptions-item>
               <el-descriptions-item v-if="ticket.request_template_name" label="请求模板">{{ ticket.request_template_name }}</el-descriptions-item>
               <el-descriptions-item label="创建人">{{ ticket.creator_name }}</el-descriptions-item>
@@ -384,18 +392,54 @@ watch(() => route.params.id, (newId, oldId) => {
               <el-descriptions-item v-if="ticket.closed_at" label="关闭时间">{{ ticket.closed_at }}</el-descriptions-item>
             </el-descriptions>
           </el-card>
-        </el-col>
-      </el-row>
+
+          <!-- 活动时间线 -->
+          <el-card shadow="never" class="border-0 ring-1 ring-slate-100 rounded-xl bg-white flex-1">
+            <template #header>
+              <div class="font-semibold text-slate-800 text-sm flex items-center gap-2">
+                <el-icon class="text-indigo-500"><List /></el-icon> 活动记录
+              </div>
+            </template>
+            <el-scrollbar max-height="600px" class="-mx-2 px-2">
+              <el-timeline class="pt-2 pl-1">
+                <el-timeline-item 
+                  v-for="a in activities" 
+                  :key="a.id" 
+                  :timestamp="a.created_at" 
+                  placement="top" 
+                  :type="a.type === 'create' ? 'success' : a.type.includes('approval') ? 'warning' : a.type === 'resolve' || a.type === 'close' ? 'danger' : 'primary'"
+                  size="large"
+                  :hollow="false"
+                >
+                  <div class="bg-white p-3 rounded-lg border border-slate-100 shadow-sm mb-2 group hover:border-indigo-100 transition-colors">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                      <span class="font-semibold text-sm text-slate-800">{{ a.is_system ? '系统' : a.user_name }}</span>
+                      <el-tag size="small" type="info" class="!rounded-md !border-none !bg-slate-100 !text-slate-600">{{ activityTypeMap[a.type] || a.type }}</el-tag>
+                    </div>
+                    <div v-if="a.old_value || a.new_value" class="mt-2 text-xs bg-slate-50 p-2 rounded-md border border-slate-100/80 flex items-center flex-wrap gap-2">
+                      <span class="line-through text-slate-400">{{ a.old_value || '无' }}</span>
+                      <el-icon class="text-slate-300"><Right /></el-icon>
+                      <span class="font-medium text-slate-700">{{ a.new_value || '空' }}</span>
+                    </div>
+                    <div v-if="a.content" class="mt-2 text-sm text-slate-600 bg-indigo-50/50 p-2.5 rounded-md border-l-2 border-indigo-300 whitespace-pre-wrap leading-relaxed">{{ a.content }}</div>
+                  </div>
+                </el-timeline-item>
+              </el-timeline>
+              <el-empty v-if="activities.length === 0" description="暂无活动记录" :image-size="60" />
+            </el-scrollbar>
+          </el-card>
+        </div>
+      </div>
     </template>
-    <el-empty v-else :description="emptyDescription" :image-size="80">
+    <el-empty v-else :description="emptyDescription" :image-size="80" class="bg-white rounded-xl shadow-sm border border-slate-100 p-12">
       <el-button @click="router.back()">返回上一页</el-button>
     </el-empty>
 
     <!-- 操作弹窗 -->
-    <el-dialog v-model="actionDialog" :title="{ assign: '分配处理人', process: '处理工单', close: '关闭工单', reopen: '重新打开', comment: '添加评论', transfer: '转交工单' }[actionType]" width="480px">
-      <el-form :model="actionForm" label-width="80px">
+    <el-dialog v-model="actionDialog" :title="{ assign: '分配处理人', process: '处理工单', close: '关闭工单', reopen: '重新打开', comment: '添加评论', transfer: '转交工单' }[actionType]" width="480px" class="!rounded-xl">
+      <el-form :model="actionForm" label-width="80px" class="mt-2">
         <el-form-item v-if="actionType === 'assign' || actionType === 'transfer'" label="处理人">
-          <el-select v-model="actionForm.assignee_id" placeholder="选择处理人" clearable style="width: 100%;">
+          <el-select v-model="actionForm.assignee_id" placeholder="选择处理人" clearable class="w-full">
             <el-option v-for="u in assigneeOptions" :key="u.id" :label="u.real_name || u.username" :value="u.id" />
           </el-select>
         </el-form-item>
@@ -406,7 +450,7 @@ watch(() => route.params.id, (newId, oldId) => {
           </el-radio-group>
         </el-form-item>
         <el-form-item v-if="actionType === 'close'" label="处理结果">
-          <el-select v-model="actionForm.resolution" placeholder="选择处理结果" style="width: 100%;">
+          <el-select v-model="actionForm.resolution" placeholder="选择处理结果" class="w-full">
             <el-option v-for="o in resolutionOptions" :key="o.value" :label="o.label" :value="o.value" />
           </el-select>
         </el-form-item>
@@ -418,183 +462,20 @@ watch(() => route.params.id, (newId, oldId) => {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="actionDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitAction">确定</el-button>
+        <div class="flex items-center justify-end gap-2">
+          <el-button @click="actionDialog = false" class="!rounded-lg">取消</el-button>
+          <el-button type="primary" @click="submitAction" class="!rounded-lg">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page { padding: 20px; }
-
-.related-assets {
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid #e5edf4;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fbfdff 0%, #f7fafc 100%);
-}
-
-.request-form-panel {
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid #e5edf4;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fdfefe 0%, #f8fbfd 100%);
-}
-
-.request-form-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  font-weight: 700;
-  color: #334155;
-}
-
-.request-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.request-form-item {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-}
-
-.request-form-label {
-  margin-bottom: 6px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.request-form-value {
-  color: #1e293b;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.6;
-}
-
-.approval-panel {
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid #e5edf4;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fdfefe 0%, #f8fbfd 100%);
-}
-
-.approval-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  font-weight: 700;
-  color: #334155;
-}
-
-.approval-meta {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  color: #64748b;
-  font-size: 13px;
-  margin-bottom: 12px;
-}
-
-.approval-records {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.approval-record {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-}
-
-.approval-record-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
-}
-
-.approval-record-name {
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.approval-record-meta {
-  margin-top: 6px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.approval-record-comment {
-  margin-top: 8px;
-  color: #475569;
-  white-space: pre-wrap;
-}
-
-.approval-panel-empty {
-  color: #94a3b8;
-  font-size: 13px;
-}
-
-.related-assets-title {
-  margin-bottom: 10px;
-  color: #475467;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.related-assets-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.related-asset-item {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #e7eef5;
-}
-
-.related-asset-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.related-asset-name {
-  font-weight: 700;
-  color: #223042;
-}
-
-.related-asset-meta {
-  margin-top: 6px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  color: #667085;
-  font-size: 12px;
-}
-
-@media (max-width: 1200px) {
-  .request-form-grid {
-    grid-template-columns: 1fr;
-  }
+/* 覆盖 Element Plus 样式 */
+:deep(.el-card__header) {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background-color: #f8fafc;
 }
 </style>

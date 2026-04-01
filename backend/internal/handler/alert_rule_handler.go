@@ -6,9 +6,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 
 	"github.com/bigops/platform/internal/model"
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
 	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
@@ -127,6 +129,7 @@ func (h *AlertRuleHandler) Create(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("创建告警规则", zap.String("operator", c.GetString("username")), zap.Int64("rule_id", item.ID), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "创建成功", item)
 }
 
@@ -176,6 +179,7 @@ func (h *AlertRuleHandler) Update(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("更新告警规则", zap.String("operator", c.GetString("username")), zap.Int64("rule_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
@@ -196,6 +200,7 @@ func (h *AlertRuleHandler) Delete(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("删除告警规则", zap.String("operator", c.GetString("username")), zap.Int64("rule_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
@@ -257,6 +262,7 @@ func (h *AlertRuleHandler) AcknowledgeEvent(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("确认告警事件", zap.String("operator", c.GetString("username")), zap.Int64("event_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "事件已确认", nil)
 }
 
@@ -280,6 +286,7 @@ func (h *AlertRuleHandler) ResolveEvent(c *gin.Context) {
 		response.Error(c, 400, err.Error())
 		return
 	}
+	logger.Info("解决告警事件", zap.String("operator", c.GetString("username")), zap.Int64("event_id", id), zap.String("ip", c.ClientIP()))
 	response.SuccessWithMessage(c, "事件已关闭", nil)
 }
 
