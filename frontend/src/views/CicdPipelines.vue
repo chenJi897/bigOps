@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { cicdPipelineApi, cicdProjectApi, requestTemplateApi, taskApi } from '../api'
+import NotifyConfigEditor from '../components/NotifyConfigEditor.vue'
 
 const router = useRouter()
 const loading = ref(false)
@@ -27,13 +28,6 @@ const taskOptions = ref<any[]>([])
 const templateOptions = ref<any[]>([])
 const selectedRunDetail = ref<any>(null)
 
-const notifyChannelOptions = [
-  { label: '站内通知', value: 'in_app' },
-  { label: '邮件', value: 'email' },
-  { label: 'Webhook', value: 'webhook' },
-  { label: 'Message Pusher', value: 'message_pusher' },
-]
-
 const form = ref({
   name: '',
   code: '',
@@ -50,6 +44,7 @@ const form = ref({
   build_hosts_text: '',
   variables_text: '',
   notify_channels: ['in_app'] as string[],
+  notify_config: {} as Record<string, { webhook_url: string; secret: string }>,
   webhook_enabled: 0,
   webhook_secret: '',
   active: 1,
@@ -191,6 +186,7 @@ function resetForm() {
     build_hosts_text: '',
     variables_text: '',
     notify_channels: ['in_app'],
+    notify_config: {},
     webhook_enabled: 0,
     webhook_secret: '',
     active: 1,
@@ -223,6 +219,7 @@ function openEdit(row: any) {
     build_hosts_text: formatTextList(row.build_hosts_list),
     variables_text: variablesToText(row.variables || row.pipeline_variables),
     notify_channels: Array.isArray(row.notify_channels) ? row.notify_channels : [],
+    notify_config: row.notify_config ? (typeof row.notify_config === 'string' ? JSON.parse(row.notify_config) : row.notify_config) : {},
     webhook_enabled: normalizeBoolFlag(row.webhook_enabled) ? 1 : 0,
     webhook_secret: row.webhook_secret || '',
     active: row.active === 1 ? 1 : 0,
@@ -250,6 +247,7 @@ async function submitForm() {
       build_hosts: parseTextList(form.value.build_hosts_text),
       variables: parseVariablesText(form.value.variables_text),
       notify_channels: form.value.notify_channels,
+      notify_config: form.value.notify_config,
       webhook_enabled: form.value.webhook_enabled === 1,
       webhook_secret: form.value.webhook_secret.trim(),
       active: form.value.active,
@@ -510,9 +508,7 @@ onMounted(async () => {
           <el-input v-model="form.variables_text" type="textarea" :rows="4" placeholder="一行一个 KEY=VALUE" />
         </el-form-item>
         <el-form-item label="通知渠道">
-          <el-select v-model="form.notify_channels" multiple clearable filterable placeholder="为空则走系统默认" class="w-full">
-            <el-option v-for="item in notifyChannelOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
+          <NotifyConfigEditor v-model="form.notify_config" />
         </el-form-item>
         <el-form-item label="Webhook">
           <div class="flex flex-col gap-2 w-full">

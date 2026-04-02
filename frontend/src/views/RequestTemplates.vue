@@ -4,6 +4,7 @@ import { computed, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requestTemplateApi, userApi, departmentApi } from '../api'
 import { useViewStateStore } from '../stores/viewState'
+import NotifyConfigEditor from '../components/NotifyConfigEditor.vue'
 
 type TemplateNode = {
   node_id: string
@@ -50,6 +51,7 @@ const form = ref<any>({
   auto_create_order: 1,
   notify_applicant: 1,
   notify_channels: ['in_app'] as string[],
+  notify_config: {} as Record<string, { webhook_url: string; secret: string }>,
   sort: 999,
   status: 1,
 })
@@ -71,13 +73,6 @@ const categoryOptions = [
   { label: '数据库上线', value: 'db_release' },
   { label: '代码仓库', value: 'repo' },
   { label: '其他', value: 'other' },
-]
-
-const notifyChannelOptions = [
-  { label: '站内通知', value: 'in_app' },
-  { label: '邮件', value: 'email' },
-  { label: 'Webhook', value: 'webhook' },
-  { label: 'Message Pusher', value: 'message_pusher' },
 ]
 
 const templateCategoryOptions = categoryOptions
@@ -205,6 +200,7 @@ function resetForm() {
     auto_create_order: 1,
     notify_applicant: 1,
     notify_channels: ['in_app'],
+    notify_config: {},
     sort: 999,
     status: 1,
   }
@@ -242,6 +238,7 @@ function handleEdit(row: any) {
     auto_create_order: row.auto_create_order ?? 1,
     notify_applicant: row.notify_applicant ?? 1,
     notify_channels: row.notify_channels ? JSON.parse(row.notify_channels) : ['in_app'],
+    notify_config: row.notify_config ? (typeof row.notify_config === 'string' ? JSON.parse(row.notify_config) : row.notify_config) : {},
     sort: row.sort || 999,
     status: Number(row.status) || 0,
   }
@@ -314,6 +311,7 @@ async function submitForm() {
     approval_policy_id: 0,
     nodes_json: form.value.nodes_json || '[]',
     notify_channels: form.value.notify_channels || [],
+    notify_config: form.value.notify_config || {},
   }
   try {
     if (isEdit.value) {
@@ -478,9 +476,7 @@ onMounted(fetchData)
               </el-select>
             </el-form-item>
             <el-form-item label="通知渠道">
-              <el-select v-model="form.notify_channels" multiple clearable filterable class="w-full" placeholder="为空则走系统默认">
-                <el-option v-for="item in notifyChannelOptions" :key="item.value" :label="item.label" :value="item.value" />
-              </el-select>
+              <NotifyConfigEditor v-model="form.notify_config" />
             </el-form-item>
             <el-form-item label="是否启用"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
           </div>
