@@ -276,9 +276,9 @@ watch(() => route.params.id, (newId, oldId) => {
               </div>
               
               <div class="flex items-center gap-2 flex-wrap">
-                <el-button v-if="ticket.status === 'open'" type="primary" @click="openAction('assign')" :icon="User" class="!rounded-lg shadow-sm">分配处理人</el-button>
-                <el-button v-if="ticket.status === 'processing'" type="success" @click="openAction('process')" :icon="Check" class="!rounded-lg shadow-sm">处理工单</el-button>
-                <el-button v-if="ticket.status === 'processing'" @click="openAction('transfer')" :icon="Switch" class="!rounded-lg">转交</el-button>
+                <el-button v-if="ticket.status === 'open' || (ticket.status === 'processing' && !ticket.assignee_id)" type="primary" @click="openAction('assign')" :icon="User" class="!rounded-lg shadow-sm">分配处理人</el-button>
+                <el-button v-if="ticket.status === 'processing' && ticket.assignee_id" type="success" @click="openAction('process')" :icon="Check" class="!rounded-lg shadow-sm">处理工单</el-button>
+                <el-button v-if="ticket.status === 'processing' && ticket.assignee_id" @click="openAction('transfer')" :icon="Switch" class="!rounded-lg">转交</el-button>
                 <el-button v-if="ticket.status === 'resolved' || ticket.status === 'rejected'" type="primary" @click="openAction('close')" :icon="Select" class="!rounded-lg shadow-sm">确认关闭</el-button>
                 <el-button v-if="ticket.status === 'closed' || ticket.status === 'rejected'" @click="openAction('reopen')" :icon="RefreshRight" class="!rounded-lg">重新打开</el-button>
                 <el-button @click="openAction('comment')" :icon="ChatDotSquare" class="!rounded-lg hover:!text-indigo-600 hover:!border-indigo-300">评论</el-button>
@@ -334,7 +334,7 @@ watch(() => route.params.id, (newId, oldId) => {
             </div>
 
             <!-- 审批信息 -->
-            <div v-if="ticket.ticket_kind !== 'incident'" class="mt-6 p-4 border border-slate-100 rounded-xl bg-gradient-to-b from-white to-slate-50/50 shadow-sm">
+            <div v-if="ticket.approval_status && ticket.approval_status !== 'not_required'" class="mt-6 p-4 border border-slate-100 rounded-xl bg-gradient-to-b from-white to-slate-50/50 shadow-sm">
               <div class="flex items-center justify-between mb-4">
                 <span class="font-semibold text-slate-700">审批信息</span>
                 <el-tag size="small" :type="ticket.approval_status === 'approved' ? 'success' : ticket.approval_status === 'rejected' ? 'danger' : 'warning'" class="!rounded">
@@ -401,7 +401,8 @@ watch(() => route.params.id, (newId, oldId) => {
               </div>
             </template>
             <el-scrollbar max-height="600px" class="-mx-2 px-2">
-              <el-timeline class="pt-2 pl-1">
+              <div v-if="!activities.length" class="text-center text-sm text-slate-400 py-8">暂无活动记录</div>
+              <el-timeline v-else class="pt-2 pl-1">
                 <el-timeline-item 
                   v-for="a in activities" 
                   :key="a.id" 

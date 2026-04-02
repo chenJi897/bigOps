@@ -258,13 +258,22 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 			instance.Status = "approved"
 			instance.FinishedAt = &now
 			ticket.ApprovalStatus = "approved"
-			ticket.ExecutionStatus = "pending"
+			ticket.Status = "processing" // 审批通过 → 推进到处理中
+
+			// 自动指派处理人
+			assigneeID := s.resolveAssigneeAfterApproval(ticket)
+			if assigneeID > 0 {
+				ticket.AssigneeID = assigneeID
+			}
+
 			if err := tx.Save(instance).Error; err != nil {
 				return err
 			}
 			if err := tx.Save(ticket).Error; err != nil {
 				return err
 			}
+
+			// 审批完成活动
 			if err := tx.Create(&model.TicketActivity{
 				TicketID: ticket.ID,
 				UserID:   approverID,
@@ -273,6 +282,21 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 				IsSystem: false,
 			}).Error; err != nil {
 				return err
+			}
+
+			// 自动指派活动
+			if assigneeID > 0 {
+				assigneeName := s.userRepo.GetNamesByIDs([]int64{assigneeID})[assigneeID]
+				if err := tx.Create(&model.TicketActivity{
+					TicketID: ticket.ID,
+					UserID:   0,
+					Type:     "assign",
+					Content:  fmt.Sprintf("审批通过后自动分配给 %s", assigneeName),
+					NewValue: assigneeName,
+					IsSystem: true,
+				}).Error; err != nil {
+					return err
+				}
 			}
 			var notifyErr error
 			channels := s.ticketNotifyChannels(ticket)
@@ -506,4 +530,46 @@ func dedupeApprovalIDs(items []int64) []int64 {
 		result = append(result, item)
 	}
 	return result
+}
+
+// resolveAssigneeAfterApproval 审批通过后自动指派处理人。
+// 优先级：模板 autoAssignRule → 工单类型 autoAssignRule → 不指派
+func (s *ApprovalService) resolveAssigneeAfterApproval(ticket *model.Ticket) int64 {
+	// 从模板获取指派规则
+	if ticket.RequestTemplateID > 0 {
+		tpl, err := s.requestRepo.GetByID(ticket.RequestTemplateID)
+		if err == nil && tpl.AutoAssignRule != "" && tpl.AutoAssignRule != "manual" {
+			if id := s.resolveAssignee(tpl.AutoAssignRule, tpl.DefaultAssignee, ticket); id > 0 {
+				return id
+			}
+		}
+	}
+	return 0
+}
+
+func (s *ApprovalService) resolveAssignee(rule string, defaultAssignee int64, ticket *model.Ticket) int64 {
+	switch rule {
+	case "resource_owner":
+		if ticket.ResourceType == "asset" && ticket.ResourceID > 0 {
+			assetRepo := repository.NewAssetRepository()
+			if asset, err := assetRepo.GetByID(ticket.ResourceID); err == nil {
+				var ownerIDs []int64
+				_ = json.Unmarshal([]byte(asset.OwnerIDs), &ownerIDs)
+				if len(ownerIDs) > 0 {
+					return ownerIDs[0]
+				}
+			}
+		}
+	case "service_owner":
+		if ticket.ServiceTreeID > 0 {
+			if node, err := s.treeRepo.GetByID(ticket.ServiceTreeID); err == nil && node.OwnerID > 0 {
+				return node.OwnerID
+			}
+		}
+	case "dept_default":
+		if defaultAssignee > 0 {
+			return defaultAssignee
+		}
+	}
+	return 0
 }

@@ -428,6 +428,12 @@ onActivated(() => {
             </div>
           </div>
 
+          <!-- 审批提示 -->
+          <div v-if="selectedTemplate?.approval_policy_id || selectedTemplate?.nodes_json" class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-sm text-amber-700">
+            <el-icon class="text-amber-500"><InfoFilled /></el-icon>
+            <span>该模板需要审批，提交后将进入审批流程，审批通过后系统会自动分配处理人。</span>
+          </div>
+
           <el-form :model="form" label-width="110px" class="w-full" label-position="right" require-asterisk-position="right">
             <el-form-item label="工单标题" required class="font-medium">
               <el-input v-model="form.title" placeholder="请简明扼要地描述您的申请或问题" size="large" class="!rounded-md" />
