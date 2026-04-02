@@ -27,8 +27,10 @@ func (NotificationEvent) TableName() string {
 type NotificationDelivery struct {
 	ID            int64          `gorm:"primaryKey;autoIncrement" json:"id"`
 	EventID       int64          `gorm:"index;not null" json:"event_id"`
-	Channel       string         `gorm:"size:20;index;not null" json:"channel"` // in_app/email/webhook/im
+	Channel       string         `gorm:"size:20;index;not null" json:"channel"` // in_app/dingtalk/lark/wecom/webhook
 	Recipient     string         `gorm:"size:200;index" json:"recipient"`
+	WebhookURL    string         `gorm:"size:500" json:"webhook_url"`
+	WebhookSecret string         `gorm:"size:200" json:"webhook_secret"`
 	Status        string         `gorm:"size:20;index;default:pending" json:"status"`
 	StatusSummary string         `gorm:"-" json:"status_summary,omitempty"`
 	CanRetry      bool           `gorm:"-" json:"can_retry"`

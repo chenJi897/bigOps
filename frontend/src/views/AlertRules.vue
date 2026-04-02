@@ -5,6 +5,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { alertRuleApi, onCallApi, serviceTreeApi, taskApi, userApi } from '../api'
+import NotifyConfigEditor from '../components/NotifyConfigEditor.vue'
 
 const loading = ref(false)
 const eventLoading = ref(false)
@@ -56,6 +57,7 @@ const form = ref<any>({
   description: '',
   notify_user_ids: [] as number[],
   notify_channels: ['in_app'] as string[],
+  notify_config: {} as Record<string, { webhook_url: string; secret: string }>,
   action: 'notify_only',
   repair_task_id: null as number | null,
   ticket_type_id: null as number | null,
@@ -99,13 +101,6 @@ const eventStatusOptions = [
   { label: '触发中', value: 'firing' },
   { label: '已确认', value: 'acknowledged' },
   { label: '已恢复', value: 'resolved' },
-]
-
-const notifyChannelOptions = [
-  { label: '站内通知', value: 'in_app' },
-  { label: '邮件', value: 'email' },
-  { label: 'Webhook', value: 'webhook' },
-  { label: 'Message Pusher', value: 'message_pusher' },
 ]
 
 async function fetchUsers() {
@@ -191,6 +186,7 @@ function openAdd() {
     description: '',
     notify_user_ids: [],
     notify_channels: ['in_app'],
+    notify_config: {},
     action: 'notify_only',
     repair_task_id: null,
     ticket_type_id: null,
@@ -214,6 +210,7 @@ function openEdit(row: any) {
     description: row.description || '',
     notify_user_ids: row.notify_user_ids ? JSON.parse(row.notify_user_ids) : [],
     notify_channels: row.notify_channels ? JSON.parse(row.notify_channels) : ['in_app'],
+    notify_config: row.notify_config ? (typeof row.notify_config === 'string' ? JSON.parse(row.notify_config) : row.notify_config) : {},
     action: row.action || 'notify_only',
     repair_task_id: row.repair_task_id ? Number(row.repair_task_id) : null,
     ticket_type_id: row.ticket_type_id ? Number(row.ticket_type_id) : null,
@@ -761,9 +758,7 @@ onUnmounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="通知渠道">
-          <el-select v-model="form.notify_channels" multiple clearable filterable class="w-full">
-            <el-option v-for="item in notifyChannelOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
+          <NotifyConfigEditor v-model="form.notify_config" />
         </el-form-item>
         
         <el-divider border-style="dashed" />

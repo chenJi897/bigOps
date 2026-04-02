@@ -204,6 +204,8 @@ export const notificationApi = {
   listTemplates: () => api.get('/notifications/templates'),
   updateTemplate: (id: number, data: { title: string; content: string }) => api.post(`/notifications/templates/${id}`, data),
   previewTemplate: (data: { title: string; content: string; variables: Record<string, any> }) => api.post('/notifications/templates/preview', data),
+  testWebhook: (data: { channel_type: string; webhook_url: string; secret?: string }) => api.post('/notifications/test-webhook', data),
+  enabledChannelTypes: () => api.get('/notifications/enabled-channel-types'),
 }
 
 export const monitorApi = {

@@ -39,9 +39,11 @@ type AliyunConfig struct {
 // NotificationConfig 通知中心配置。
 type NotificationConfig struct {
 	DefaultChannels          []string            `mapstructure:"default_channels" json:"default_channels"`
+	EnabledChannelTypes      []string            `mapstructure:"enabled_channel_types" json:"enabled_channel_types"` // 管理员允许的外部渠道类型
 	MaxRetries               int                 `mapstructure:"max_retries" json:"max_retries"`
 	RetryIntervalSeconds     int                 `mapstructure:"retry_interval_seconds" json:"retry_interval_seconds"`
 	RetryScanIntervalSeconds int                 `mapstructure:"retry_scan_interval_seconds" json:"retry_scan_interval_seconds"`
+	// 以下为旧 Message Pusher 字段，保留兼容，后续删除
 	MessagePusher            MessagePusherConfig `mapstructure:"message_pusher" json:"message_pusher"`
 	ChannelMapping           map[string]string   `mapstructure:"channel_mapping" json:"channel_mapping"`
 }

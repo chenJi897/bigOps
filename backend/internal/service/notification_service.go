@@ -35,6 +35,7 @@ type NotificationPublishRequest struct {
 	Payload        interface{}
 	Channels       []string
 	SkipPreference bool
+	NotifyConfig   map[string]WebhookTarget // 业务内嵌的 Webhook 配置（渠道类型→地址）
 }
 
 type NotificationDispatchResult struct {
@@ -76,13 +77,7 @@ func NewNotificationService() *NotificationService {
 
 func (s *NotificationService) PublishTx(tx *gorm.DB, req NotificationPublishRequest) (int64, error) {
 	userIDs := dedupeUserIDs(req.UserIDs)
-	channels := s.normalizeChannels(req.Channels)
-	if len(userIDs) == 0 && len(channels) == 0 {
-		return 0, nil
-	}
-
-	channelRecipients, effectiveChannels := s.resolveRecipientsByPreference(userIDs, req.BizType, channels, req.SkipPreference)
-	if len(channelRecipients) == 0 && len(effectiveChannels) == 0 {
+	if len(userIDs) == 0 && len(req.NotifyConfig) == 0 {
 		return 0, nil
 	}
 
@@ -105,77 +100,71 @@ func (s *NotificationService) PublishTx(tx *gorm.DB, req NotificationPublishRequ
 		return 0, err
 	}
 
-	settings, _ := s.prefRepo.ListByUserIDs(userIDs)
+	hasExternal := false
 
-	for _, channel := range effectiveChannels {
-		if channel == "in_app" {
-			for _, userID := range channelRecipients["in_app"] {
-				delivery := &model.NotificationDelivery{
-					EventID:   event.ID,
-					Channel:   "in_app",
-					Recipient: fmt.Sprintf("%d", userID),
-					Status:    "sent",
-				}
-				if err := tx.Create(delivery).Error; err != nil {
-					return 0, err
-				}
-				notification := &model.InAppNotification{
-					UserID:  userID,
-					Title:   req.Title,
-					Content: req.Content,
-					Level:   normalizeLevel(req.Level),
-					BizType: req.BizType,
-					BizID:   req.BizID,
-				}
-				if err := tx.Create(notification).Error; err != nil {
-					return 0, err
-				}
-			}
-		} else {
-			// 外部通道：按“最终 Message Pusher 通道名”去重，避免同一钉钉被重复发送。
-			distinctTargets := map[string]struct{}{}
-			recipients := channelRecipients[channel]
-			for _, userID := range recipients {
-				mpCh := ""
-				if setting := settings[userID]; setting != nil {
-					// bizType -> channelType -> mpChannel
-					var targets map[string]map[string]string
-					_ = json.Unmarshal([]byte(setting.ChannelTargets), &targets)
-					if byChannel := targets[req.BizType]; byChannel != nil {
-						if v := strings.TrimSpace(byChannel[channel]); v != "" {
-							mpCh = v
-						}
-					}
-				}
-				if strings.TrimSpace(mpCh) == "" {
-					mpCh = config.Get().Notification.ChannelMapping[channel]
-				}
-				distinctTargets[mpCh] = struct{}{}
-			}
-
-			now := model.LocalTime(time.Now())
-			for mpCh := range distinctTargets {
-				if err := tx.Create(&model.NotificationDelivery{
-					EventID:     event.ID,
-					Channel:     channel,
-					Recipient:   mpCh, // 空表示走 Message Pusher 默认
-					Status:      "pending",
-					NextRetryAt: &now,
-				}).Error; err != nil {
-					return 0, err
-				}
-			}
+	// 1. 站内通知：强制发送，不可取消
+	for _, userID := range userIDs {
+		if err := tx.Create(&model.NotificationDelivery{
+			EventID:   event.ID,
+			Channel:   "in_app",
+			Recipient: fmt.Sprintf("%d", userID),
+			Status:    "sent",
+		}).Error; err != nil {
+			return 0, err
+		}
+		if err := tx.Create(&model.InAppNotification{
+			UserID:  userID,
+			Title:   req.Title,
+			Content: req.Content,
+			Level:   normalizeLevel(req.Level),
+			BizType: req.BizType,
+			BizID:   req.BizID,
+		}).Error; err != nil {
+			return 0, err
 		}
 	}
 
-	allInApp := true
-	for _, ch := range effectiveChannels {
-		if ch != "in_app" {
-			allInApp = false
-			break
+	// 2. 外部渠道：按 NotifyConfig 中的 Webhook 地址创建投递记录
+	now := model.LocalTime(time.Now())
+	for channelType, target := range req.NotifyConfig {
+		if strings.TrimSpace(target.WebhookURL) == "" {
+			continue
+		}
+		if err := tx.Create(&model.NotificationDelivery{
+			EventID:       event.ID,
+			Channel:       channelType,
+			Recipient:     channelType,
+			WebhookURL:    target.WebhookURL,
+			WebhookSecret: target.Secret,
+			Status:        "pending",
+			NextRetryAt:   &now,
+		}).Error; err != nil {
+			return 0, err
+		}
+		hasExternal = true
+	}
+
+	// 兼容旧调用：如果没有 NotifyConfig 但有 Channels，走旧 Message Pusher 逻辑
+	if len(req.NotifyConfig) == 0 && len(req.Channels) > 0 {
+		for _, channel := range req.Channels {
+			if channel == "in_app" {
+				continue
+			}
+			mpCh := config.Get().Notification.ChannelMapping[channel]
+			if err := tx.Create(&model.NotificationDelivery{
+				EventID:     event.ID,
+				Channel:     channel,
+				Recipient:   mpCh,
+				Status:      "pending",
+				NextRetryAt: &now,
+			}).Error; err != nil {
+				return 0, err
+			}
+			hasExternal = true
 		}
 	}
-	if allInApp {
+
+	if !hasExternal {
 		event.Status = "sent"
 		if err := tx.Save(event).Error; err != nil {
 			return 0, err
@@ -366,7 +355,13 @@ func (s *NotificationService) dispatchDelivery(event *model.NotificationEvent, d
 		_ = s.repo.UpdateDelivery(delivery)
 		return
 	default:
-		outcome = s.pushViaMessagePusher(event, delivery)
+		// 新模式：delivery 自带 Webhook URL
+		if strings.TrimSpace(delivery.WebhookURL) != "" {
+			outcome = s.dispatchViaWebhook(event, delivery)
+		} else {
+			// 旧模式兼容：走 Message Pusher
+			outcome = s.pushViaMessagePusher(event, delivery)
+		}
 	}
 
 	delivery.RetryCount += 1
@@ -708,6 +703,15 @@ func (s *NotificationService) renderEventContent(event *model.NotificationEvent)
 	return rendered.Title, rendered.Content
 }
 
+func (s *NotificationService) dispatchViaWebhook(event *model.NotificationEvent, delivery *model.NotificationDelivery) deliveryDispatchOutcome {
+	renderedTitle, renderedContent := s.renderEventContent(event)
+	err := DispatchWebhook(delivery.Channel, delivery.WebhookURL, delivery.WebhookSecret, renderedTitle, renderedContent)
+	if err != nil {
+		return dispatchErrorOutcome(err)
+	}
+	return deliveryDispatchOutcome{success: true, response: fmt.Sprintf("%s webhook ok", delivery.Channel)}
+}
+
 func (s *NotificationService) pushViaMessagePusher(event *model.NotificationEvent, delivery *model.NotificationDelivery) deliveryDispatchOutcome {
 	cfg := config.Get().Notification.MessagePusher
 	if !cfg.Enabled || cfg.Server == "" || cfg.Username == "" || cfg.Token == "" {
@@ -721,7 +725,7 @@ func (s *NotificationService) pushViaMessagePusher(event *model.NotificationEven
 		"content":     renderedContent,
 		"token":       cfg.Token,
 	}
-	// 外部投递：优先使用 delivery.Recipient 里的“最终 Message Pusher 通道名”，
+	// 外部投递：优先使用 delivery.Recipient 里的"最终 Message Pusher 通道名"，
 	// 否则回退到平台全局的 channel_mapping（兼容旧数据 Recipient="system"）。
 	mpCh := strings.TrimSpace(delivery.Recipient)
 	if mpCh == "" || mpCh == "system" {

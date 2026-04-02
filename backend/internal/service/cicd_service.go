@@ -981,14 +981,15 @@ func (s *CICDService) notifyPipelineRun(run *model.CICDPipelineRun) {
 	}
 	title := fmt.Sprintf("流水线 %s #%d %s", firstNonEmpty(run.PipelineName, fmt.Sprintf("%d", run.PipelineID)), run.RunNumber, run.Status)
 	content := fmt.Sprintf("项目 %s %s 分支 %s，结果 %s", run.ProjectName, run.PipelineName, run.Branch, run.Result)
-	userIDs, channels := s.resolvePipelineNotifyTargets(run)
+	userIDs, channels, notifyConfig := s.resolvePipelineNotifyTargets(run)
 	_, _ = s.notifySvc.Publish(NotificationPublishRequest{
-		EventType: eventType,
-		BizType:   "cicd_pipeline",
-		BizID:     run.ID,
-		Title:     title,
-		Content:   content,
-		Level:     level,
+		EventType:    eventType,
+		BizType:      "cicd_pipeline",
+		BizID:        run.ID,
+		Title:        title,
+		Content:      content,
+		Level:        level,
+		NotifyConfig: notifyConfig,
 		Payload: map[string]interface{}{
 			"pipeline_id":   run.PipelineID,
 			"pipeline_name": run.PipelineName,
@@ -1002,13 +1003,13 @@ func (s *CICDService) notifyPipelineRun(run *model.CICDPipelineRun) {
 	})
 }
 
-func (s *CICDService) resolvePipelineNotifyTargets(run *model.CICDPipelineRun) ([]int64, []string) {
+func (s *CICDService) resolvePipelineNotifyTargets(run *model.CICDPipelineRun) ([]int64, []string, map[string]WebhookTarget) {
 	if run == nil || run.PipelineID <= 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	pipeline, err := s.pipelineRepo.GetByID(run.PipelineID)
 	if err != nil || pipeline == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	cfg := parsePipelineRuntimeConfig(pipeline.ConfigJSON, pipeline.VariablesJSON, nil)
 	var userIDs []int64
@@ -1020,7 +1021,9 @@ func (s *CICDService) resolvePipelineNotifyTargets(run *model.CICDPipelineRun) (
 	if run.TriggeredBy > 0 {
 		userIDs = append(userIDs, run.TriggeredBy)
 	}
-	return dedupeRunNotifyUserIDs(userIDs), cfg.NotifyChannels
+	// 从 config_json 中提取 notify_config
+	notifyConfig := ParseNotifyConfig(extractStringFromJSON(pipeline.ConfigJSON, "notify_config"))
+	return dedupeRunNotifyUserIDs(userIDs), cfg.NotifyChannels, notifyConfig
 }
 
 func (s *CICDService) validatePipelineRefs(item *model.CICDPipeline) error {
@@ -1149,6 +1152,18 @@ func normalizeStringSlice(items []string) []string {
 		result = append(result, item)
 	}
 	return result
+}
+
+func extractStringFromJSON(raw, key string) string {
+	var m map[string]json.RawMessage
+	if json.Unmarshal([]byte(raw), &m) != nil {
+		return ""
+	}
+	v, ok := m[key]
+	if !ok {
+		return ""
+	}
+	return string(v)
 }
 
 func dedupeRunNotifyUserIDs(items []int64) []int64 {

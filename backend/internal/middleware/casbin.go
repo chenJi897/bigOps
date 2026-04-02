@@ -22,11 +22,13 @@ var casbinWhitelist = []string{
 	"/api/v1/approval-policies",
 	"/api/v1/dashboard/personal",
 	"/api/v1/notifications/preferences",
+	"/api/v1/notifications/enabled-channel-types",
 }
 
 // 公共路由前缀白名单（不限方法，所有已认证用户可访问）
 var casbinPrefixWhitelistAny = []string{
 	"/api/v1/notifications/in-app",
+	"/api/v1/notifications/test-webhook",
 	"/api/v1/ws/",
 	"/api/v1/approval-instances/",
 }

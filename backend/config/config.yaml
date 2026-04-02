@@ -24,20 +24,14 @@ log:
 notification:
     default_channels:
         - in_app
+    enabled_channel_types:
+        - lark
+        - dingtalk
+        - wecom
+        - webhook
     max_retries: 3
     retry_interval_seconds: 60
     retry_scan_interval_seconds: 60
-    message_pusher:
-        enabled: false
-        server: ""
-        username: ""
-        token: ""
-        timeout_seconds: 10
-    channel_mapping:
-        wecom: "corp"
-        dingtalk: "ding"
-        lark: "lark"
-        webhook: "custom"
 redis:
     db: 0
     host: 192.168.0.197

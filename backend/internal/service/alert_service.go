@@ -234,14 +234,15 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 				return err
 			}
 			eventID, notifyErr := s.notifySvc.PublishTx(tx, NotificationPublishRequest{
-				EventType: "alert_firing",
-				BizType:   "alert_event",
-				BizID:     alertEvent.ID,
-				Title:     fmt.Sprintf("告警触发：%s", rule.Name),
-				Content:   fmt.Sprintf("%s(%s) %s = %.2f", agent.Hostname, agent.IP, rule.MetricType, value),
-				Level:     severityToNotifyLevel(rule.Severity),
-				UserIDs:   userIDs,
-				Channels:  channels,
+				EventType:    "alert_firing",
+				BizType:      "alert_event",
+				BizID:        alertEvent.ID,
+				Title:        fmt.Sprintf("告警触发：%s", rule.Name),
+				Content:      fmt.Sprintf("%s(%s) %s = %.2f", agent.Hostname, agent.IP, rule.MetricType, value),
+				Level:        severityToNotifyLevel(rule.Severity),
+				UserIDs:      userIDs,
+				Channels:     channels,
+				NotifyConfig: ParseNotifyConfig(rule.NotifyConfig),
 				Payload: map[string]interface{}{
 					"alert_event_id": alertEvent.ID,
 					"rule_id":        rule.ID,
@@ -287,14 +288,15 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 				return err
 			}
 			eventID, notifyErr := s.notifySvc.PublishTx(tx, NotificationPublishRequest{
-				EventType: "alert_resolved",
-				BizType:   "alert_event",
-				BizID:     event.ID,
-				Title:     fmt.Sprintf("告警恢复：%s", rule.Name),
-				Content:   fmt.Sprintf("%s(%s) %s 已恢复到 %.2f", agent.Hostname, agent.IP, rule.MetricType, value),
-				Level:     "info",
-				UserIDs:   userIDs,
-				Channels:  channels,
+				EventType:    "alert_resolved",
+				BizType:      "alert_event",
+				BizID:        event.ID,
+				Title:        fmt.Sprintf("告警恢复：%s", rule.Name),
+				Content:      fmt.Sprintf("%s(%s) %s 已恢复到 %.2f", agent.Hostname, agent.IP, rule.MetricType, value),
+				Level:        "info",
+				UserIDs:      userIDs,
+				Channels:     channels,
+				NotifyConfig: ParseNotifyConfig(rule.NotifyConfig),
 				Payload: map[string]interface{}{
 					"alert_event_id": event.ID,
 					"rule_id":        rule.ID,

@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -305,4 +306,34 @@ func (h *NotificationHandler) PreviewTemplate(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"title": rendered.Title, "content": rendered.Content})
+}
+
+// TestWebhook 测试 Webhook 连通性。
+func (h *NotificationHandler) TestWebhook(c *gin.Context) {
+	var req struct {
+		ChannelType string `json:"channel_type" binding:"required"`
+		WebhookURL  string `json:"webhook_url" binding:"required"`
+		Secret      string `json:"secret"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	title := "BigOps 通知测试"
+	markdown := "## 通知测试\n\n这是一条来自 BigOps 的测试消息，收到说明 Webhook 配置正确。\n\n- 渠道类型: " + req.ChannelType + "\n- 时间: " + time.Now().Format("2006-01-02 15:04:05")
+	if err := service.DispatchWebhook(req.ChannelType, req.WebhookURL, req.Secret, title, markdown); err != nil {
+		response.Error(c, 400, "发送失败: "+err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "测试消息发送成功", nil)
+}
+
+// GetEnabledChannelTypes 获取管理员允许的通知渠道类型列表。
+func (h *NotificationHandler) GetEnabledChannelTypes(c *gin.Context) {
+	cfg := config.Get().Notification
+	types := cfg.EnabledChannelTypes
+	if len(types) == 0 {
+		types = []string{"lark", "dingtalk", "wecom", "webhook"}
+	}
+	response.Success(c, types)
 }

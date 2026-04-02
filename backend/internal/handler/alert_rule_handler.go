@@ -34,6 +34,7 @@ type UpsertAlertRuleRequest struct {
 	Description   string  `json:"description"`
 	NotifyUserIDs []int64 `json:"notify_user_ids"`
 	NotifyChannels []string `json:"notify_channels"`
+	NotifyConfig  map[string]interface{} `json:"notify_config"`
 	Action        string  `json:"action"`
 	RepairTaskID  int64   `json:"repair_task_id"`
 	TicketTypeID  int64   `json:"ticket_type_id"`
@@ -98,6 +99,7 @@ func (h *AlertRuleHandler) Create(c *gin.Context) {
 	}
 	payload, _ := json.Marshal(req.NotifyUserIDs)
 	channelsPayload, _ := json.Marshal(req.NotifyChannels)
+	notifyConfigPayload, _ := json.Marshal(req.NotifyConfig)
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
 	item := &model.AlertRule{
@@ -110,6 +112,7 @@ func (h *AlertRuleHandler) Create(c *gin.Context) {
 		Description:   req.Description,
 		NotifyUserIDs: string(payload),
 		NotifyChannels: string(channelsPayload),
+		NotifyConfig:  string(notifyConfigPayload),
 		Action:        req.Action,
 		RepairTaskID:  req.RepairTaskID,
 		TicketTypeID:  req.TicketTypeID,
@@ -155,6 +158,7 @@ func (h *AlertRuleHandler) Update(c *gin.Context) {
 	}
 	payload, _ := json.Marshal(req.NotifyUserIDs)
 	channelsPayload, _ := json.Marshal(req.NotifyChannels)
+	notifyConfigPayload, _ := json.Marshal(req.NotifyConfig)
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
 	item := &model.AlertRule{
@@ -167,6 +171,7 @@ func (h *AlertRuleHandler) Update(c *gin.Context) {
 		Description:   req.Description,
 		NotifyUserIDs: string(payload),
 		NotifyChannels: string(channelsPayload),
+		NotifyConfig:  string(notifyConfigPayload),
 		Action:        req.Action,
 		RepairTaskID:  req.RepairTaskID,
 		TicketTypeID:  req.TicketTypeID,
