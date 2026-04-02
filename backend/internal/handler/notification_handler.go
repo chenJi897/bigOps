@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -336,4 +337,121 @@ func (h *NotificationHandler) GetEnabledChannelTypes(c *gin.Context) {
 		types = []string{"lark", "dingtalk", "wecom", "webhook"}
 	}
 	response.Success(c, types)
+}
+
+// ========== 发送组 CRUD ==========
+
+func (h *NotificationHandler) ListGroups(c *gin.Context) {
+	page, size := parsePageSize(c)
+	groupSvc := service.NewNotifyGroupService()
+	items, total, err := groupSvc.List(page, size, c.Query("keyword"))
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Page(c, items, total, page, size)
+}
+
+func (h *NotificationHandler) ListAllGroups(c *gin.Context) {
+	groupSvc := service.NewNotifyGroupService()
+	items, err := groupSvc.ListAll()
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, items)
+}
+
+func (h *NotificationHandler) GetGroup(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	groupSvc := service.NewNotifyGroupService()
+	item, err := groupSvc.GetByID(id)
+	if err != nil {
+		response.Error(c, 404, "发送组不存在")
+		return
+	}
+	response.Success(c, item)
+}
+
+func (h *NotificationHandler) CreateGroup(c *gin.Context) {
+	var item model.NotifyGroup
+	if err := c.ShouldBindJSON(&item); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	userID, _ := c.Get("userID")
+	item.CreatedBy, _ = userID.(int64)
+	groupSvc := service.NewNotifyGroupService()
+	if err := groupSvc.Create(&item); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	logger.Info("创建发送组", zap.String("operator", c.GetString("username")), zap.Int64("group_id", item.ID), zap.String("name", item.Name))
+	response.SuccessWithMessage(c, "创建成功", item)
+}
+
+func (h *NotificationHandler) UpdateGroup(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var item model.NotifyGroup
+	if err := c.ShouldBindJSON(&item); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	groupSvc := service.NewNotifyGroupService()
+	if err := groupSvc.Update(id, &item); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	logger.Info("更新发送组", zap.String("operator", c.GetString("username")), zap.Int64("group_id", id))
+	response.SuccessWithMessage(c, "更新成功", nil)
+}
+
+func (h *NotificationHandler) DeleteGroup(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	groupSvc := service.NewNotifyGroupService()
+	if err := groupSvc.Delete(id); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	logger.Info("删除发送组", zap.String("operator", c.GetString("username")), zap.Int64("group_id", id))
+	response.SuccessWithMessage(c, "删除成功", nil)
+}
+
+func (h *NotificationHandler) TestGroup(c *gin.Context) {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	groupSvc := service.NewNotifyGroupService()
+	group, err := groupSvc.GetByID(id)
+	if err != nil {
+		response.Error(c, 404, "发送组不存在")
+		return
+	}
+	targets := service.ResolveGroupWebhookTargets(group.WebhooksJSON)
+	if len(targets) == 0 {
+		response.Error(c, 400, "发送组无 Webhook 配置")
+		return
+	}
+	title := "BigOps 发送组测试"
+	markdown := "## 发送组测试\n\n发送组 **" + group.Name + "** 的测试消息。\n\n收到说明 Webhook 配置正确。\n\n- 时间: " + time.Now().Format("2006-01-02 15:04:05")
+	var failed []string
+	for key, target := range targets {
+		if err := service.DispatchWebhook(extractChannelType(key), target.WebhookURL, target.Secret, title, markdown); err != nil {
+			failed = append(failed, key+": "+err.Error())
+		}
+	}
+	if len(failed) > 0 {
+		response.Error(c, 400, "部分发送失败: "+strings.Join(failed, "; "))
+		return
+	}
+	response.SuccessWithMessage(c, "测试消息已发送到所有渠道", nil)
+}
+
+func extractChannelType(key string) string {
+	// key may be "lark", "lark_SRE群" etc
+	if idx := strings.Index(key, "_"); idx > 0 {
+		return key[:idx]
+	}
+	return key
 }

@@ -38,6 +38,7 @@ const viewModules: Record<string, () => Promise<any>> = {
   'MonitorDatasources': () => import('../views/MonitorDatasources.vue'),
   'MonitorQuery': () => import('../views/MonitorQuery.vue'),
   'OnCallSchedules': () => import('../views/OnCallSchedules.vue'),
+  'NotifyGroups': () => import('../views/NotifyGroups.vue'),
   'Users': () => import('../views/Users.vue'),
   'Roles': () => import('../views/Roles.vue'),
   'Menus': () => import('../views/Menus.vue'),

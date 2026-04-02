@@ -106,6 +106,7 @@ func main() {
 		&model.InAppNotification{},
 		&model.NotificationUserSetting{},
 		&model.NotificationTemplate{},
+		&model.NotifyGroup{},
 		&model.Task{},
 		&model.TaskExecution{},
 		&model.TaskHostResult{},

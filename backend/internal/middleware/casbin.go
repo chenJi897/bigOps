@@ -23,6 +23,7 @@ var casbinWhitelist = []string{
 	"/api/v1/dashboard/personal",
 	"/api/v1/notifications/preferences",
 	"/api/v1/notifications/enabled-channel-types",
+	"/api/v1/notify-groups/all",
 }
 
 // 公共路由前缀白名单（不限方法，所有已认证用户可访问）
@@ -51,6 +52,8 @@ var casbinPrefixWhitelistGET = []string{
 	"/api/v1/tasks",
 	"/api/v1/task-executions",
 	"/api/v1/agents",
+	// 发送组
+	"/api/v1/notify-groups",
 	// CI/CD
 	"/api/v1/cicd/",
 }

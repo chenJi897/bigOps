@@ -35,6 +35,7 @@ type UpsertAlertRuleRequest struct {
 	NotifyUserIDs []int64 `json:"notify_user_ids"`
 	NotifyChannels []string `json:"notify_channels"`
 	NotifyConfig  map[string]interface{} `json:"notify_config"`
+	NotifyGroupID int64                  `json:"notify_group_id"`
 	Action        string  `json:"action"`
 	RepairTaskID  int64   `json:"repair_task_id"`
 	TicketTypeID  int64   `json:"ticket_type_id"`
@@ -113,6 +114,7 @@ func (h *AlertRuleHandler) Create(c *gin.Context) {
 		NotifyUserIDs: string(payload),
 		NotifyChannels: string(channelsPayload),
 		NotifyConfig:  string(notifyConfigPayload),
+		NotifyGroupID: req.NotifyGroupID,
 		Action:        req.Action,
 		RepairTaskID:  req.RepairTaskID,
 		TicketTypeID:  req.TicketTypeID,
@@ -172,6 +174,7 @@ func (h *AlertRuleHandler) Update(c *gin.Context) {
 		NotifyUserIDs: string(payload),
 		NotifyChannels: string(channelsPayload),
 		NotifyConfig:  string(notifyConfigPayload),
+		NotifyGroupID: req.NotifyGroupID,
 		Action:        req.Action,
 		RepairTaskID:  req.RepairTaskID,
 		TicketTypeID:  req.TicketTypeID,

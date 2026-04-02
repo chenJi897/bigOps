@@ -155,6 +155,15 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/notifications/test-webhook", notificationHandler.TestWebhook)
 			authGroup.GET("/notifications/enabled-channel-types", notificationHandler.GetEnabledChannelTypes)
 
+			// --- 发送组管理 ---
+			authGroup.GET("/notify-groups", notificationHandler.ListGroups)
+			authGroup.GET("/notify-groups/all", notificationHandler.ListAllGroups)
+			authGroup.GET("/notify-groups/:id", notificationHandler.GetGroup)
+			authGroup.POST("/notify-groups", notificationHandler.CreateGroup)
+			authGroup.POST("/notify-groups/:id", notificationHandler.UpdateGroup)
+			authGroup.POST("/notify-groups/:id/delete", notificationHandler.DeleteGroup)
+			authGroup.POST("/notify-groups/:id/test", notificationHandler.TestGroup)
+
 			// --- 部门管理 ---
 			departmentHandler := handler.NewDepartmentHandler()
 			authGroup.GET("/departments", departmentHandler.List)

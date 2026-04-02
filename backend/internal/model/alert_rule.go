@@ -15,6 +15,7 @@ type AlertRule struct {
 	NotifyUserIDs string         `gorm:"type:json" json:"notify_user_ids"` // JSON 数组
 	NotifyChannels string        `gorm:"type:json" json:"notify_channels"` // JSON 数组
 	NotifyConfig   string        `gorm:"type:text" json:"notify_config"`   // JSON: 渠道→webhook 配置
+	NotifyGroupID  int64         `gorm:"index" json:"notify_group_id"`     // 发送组ID，>0 则使用发送组模式
 	NotifyTemplate string        `gorm:"type:text" json:"notify_template"`
 	Action        string         `gorm:"size:32;index;default:notify_only" json:"action"`
 	RepairTaskID  int64          `gorm:"index" json:"repair_task_id"`

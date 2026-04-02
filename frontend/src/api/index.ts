@@ -208,6 +208,16 @@ export const notificationApi = {
   enabledChannelTypes: () => api.get('/notifications/enabled-channel-types'),
 }
 
+export const notifyGroupApi = {
+  list: (params?: { page?: number; size?: number; keyword?: string }) => api.get('/notify-groups', { params }),
+  all: () => api.get('/notify-groups/all'),
+  getById: (id: number) => api.get(`/notify-groups/${id}`),
+  create: (data: any) => api.post('/notify-groups', data),
+  update: (id: number, data: any) => api.post(`/notify-groups/${id}`, data),
+  delete: (id: number) => api.post(`/notify-groups/${id}/delete`),
+  test: (id: number) => api.post(`/notify-groups/${id}/test`),
+}
+
 export const monitorApi = {
   summary: () => api.get('/monitor/summary'),
   agents: (params: { page?: number; size?: number; status?: string; keyword?: string }) => api.get('/monitor/agents', { params }),

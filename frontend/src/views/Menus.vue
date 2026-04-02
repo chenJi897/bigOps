@@ -29,6 +29,7 @@ const componentOptions = [
   'TaskList', 'TaskCreate', 'TaskExecution', 'AgentList',
   'MonitorDashboard', 'AlertRules', 'AgentDetail', 'AlertEvents', 'AlertSilences', 'MonitorDatasources', 'MonitorQuery', 'OnCallSchedules',
   'CicdProjects', 'CicdPipelines', 'CicdRuns',
+  'NotifyGroups',
 ]
 
 async function loadMenus() {

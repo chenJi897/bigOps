@@ -193,8 +193,23 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 	now := model.LocalTime(time.Now())
 	var userIDs []int64
 	var channels []string
-	_ = json.Unmarshal([]byte(rule.NotifyUserIDs), &userIDs)
-	_ = json.Unmarshal([]byte(rule.NotifyChannels), &channels)
+	var notifyConfig map[string]WebhookTarget
+	var sendResolved int8 = 1
+
+	// 发送组模式 vs 简单模式
+	if rule.NotifyGroupID > 0 {
+		groupRepo := repository.NewNotifyGroupRepository()
+		group, groupErr := groupRepo.GetByID(rule.NotifyGroupID)
+		if groupErr == nil {
+			_ = json.Unmarshal([]byte(group.NotifyUserIDs), &userIDs)
+			notifyConfig = ResolveGroupWebhookTargets(group.WebhooksJSON)
+			sendResolved = group.SendResolved
+		}
+	} else {
+		_ = json.Unmarshal([]byte(rule.NotifyUserIDs), &userIDs)
+		_ = json.Unmarshal([]byte(rule.NotifyChannels), &channels)
+		notifyConfig = ParseNotifyConfig(rule.NotifyConfig)
+	}
 	if rule.OnCallScheduleID > 0 {
 		if oncallIDs, oncallErr := s.oncallSvc.CurrentUserIDs(rule.OnCallScheduleID, time.Now()); oncallErr == nil {
 			userIDs = dedupeInt64s(append(userIDs, oncallIDs...))
@@ -226,6 +241,7 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 				Status:        model.AlertEventStatusFiring,
 				Description:   rule.Description,
 				TriggeredAt:   now,
+				LastNotifyAt:  &now,
 			}
 			if err := tx.Create(alertEvent).Error; err != nil {
 				return err
@@ -242,7 +258,7 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 				Level:        severityToNotifyLevel(rule.Severity),
 				UserIDs:      userIDs,
 				Channels:     channels,
-				NotifyConfig: ParseNotifyConfig(rule.NotifyConfig),
+				NotifyConfig: notifyConfig,
 				Payload: map[string]interface{}{
 					"alert_event_id": alertEvent.ID,
 					"rule_id":        rule.ID,
@@ -287,6 +303,10 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 			if err := tx.Save(event).Error; err != nil {
 				return err
 			}
+			// 发送组可控制是否发恢复通知
+			if sendResolved == 0 {
+				return nil
+			}
 			eventID, notifyErr := s.notifySvc.PublishTx(tx, NotificationPublishRequest{
 				EventType:    "alert_resolved",
 				BizType:      "alert_event",
@@ -296,7 +316,7 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 				Level:        "info",
 				UserIDs:      userIDs,
 				Channels:     channels,
-				NotifyConfig: ParseNotifyConfig(rule.NotifyConfig),
+				NotifyConfig: notifyConfig,
 				Payload: map[string]interface{}{
 					"alert_event_id": event.ID,
 					"rule_id":        rule.ID,

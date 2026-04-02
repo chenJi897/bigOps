@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { alertRuleApi, onCallApi, serviceTreeApi, taskApi, userApi } from '../api'
 import NotifyConfigEditor from '../components/NotifyConfigEditor.vue'
+import { notifyGroupApi } from '../api'
 
 const loading = ref(false)
 const eventLoading = ref(false)
@@ -20,6 +21,7 @@ const users = ref<any[]>([])
 const tasks = ref<any[]>([])
 const oncallSchedules = ref<any[]>([])
 const serviceTrees = ref<any[]>([])
+const notifyGroups = ref<any[]>([])
 
 const rulePager = ref({
   page: 1,
@@ -58,6 +60,8 @@ const form = ref<any>({
   notify_user_ids: [] as number[],
   notify_channels: ['in_app'] as string[],
   notify_config: {} as Record<string, { webhook_url: string; secret: string }>,
+  notify_mode: 'simple' as 'simple' | 'group',
+  notify_group_id: null as number | null,
   action: 'notify_only',
   repair_task_id: null as number | null,
   ticket_type_id: null as number | null,
@@ -187,6 +191,8 @@ function openAdd() {
     notify_user_ids: [],
     notify_channels: ['in_app'],
     notify_config: {},
+    notify_mode: 'simple',
+    notify_group_id: null,
     action: 'notify_only',
     repair_task_id: null,
     ticket_type_id: null,
@@ -211,6 +217,8 @@ function openEdit(row: any) {
     notify_user_ids: row.notify_user_ids ? JSON.parse(row.notify_user_ids) : [],
     notify_channels: row.notify_channels ? JSON.parse(row.notify_channels) : ['in_app'],
     notify_config: row.notify_config ? (typeof row.notify_config === 'string' ? JSON.parse(row.notify_config) : row.notify_config) : {},
+    notify_mode: row.notify_group_id ? 'group' : 'simple',
+    notify_group_id: row.notify_group_id || null,
     action: row.action || 'notify_only',
     repair_task_id: row.repair_task_id ? Number(row.repair_task_id) : null,
     ticket_type_id: row.ticket_type_id ? Number(row.ticket_type_id) : null,
@@ -231,6 +239,7 @@ async function submitForm() {
     const payload = {
       ...form.value,
       name: form.value.name.trim(),
+      notify_group_id: form.value.notify_mode === 'group' ? Number(form.value.notify_group_id || 0) : 0,
       repair_task_id: Number(form.value.repair_task_id || 0),
       ticket_type_id: Number(form.value.ticket_type_id || 0),
       oncall_schedule_id: Number(form.value.oncall_schedule_id || 0),
@@ -490,6 +499,7 @@ function flattenTree(nodes: any[], level = 0): any[] {
 onMounted(async () => {
   await fetchData(true)
   setupRefreshTimer()
+  try { const res: any = await notifyGroupApi.all(); notifyGroups.value = res.data || [] } catch {}
 })
 
 onUnmounted(() => {
@@ -752,14 +762,36 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <el-form-item label="通知成员">
-          <el-select v-model="form.notify_user_ids" multiple clearable filterable class="w-full" placeholder="选择接收通知的用户">
-            <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
+        <el-form-item label="通知方式">
+          <el-radio-group v-model="form.notify_mode" class="mb-2">
+            <el-radio value="simple">简单模式</el-radio>
+            <el-radio value="group">发送组模式</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="通知渠道">
-          <NotifyConfigEditor v-model="form.notify_config" />
-        </el-form-item>
+
+        <!-- 简单模式 -->
+        <template v-if="form.notify_mode === 'simple'">
+          <el-form-item label="通知成员">
+            <el-select v-model="form.notify_user_ids" multiple clearable filterable class="w-full" placeholder="选择接收通知的用户">
+              <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="通知渠道">
+            <NotifyConfigEditor v-model="form.notify_config" />
+          </el-form-item>
+        </template>
+
+        <!-- 发送组模式 -->
+        <template v-if="form.notify_mode === 'group'">
+          <el-form-item label="发送组">
+            <el-select v-model="form.notify_group_id" clearable filterable class="w-full" placeholder="选择发送组">
+              <el-option v-for="g in notifyGroups" :key="g.id" :label="g.name" :value="g.id">
+                <span>{{ g.name }}</span>
+                <span class="text-xs text-gray-400 ml-2">{{ g.description }}</span>
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </template>
         
         <el-divider border-style="dashed" />
 

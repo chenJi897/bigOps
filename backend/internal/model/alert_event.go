@@ -25,6 +25,8 @@ type AlertEvent struct {
 	OwnerID             int64          `gorm:"index;default:0" json:"owner_id"`
 	TriggeredAt         LocalTime      `gorm:"index" json:"triggered_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	ResolvedAt          *LocalTime     `json:"resolved_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
+	LastNotifyAt        *LocalTime     `json:"last_notify_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
+	Escalated           int8           `gorm:"default:0" json:"escalated"`
 	AcknowledgedBy      int64          `gorm:"index;default:0" json:"acknowledged_by"`
 	AcknowledgedAt      *LocalTime     `json:"acknowledged_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	AcknowledgementNote string         `gorm:"size:500" json:"acknowledgement_note"`
