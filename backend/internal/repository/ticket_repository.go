@@ -48,17 +48,17 @@ func (r *TicketRepository) GetByDedupeKey(key string) (*model.Ticket, error) {
 
 // GetNextSeq 获取当天工单序号。
 func (r *TicketRepository) GetNextSeq(date string) int {
-	var maxNo string
+	var maxNo *string
 	prefix := fmt.Sprintf("TK-%s-", date)
 	database.GetDB().Model(&model.Ticket{}).
 		Where("ticket_no LIKE ?", prefix+"%").
 		Select("MAX(ticket_no)").Scan(&maxNo)
-	if maxNo == "" {
+	if maxNo == nil || *maxNo == "" {
 		return 1
 	}
 	// 解析末尾4位
 	var seq int
-	fmt.Sscanf(maxNo, "TK-"+date+"-%04d", &seq)
+	fmt.Sscanf(*maxNo, "TK-"+date+"-%04d", &seq)
 	return seq + 1
 }
 
