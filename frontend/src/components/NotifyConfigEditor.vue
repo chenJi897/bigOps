@@ -113,14 +113,7 @@ async function testWebhook(channelType: string) {
 
 <template>
   <div class="notify-config-editor space-y-2">
-    <!-- 站内通知：强制 -->
-    <div class="flex items-center gap-2 py-1.5 px-3 bg-gray-50 rounded-lg">
-      <el-checkbox :model-value="true" disabled />
-      <span class="text-sm text-gray-600">站内通知</span>
-      <span class="text-xs text-gray-400">默认开启，不可取消</span>
-    </div>
-
-    <!-- 外部渠道 -->
+    <!-- 外部渠道（站内通知强制开启，不在此显示） -->
     <div v-for="ct in enabledTypes" :key="ct" class="border border-gray-200 rounded-lg overflow-hidden">
       <div
         class="flex items-center gap-2 py-2 px-3 cursor-pointer hover:bg-gray-50 transition-colors"
