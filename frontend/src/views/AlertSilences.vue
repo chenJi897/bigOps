@@ -14,6 +14,7 @@ const rows = ref<any[]>([])
 const rules = ref<any[]>([])
 const users = ref<any[]>([])
 const serviceTrees = ref<any[]>([])
+const serviceTreeData = ref<any[]>([])
 
 const form = ref<any>(createDefaultForm())
 
@@ -97,6 +98,7 @@ async function fetchBaseOptions() {
   rules.value = (ruleRes as any).data?.list || []
   users.value = (userRes as any).data?.list || []
   serviceTrees.value = flattenTree((treeRes as any).data || [])
+  serviceTreeData.value = (treeRes as any).data || []
 }
 
 async function fetchData() {
@@ -207,68 +209,81 @@ onMounted(async () => {
           <el-table-column label="操作" width="140" fixed="right" align="center">
             <template #default="{ row }">
               <el-button v-permission="'silence:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
-              <el-button link type="danger" @click="removeRow(row)">删除</el-button>
+              <el-button v-permission="'silence:edit'" link type="danger" @click="removeRow(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
       </el-card>
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑静默' : '新增静默'" width="640px" destroy-on-close align-center>
-      <el-form label-width="100px" class="pr-6">
-        <el-form-item label="静默名称" required>
-          <el-input v-model="form.name" placeholder="例如：数据库维护窗口" />
-        </el-form-item>
-        <el-form-item label="规则范围">
-          <el-select v-model="form.rule_id" clearable filterable class="w-full" placeholder="不限制规则">
-            <el-option v-for="item in rules" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Agent ID">
-          <el-input v-model="form.agent_id" placeholder="可选，指定某台 Agent" />
-        </el-form-item>
-        <el-form-item label="服务树">
-          <el-select v-model="form.service_tree_id" clearable filterable class="w-full" placeholder="不限制服务树">
-            <el-option v-for="item in serviceTrees" :key="item.id" :label="item.label" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="负责人">
-          <el-select v-model="form.owner_id" clearable filterable class="w-full" placeholder="不限制负责人">
-            <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="开始时间">
-          <el-date-picker
-            v-model="form.starts_at"
-            type="datetime"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            placeholder="选择开始时间"
-            class="!w-full"
-          />
-        </el-form-item>
-        <el-form-item label="结束时间">
-          <el-date-picker
-            v-model="form.ends_at"
-            type="datetime"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            placeholder="选择结束时间"
-            class="!w-full"
-          />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-        <el-form-item label="静默原因">
-          <el-input v-model="form.reason" type="textarea" :rows="4" placeholder="例如：业务窗口期发布、节假日演练等" />
-        </el-form-item>
-      </el-form>
+    <el-drawer v-model="dialogVisible" :title="isEdit ? '编辑静默' : '新增静默'" size="520px" destroy-on-close>
+      <div class="px-2">
+        <el-form label-position="top">
+          <el-form-item label="静默名称" required>
+            <el-input v-model="form.name" placeholder="例如：数据库维护窗口" />
+          </el-form-item>
+          <el-form-item label="规则范围">
+            <el-select v-model="form.rule_id" clearable filterable class="w-full" placeholder="不限制规则（全部告警规则）">
+              <el-option v-for="item in rules" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="Agent ID">
+            <el-input v-model="form.agent_id" placeholder="可选，指定某台 Agent" />
+          </el-form-item>
+          <div class="grid grid-cols-2 gap-4">
+            <el-form-item label="服务树">
+              <el-tree-select
+                v-model="form.service_tree_id"
+                :data="serviceTreeData"
+                :props="{ label: 'name', value: 'id', children: 'children' }"
+                clearable
+                filterable
+                check-strictly
+                placeholder="不限制"
+                class="w-full"
+              />
+            </el-form-item>
+            <el-form-item label="负责人">
+              <el-select v-model="form.owner_id" clearable filterable class="w-full" placeholder="不限制">
+                <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <el-form-item label="开始时间">
+              <el-date-picker
+                v-model="form.starts_at"
+                type="datetime"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                placeholder="开始时间"
+                class="!w-full"
+              />
+            </el-form-item>
+            <el-form-item label="结束时间">
+              <el-date-picker
+                v-model="form.ends_at"
+                type="datetime"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                placeholder="结束时间"
+                class="!w-full"
+              />
+            </el-form-item>
+          </div>
+          <el-form-item label="状态">
+            <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="停用" />
+          </el-form-item>
+          <el-form-item label="静默原因">
+            <el-input v-model="form.reason" type="textarea" :rows="3" placeholder="例如：业务窗口期发布、节假日演练等" />
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
-        <div class="flex justify-end pt-4">
+        <div class="flex justify-end gap-2">
           <el-button @click="dialogVisible = false">取消</el-button>
           <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 </template>
 
