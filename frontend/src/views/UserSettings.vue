@@ -245,12 +245,12 @@ onMounted(() => {
               <div class="text-xs text-gray-500 mb-3 leading-snug">
                 仅影响站外通知（企业微信/钉钉/飞书/Webhook）。留空则使用告警规则/工单模板/发送组中配置的 Webhook 地址。
               </div>
-              <div v-for="item in channelOptions" :key="item.value" v-show="notifForm.enabled_channels.includes(item.value)" class="mb-4">
+              <div v-for="item in channelOptions.filter(o => o.value !== 'in_app')" :key="item.value" v-show="notifForm.enabled_channels.includes(item.value)" class="mb-4">
                 <div class="text-sm text-gray-700 mb-1">{{ item.label }} 接收目标</div>
                 <el-input
                   v-model="notifForm.channel_targets[item.value]"
                   clearable
-                  placeholder="例如：dingtalk_robot_001（留空表示使用全局映射）"
+                  :placeholder="`${item.label} Webhook 地址或通道标识（留空使用全局配置）`"
                 />
               </div>
             </el-form-item>
