@@ -10,10 +10,7 @@ const page = ref(1)
 const size = ref(20)
 const loading = ref(false)
 const searchKeyword = ref('')
-
-// 所有部门（下拉选择用）
 const allDepts = ref<any[]>([])
-// 所有角色
 const allRoles = ref<any[]>([])
 
 // 新建用户
@@ -21,15 +18,12 @@ const createVisible = ref(false)
 const createForm = ref({ username: '', password: '', email: '', department_id: 0, role_ids: [] as number[] })
 const createLoading = ref(false)
 
-// 编辑用户
-const editVisible = ref(false)
+// 编辑抽屉（基本信息 + 角色）
+const drawerVisible = ref(false)
+const drawerTab = ref('info')
 const editId = ref(0)
+const editUsername = ref('')
 const editForm = ref({ real_name: '', phone: '', email: '', department_id: 0 })
-
-// 角色分配
-const roleVisible = ref(false)
-const roleUserId = ref(0)
-const roleUserName = ref('')
 const selectedRoles = ref<number[]>([])
 
 async function loadUsers() {
@@ -42,17 +36,11 @@ async function loadUsers() {
 }
 
 async function loadDepts() {
-  try {
-    const res: any = await departmentApi.all()
-    allDepts.value = res.data || []
-  } catch {}
+  try { const res: any = await departmentApi.all(); allDepts.value = res.data || [] } catch {}
 }
 
 async function loadRoles() {
-  try {
-    const res: any = await roleApi.list(1, 100)
-    allRoles.value = res.data.list || []
-  } catch {}
+  try { const res: any = await roleApi.list(1, 100); allRoles.value = res.data.list || [] } catch {}
 }
 
 function handleSearch() { page.value = 1; loadUsers() }
@@ -88,66 +76,45 @@ async function submitCreate() {
   createLoading.value = true
   try {
     await authApi.register(username, password, email)
-    // 注册成功后，获取新用户并设置部门和角色
     const listRes: any = await userApi.list(1, 1, username)
     const newUser = listRes.data?.list?.[0]
     if (newUser) {
-      if (createForm.value.department_id > 0) {
-        await userApi.setDepartment(newUser.id, createForm.value.department_id)
-      }
-      if (createForm.value.role_ids.length > 0) {
-        await userApi.setRoles(newUser.id, createForm.value.role_ids)
-      }
+      if (createForm.value.department_id > 0) await userApi.setDepartment(newUser.id, createForm.value.department_id)
+      if (createForm.value.role_ids.length > 0) await userApi.setRoles(newUser.id, createForm.value.role_ids)
     }
     ElMessage.success('用户创建成功')
     createVisible.value = false
     loadUsers()
-  } catch {} finally {
-    createLoading.value = false
-  }
+  } catch {} finally { createLoading.value = false }
 }
 
-// --- 编辑用户 ---
-function openEditDialog(row: any) {
+// --- 编辑用户（抽屉） ---
+async function openDrawer(row: any, tab = 'info') {
   editId.value = row.id
+  editUsername.value = row.username
   editForm.value = {
     real_name: row.real_name || '',
     phone: row.phone || '',
     email: row.email || '',
     department_id: row.department_id || 0,
   }
-  editVisible.value = true
+  const res: any = await userApi.getRoles(row.id)
+  selectedRoles.value = (res.data || []).map((r: any) => r.id)
+  drawerTab.value = tab
+  drawerVisible.value = true
 }
 
 async function submitEdit() {
   try {
     await userApi.update(editId.value, editForm.value)
-    ElMessage.success('更新成功')
-    editVisible.value = false
+    await userApi.setRoles(editId.value, selectedRoles.value)
+    ElMessage.success('保存成功')
+    drawerVisible.value = false
     loadUsers()
   } catch {}
 }
 
-// --- 角色分配 ---
-async function openRoleDialog(row: any) {
-  roleUserId.value = row.id
-  roleUserName.value = row.username
-  const res: any = await userApi.getRoles(row.id)
-  selectedRoles.value = (res.data || []).map((r: any) => r.id)
-  roleVisible.value = true
-}
-
-async function submitRoles() {
-  await userApi.setRoles(roleUserId.value, selectedRoles.value)
-  ElMessage.success('角色分配成功')
-  roleVisible.value = false
-}
-
-onMounted(() => {
-  loadUsers()
-  loadDepts()
-  loadRoles()
-})
+onMounted(() => { loadUsers(); loadDepts(); loadRoles() })
 </script>
 
 <template>
@@ -163,16 +130,8 @@ onMounted(() => {
       </template>
 
       <div class="flex flex-wrap items-center gap-3 mb-4">
-        <el-input 
-          v-model="searchKeyword" 
-          placeholder="用户名 / 邮箱 / 姓名" 
-          clearable 
-          class="w-64" 
-          @keyup.enter="handleSearch" 
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
+        <el-input v-model="searchKeyword" placeholder="用户名 / 邮箱 / 姓名" clearable class="w-64" @keyup.enter="handleSearch">
+          <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
         <el-button type="primary" @click="handleSearch">搜索</el-button>
         <el-button @click="handleReset">重置</el-button>
@@ -192,40 +151,28 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="部门" width="140" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.department_name" size="small" type="info" effect="light">
-              {{ row.department_name }}
-            </el-tag>
+            <el-tag v-if="row.department_name" size="small" type="info" effect="light">{{ row.department_name }}</el-tag>
             <span v-else class="text-gray-400">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span class="text-gray-600">{{ row.email || '-' }}</span>
-          </template>
+          <template #default="{ row }"><span class="text-gray-600">{{ row.email || '-' }}</span></template>
         </el-table-column>
         <el-table-column prop="phone" label="手机号" width="130" align="center">
-          <template #default="{ row }">
-            <span class="text-gray-600">{{ row.phone || '-' }}</span>
-          </template>
+          <template #default="{ row }"><span class="text-gray-600">{{ row.phone || '-' }}</span></template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="plain" round>
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="plain" round>{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="170" align="center" />
-        <el-table-column label="操作" fixed="right" width="260" align="center">
+        <el-table-column label="操作" fixed="right" width="180" align="center">
           <template #default="{ row }">
             <div class="flex items-center justify-center gap-1">
-              <el-button v-permission="'user:edit'" link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-button v-permission="'user:edit'" link type="primary" @click="openDrawer(row)">编辑</el-button>
               <el-divider direction="vertical" />
-              <el-button v-permission="'user:assign_role'" link type="primary" @click="openRoleDialog(row)">角色</el-button>
-              <el-divider direction="vertical" />
-              <el-button link :type="row.status === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">
-                {{ row.status === 1 ? '禁用' : '启用' }}
-              </el-button>
+              <el-button link :type="row.status === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
               <el-divider direction="vertical" />
               <el-button v-permission="'user:delete'" link type="danger" @click="handleDelete(row)" :disabled="row.id === 1">删除</el-button>
             </div>
@@ -235,12 +182,8 @@ onMounted(() => {
 
       <div class="mt-4 flex justify-end">
         <el-pagination
-          background 
-          layout="total, sizes, prev, pager, next"
-          :total="total" 
-          :page-size="size" 
-          :current-page="page" 
-          :page-sizes="[10, 20, 50]"
+          background layout="total, sizes, prev, pager, next"
+          :total="total" :page-size="size" :current-page="page" :page-sizes="[10, 20, 50]"
           @current-change="(p: number) => { page = p; loadUsers() }"
           @size-change="(s: number) => { size = s; page = 1; loadUsers() }"
         />
@@ -278,60 +221,50 @@ onMounted(() => {
       </template>
     </el-dialog>
 
-    <!-- 编辑用户 -->
-    <el-dialog v-model="editVisible" title="编辑用户" width="500px" destroy-on-close align-center>
-      <el-form :model="editForm" label-width="90px" class="pr-6">
-        <el-form-item label="姓名">
-          <el-input v-model="editForm.real_name" placeholder="真实姓名" />
-        </el-form-item>
-        <el-form-item label="手机号">
-          <el-input v-model="editForm.phone" placeholder="手机号" />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="editForm.email" placeholder="邮箱" />
-        </el-form-item>
-        <el-form-item label="部门">
-          <el-select v-model="editForm.department_id" placeholder="选择部门" clearable class="w-full">
-            <el-option label="无部门" :value="0" />
-            <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
-          </el-select>
-        </el-form-item>
-      </el-form>
+    <!-- 编辑用户抽屉 -->
+    <el-drawer v-model="drawerVisible" :title="`编辑用户 — ${editUsername}`" size="480px" destroy-on-close>
+      <el-tabs v-model="drawerTab" class="px-1">
+        <el-tab-pane label="基本信息" name="info">
+          <el-form :model="editForm" label-position="top" class="mt-2">
+            <el-form-item label="姓名">
+              <el-input v-model="editForm.real_name" placeholder="真实姓名" />
+            </el-form-item>
+            <el-form-item label="手机号">
+              <el-input v-model="editForm.phone" placeholder="手机号" />
+            </el-form-item>
+            <el-form-item label="邮箱">
+              <el-input v-model="editForm.email" placeholder="邮箱" />
+            </el-form-item>
+            <el-form-item label="部门">
+              <el-select v-model="editForm.department_id" placeholder="选择部门" clearable class="w-full">
+                <el-option label="无部门" :value="0" />
+                <el-option v-for="d in allDepts" :key="d.id" :label="d.name" :value="d.id" />
+              </el-select>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+        <el-tab-pane label="角色分配" name="roles">
+          <div class="mt-2 bg-gray-50 p-4 rounded-lg border border-gray-100">
+            <el-checkbox-group v-model="selectedRoles" class="flex flex-col gap-3">
+              <el-checkbox v-for="r in allRoles" :key="r.id" :value="r.id" class="!mr-0">
+                <span class="text-gray-700 font-medium">{{ r.display_name }}</span>
+                <span class="text-gray-400 text-xs ml-2">({{ r.name }})</span>
+              </el-checkbox>
+            </el-checkbox-group>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <el-button @click="editVisible = false">取消</el-button>
+          <el-button @click="drawerVisible = false">取消</el-button>
           <el-button type="primary" @click="submitEdit">保存</el-button>
         </div>
       </template>
-    </el-dialog>
-
-    <!-- 角色分配 -->
-    <el-dialog v-model="roleVisible" :title="'分配角色 - ' + roleUserName" width="440px" destroy-on-close align-center>
-      <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 max-h-[60vh] overflow-y-auto">
-        <el-checkbox-group v-model="selectedRoles" class="flex flex-col gap-3">
-          <el-checkbox v-for="r in allRoles" :key="r.id" :value="r.id" class="!mr-0">
-            <span class="text-gray-700 font-medium">{{ r.display_name }}</span>
-            <span class="text-gray-400 text-xs ml-2">({{ r.name }})</span>
-          </el-checkbox>
-        </el-checkbox-group>
-      </div>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <el-button @click="roleVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitRoles">确定</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 </template>
 
 <style scoped>
-:deep(.el-card__body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-:deep(.el-table) {
-  flex: 1;
-}
+:deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; }
+:deep(.el-table) { flex: 1; }
 </style>

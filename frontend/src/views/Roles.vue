@@ -9,14 +9,15 @@ const total = ref(0)
 const page = ref(1)
 const loading = ref(false)
 
-// 新增/编辑
-const formVisible = ref(false)
-const isEdit = ref(false)
-const form = ref({ id: 0, name: '', display_name: '', description: '', sort: 0, status: 1 })
+// 新增
+const createVisible = ref(false)
+const createForm = ref({ name: '', display_name: '', description: '', sort: 0, status: 1 })
 
-// 菜单权限
-const menuVisible = ref(false)
-const menuRoleId = ref(0)
+// 编辑抽屉（基本信息 + 菜单权限）
+const drawerVisible = ref(false)
+const drawerTab = ref('info')
+const editId = ref(0)
+const editForm = ref({ id: 0, name: '', display_name: '', description: '', sort: 0, status: 1 })
 const menuTree = ref<any[]>([])
 const selectedMenus = ref<number[]>([])
 const treeRef = ref<any>(null)
@@ -31,47 +32,28 @@ async function loadRoles() {
 }
 
 function openCreate() {
-  isEdit.value = false
-  form.value = { id: 0, name: '', display_name: '', description: '', sort: 0, status: 1 }
-  formVisible.value = true
+  createForm.value = { name: '', display_name: '', description: '', sort: 0, status: 1 }
+  createVisible.value = true
 }
 
-function openEdit(row: any) {
-  isEdit.value = true
-  form.value = { ...row }
-  formVisible.value = true
-}
-
-async function submitForm() {
-  if (!form.value.name || !form.value.display_name) { ElMessage.warning('请填写完整'); return }
-  if (isEdit.value) {
-    await roleApi.update(form.value.id, form.value)
-  } else {
-    await roleApi.create(form.value)
-  }
-  ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
-  formVisible.value = false
+async function submitCreate() {
+  if (!createForm.value.name || !createForm.value.display_name) { ElMessage.warning('请填写完整'); return }
+  await roleApi.create(createForm.value)
+  ElMessage.success('创建成功')
+  createVisible.value = false
   loadRoles()
 }
 
-async function handleDelete(row: any) {
-  await ElMessageBox.confirm(`确定删除角色 ${row.display_name}？`, '提示', { type: 'warning' })
-  await roleApi.delete(row.id)
-  ElMessage.success('删除成功')
-  loadRoles()
-}
+async function openDrawer(row: any, tab = 'info') {
+  editId.value = row.id
+  editForm.value = { ...row }
+  drawerTab.value = tab
 
-async function openMenuDialog(row: any) {
-  menuRoleId.value = row.id
-  const [treeRes, roleRes]: any = await Promise.all([
-    menuApi.tree(),
-    roleApi.getById(row.id),
-  ])
+  const [treeRes, roleRes]: any = await Promise.all([menuApi.tree(), roleApi.getById(row.id)])
   menuTree.value = treeRes.data || []
   const menuIds = (roleRes.data.menus || []).map((m: any) => m.id)
-  // 只勾选叶子节点，避免父节点被全选
   selectedMenus.value = filterLeafIds(menuTree.value, menuIds)
-  menuVisible.value = true
+  drawerVisible.value = true
 }
 
 function filterLeafIds(tree: any[], ids: number[]): number[] {
@@ -86,12 +68,24 @@ function filterLeafIds(tree: any[], ids: number[]): number[] {
   return leafIds
 }
 
-async function submitMenus() {
-  const checked = treeRef.value.getCheckedKeys()
-  const half = treeRef.value.getHalfCheckedKeys()
-  await roleApi.setMenus(menuRoleId.value, [...checked, ...half])
-  ElMessage.success('菜单权限设置成功')
-  menuVisible.value = false
+async function submitDrawer() {
+  if (!editForm.value.name || !editForm.value.display_name) { ElMessage.warning('请填写完整'); return }
+  // 保存基本信息
+  await roleApi.update(editForm.value.id, editForm.value)
+  // 保存菜单权限
+  const checked = treeRef.value?.getCheckedKeys() || []
+  const half = treeRef.value?.getHalfCheckedKeys() || []
+  await roleApi.setMenus(editId.value, [...checked, ...half])
+  ElMessage.success('保存成功')
+  drawerVisible.value = false
+  loadRoles()
+}
+
+async function handleDelete(row: any) {
+  await ElMessageBox.confirm(`确定删除角色 ${row.display_name}？`, '提示', { type: 'warning' })
+  await roleApi.delete(row.id)
+  ElMessage.success('删除成功')
+  loadRoles()
 }
 
 onMounted(loadRoles)
@@ -122,24 +116,18 @@ onMounted(loadRoles)
           </template>
         </el-table-column>
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span class="text-gray-500">{{ row.description || '-' }}</span>
-          </template>
+          <template #default="{ row }"><span class="text-gray-500">{{ row.description || '-' }}</span></template>
         </el-table-column>
         <el-table-column prop="sort" label="排序" width="100" align="center" />
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="plain" round>
-              {{ row.status === 1 ? '启用' : '禁用' }}
-            </el-tag>
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small" effect="plain" round>{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" fixed="right" min-width="240" align="center">
+        <el-table-column label="操作" fixed="right" width="140" align="center">
           <template #default="{ row }">
             <div class="flex items-center justify-center gap-1">
-              <el-button v-permission="'role:assign_menu'" link type="primary" @click="openMenuDialog(row)">菜单权限</el-button>
-              <el-divider direction="vertical" />
-              <el-button v-permission="'role:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'role:edit'" link type="primary" @click="openDrawer(row)">编辑</el-button>
               <el-divider direction="vertical" />
               <el-button v-permission="'role:delete'" link type="danger" @click="handleDelete(row)" :disabled="row.name === 'admin'">删除</el-button>
             </div>
@@ -148,61 +136,81 @@ onMounted(loadRoles)
       </el-table>
     </el-card>
 
-    <!-- 新增/编辑角色 -->
-    <el-dialog v-model="formVisible" :title="isEdit ? '编辑角色' : '新增角色'" width="500px" destroy-on-close align-center>
+    <!-- 新增角色 -->
+    <el-dialog v-model="createVisible" title="新增角色" width="500px" destroy-on-close align-center>
       <el-form label-width="90px" class="pr-6">
         <el-form-item label="标识" required>
-          <el-input v-model="form.name" :disabled="isEdit" placeholder="英文标识，如 viewer" />
+          <el-input v-model="createForm.name" placeholder="英文标识，如 viewer" />
         </el-form-item>
         <el-form-item label="名称" required>
-          <el-input v-model="form.display_name" placeholder="显示名称" />
+          <el-input v-model="createForm.display_name" placeholder="显示名称" />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="角色描述" />
+          <el-input v-model="createForm.description" type="textarea" :rows="3" placeholder="角色描述" />
         </el-form-item>
         <el-form-item label="排序">
-          <el-input-number v-model="form.sort" :min="0" class="!w-32" />
+          <el-input-number v-model="createForm.sort" :min="0" class="!w-32" />
         </el-form-item>
       </el-form>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <el-button @click="formVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitForm">确定</el-button>
+          <el-button @click="createVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitCreate">创建</el-button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- 菜单权限 -->
-    <el-dialog v-model="menuVisible" title="菜单权限" width="460px" destroy-on-close align-center>
-      <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-[60vh] overflow-y-auto">
-        <el-tree
-          ref="treeRef"
-          :data="menuTree"
-          show-checkbox
-          node-key="id"
-          :default-checked-keys="selectedMenus"
-          :props="{ label: 'title', children: 'children' }"
-          default-expand-all
-          class="!bg-transparent"
-        />
-      </div>
+    <!-- 编辑角色抽屉（基本信息 + 菜单权限） -->
+    <el-drawer v-model="drawerVisible" :title="`编辑角色 — ${editForm.display_name}`" size="520px" destroy-on-close>
+      <el-tabs v-model="drawerTab" class="px-1">
+        <el-tab-pane label="基本信息" name="info">
+          <el-form label-position="top" class="mt-2">
+            <el-form-item label="标识">
+              <el-input v-model="editForm.name" disabled />
+            </el-form-item>
+            <el-form-item label="名称" required>
+              <el-input v-model="editForm.display_name" placeholder="显示名称" />
+            </el-form-item>
+            <el-form-item label="描述">
+              <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="角色描述" />
+            </el-form-item>
+            <div class="grid grid-cols-2 gap-4">
+              <el-form-item label="排序">
+                <el-input-number v-model="editForm.sort" :min="0" class="!w-full" />
+              </el-form-item>
+              <el-form-item label="状态">
+                <el-switch v-model="editForm.status" :active-value="1" :inactive-value="0" active-text="启用" inactive-text="禁用" />
+              </el-form-item>
+            </div>
+          </el-form>
+        </el-tab-pane>
+        <el-tab-pane label="菜单与权限" name="menus">
+          <div class="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-[65vh] overflow-y-auto">
+            <el-tree
+              ref="treeRef"
+              :data="menuTree"
+              show-checkbox
+              node-key="id"
+              :default-checked-keys="selectedMenus"
+              :props="{ label: 'title', children: 'children' }"
+              default-expand-all
+              class="!bg-transparent"
+            />
+          </div>
+          <div class="text-xs text-gray-400 mt-2">勾选菜单和按钮权限，保存后生效。按钮权限（type=3）控制页面内操作按钮的显示。</div>
+        </el-tab-pane>
+      </el-tabs>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <el-button @click="menuVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitMenus">确定</el-button>
+          <el-button @click="drawerVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitDrawer">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 </template>
 
 <style scoped>
-:deep(.el-card__body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-:deep(.el-table) {
-  flex: 1;
-}
+:deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; }
+:deep(.el-table) { flex: 1; }
 </style>
