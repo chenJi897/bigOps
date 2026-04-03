@@ -21,6 +21,7 @@ const users = ref<any[]>([])
 const tasks = ref<any[]>([])
 const oncallSchedules = ref<any[]>([])
 const serviceTrees = ref<any[]>([])
+const serviceTreeData = ref<any[]>([])
 const notifyGroups = ref<any[]>([])
 
 const rulePager = ref({
@@ -124,7 +125,8 @@ async function fetchOnCallSchedules() {
 
 async function fetchServiceTrees() {
   const res = await serviceTreeApi.tree()
-  serviceTrees.value = flattenTree((res as any).data || [])
+  serviceTreeData.value = (res as any).data || []
+  serviceTrees.value = flattenTree(serviceTreeData.value)
 }
 
 async function fetchRules(showLoading = true) {
@@ -734,115 +736,134 @@ onUnmounted(() => {
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑告警规则' : '新增告警规则'" width="640px" destroy-on-close align-center>
-      <el-form :model="form" label-width="110px" class="pr-6">
-        <el-form-item label="规则名称" required>
-          <el-input v-model="form.name" placeholder="例如：CPU 使用率持续过高" />
-        </el-form-item>
-        <div class="flex flex-col sm:flex-row gap-4 mb-4">
-          <el-form-item label="监控项" class="flex-1 !mb-0">
-            <el-select v-model="form.metric_type" class="w-full">
-              <el-option v-for="item in metricOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
+    <el-drawer v-model="dialogVisible" :title="isEdit ? '编辑告警规则' : '新增告警规则'" size="560px" destroy-on-close>
+      <div class="px-2">
+        <el-form :model="form" label-position="top" class="space-y-1">
+          <!-- 基本信息 -->
+          <div class="text-sm font-semibold text-slate-700 mb-2">基本信息</div>
+          <el-form-item label="规则名称" required>
+            <el-input v-model="form.name" placeholder="例如：CPU 使用率持续过高" />
           </el-form-item>
-          <el-form-item label="告警级别" class="flex-1 !mb-0" label-width="80px">
-            <el-select v-model="form.severity" class="w-full">
-              <el-option v-for="item in severityOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-        </div>
-        
-        <div class="p-4 bg-slate-50 border border-slate-100 rounded-xl mb-4">
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-slate-600 font-medium w-20">触发条件</span>
-            <el-select v-model="form.operator" class="w-32">
-              <el-option v-for="item in operatorOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
-            <el-input-number v-model="form.threshold" :min="0" :max="100" :step="1" class="!w-32" />
+          <div class="grid grid-cols-2 gap-4">
+            <el-form-item label="监控项">
+              <el-select v-model="form.metric_type" class="w-full">
+                <el-option v-for="item in metricOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="告警级别">
+              <el-select v-model="form.severity" class="w-full">
+                <el-option v-for="item in severityOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
           </div>
-        </div>
 
-        <el-form-item label="通知方式">
-          <el-radio-group v-model="form.notify_mode" class="mb-2">
-            <el-radio value="simple">简单模式</el-radio>
-            <el-radio value="group">发送组模式</el-radio>
-          </el-radio-group>
-        </el-form-item>
+          <div class="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-slate-600 font-medium shrink-0">触发条件</span>
+              <el-select v-model="form.operator" class="w-36">
+                <el-option v-for="item in operatorOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+              <el-input-number v-model="form.threshold" :min="0" :max="100" :step="1" class="!w-32" />
+            </div>
+          </div>
 
-        <!-- 简单模式 -->
-        <template v-if="form.notify_mode === 'simple'">
-          <el-form-item label="通知成员">
-            <el-select v-model="form.notify_user_ids" multiple clearable filterable class="w-full" placeholder="选择接收通知的用户">
-              <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
+          <el-divider class="!my-4" />
+
+          <!-- 通知配置 -->
+          <div class="text-sm font-semibold text-slate-700 mb-2">通知配置</div>
+          <el-form-item label="通知方式">
+            <el-radio-group v-model="form.notify_mode">
+              <el-radio value="simple">简单模式</el-radio>
+              <el-radio value="group">发送组模式</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <template v-if="form.notify_mode === 'simple'">
+            <el-form-item label="通知成员">
+              <el-select v-model="form.notify_user_ids" multiple clearable filterable class="w-full" placeholder="选择接收通知的用户">
+                <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="通知渠道">
+              <NotifyConfigEditor v-model="form.notify_config" />
+            </el-form-item>
+          </template>
+
+          <template v-if="form.notify_mode === 'group'">
+            <el-form-item label="发送组">
+              <el-select v-model="form.notify_group_id" clearable filterable class="w-full" placeholder="选择发送组">
+                <el-option v-for="g in notifyGroups" :key="g.id" :label="g.name" :value="g.id">
+                  <span>{{ g.name }}</span>
+                  <span class="text-xs text-gray-400 ml-2">{{ g.description }}</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+          </template>
+
+          <el-divider class="!my-4" />
+
+          <!-- 生效范围 -->
+          <div class="text-sm font-semibold text-slate-700 mb-2">生效范围</div>
+          <div class="grid grid-cols-2 gap-4">
+            <el-form-item label="服务树">
+              <el-tree-select
+                v-model="form.service_tree_id"
+                :data="serviceTreeData"
+                :props="{ label: 'name', value: 'id', children: 'children' }"
+                clearable
+                filterable
+                check-strictly
+                placeholder="不限制（全部生效）"
+                class="w-full"
+              />
+            </el-form-item>
+            <el-form-item label="负责人">
+              <el-select v-model="form.owner_id" clearable filterable class="w-full" placeholder="不限制">
+                <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </div>
+          <el-form-item label="OnCall 值班">
+            <el-select v-model="form.oncall_schedule_id" clearable filterable class="w-full" placeholder="不启用值班升级">
+              <el-option v-for="item in oncallSchedules" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
           </el-form-item>
-          <el-form-item label="通知渠道">
-            <NotifyConfigEditor v-model="form.notify_config" />
-          </el-form-item>
-        </template>
 
-        <!-- 发送组模式 -->
-        <template v-if="form.notify_mode === 'group'">
-          <el-form-item label="发送组">
-            <el-select v-model="form.notify_group_id" clearable filterable class="w-full" placeholder="选择发送组">
-              <el-option v-for="g in notifyGroups" :key="g.id" :label="g.name" :value="g.id">
-                <span>{{ g.name }}</span>
-                <span class="text-xs text-gray-400 ml-2">{{ g.description }}</span>
-              </el-option>
+          <el-divider class="!my-4" />
+
+          <!-- 触发动作 -->
+          <div class="text-sm font-semibold text-slate-700 mb-2">触发动作</div>
+          <el-form-item label="动作类型">
+            <el-select v-model="form.action" class="w-full">
+              <el-option label="仅通知" value="notify_only" />
+              <el-option label="自动建单" value="create_ticket" />
+              <el-option label="自动修复" value="execute_task" />
             </el-select>
           </el-form-item>
-        </template>
-        
-        <el-divider border-style="dashed" />
+          <el-form-item v-if="form.action === 'create_ticket'" label="工单类型 ID">
+            <el-input-number v-model="form.ticket_type_id" :min="0" class="!w-full" />
+          </el-form-item>
+          <el-form-item v-if="form.action === 'execute_task'" label="修复任务">
+            <el-select v-model="form.repair_task_id" clearable filterable class="w-full" placeholder="选择修复任务">
+              <el-option v-for="item in tasks" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
 
-        <el-form-item label="服务树范围">
-          <el-select v-model="form.service_tree_id" clearable filterable class="w-full" placeholder="不限制（全部生效）">
-            <el-option v-for="item in serviceTrees" :key="item.id" :label="item.label" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="负责人范围">
-          <el-select v-model="form.owner_id" clearable filterable class="w-full" placeholder="不限制（全部生效）">
-            <el-option v-for="item in userOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="OnCall 值班">
-          <el-select v-model="form.oncall_schedule_id" clearable filterable class="w-full" placeholder="不启用值班升级">
-            <el-option v-for="item in oncallSchedules" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        
-        <el-divider border-style="dashed" />
-
-        <el-form-item label="触发动作">
-          <el-select v-model="form.action" class="w-full">
-            <el-option label="仅通知" value="notify_only" />
-            <el-option label="自动建单" value="create_ticket" />
-            <el-option label="自动修复" value="execute_task" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="form.action === 'create_ticket'" label="工单类型ID">
-          <el-input-number v-model="form.ticket_type_id" :min="0" class="!w-32" />
-        </el-form-item>
-        <el-form-item v-if="form.action === 'execute_task'" label="修复任务">
-          <el-select v-model="form.repair_task_id" clearable filterable class="w-full" placeholder="选择修复任务">
-            <el-option v-for="item in tasks" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="可填写触发背景、值守说明或排查建议" />
-        </el-form-item>
-        <el-form-item label="是否启用">
-          <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0" inline-prompt active-text="启用" inactive-text="停用" />
-        </el-form-item>
-      </el-form>
+          <el-form-item label="描述">
+            <el-input v-model="form.description" type="textarea" :rows="3" placeholder="可填写触发背景、值守说明或排查建议" />
+          </el-form-item>
+          <el-form-item label="是否启用">
+            <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0" inline-prompt active-text="启用" inactive-text="停用" />
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
         <div class="flex justify-end gap-2">
           <el-button @click="dialogVisible = false">取消</el-button>
           <el-button type="primary" :loading="submitting" @click="submitForm">保存</el-button>
         </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 </template>
 
