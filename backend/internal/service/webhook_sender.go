@@ -99,15 +99,27 @@ func SendLark(webhookURL, secret, title, markdown string) error {
 }
 
 // SendWecom 发送企业微信机器人 Markdown 消息。
-// 文档: https://developer.work.weixin.qq.com/document/path/91770
+// 使用 markdown_v2 类型，支持表格、代码块等完整 Markdown 语法。
+// 文档: https://developer.work.weixin.qq.com/document/path/99110
 func SendWecom(webhookURL, _, _, markdown string) error {
 	body := map[string]interface{}{
-		"msgtype": "markdown",
-		"markdown": map[string]string{
-			"content": markdown,
+		"msgtype": "markdown_v2",
+		"markdown_v2": map[string]string{
+			"content": sanitizeForWecom(markdown),
 		},
 	}
 	return postJSON(webhookURL, body)
+}
+
+// sanitizeForWecom 清理企微不支持的 Markdown 语法。
+// markdown_v2 不支持 <font color> 和 emoji 表情字符，需要移除。
+func sanitizeForWecom(md string) string {
+	// 移除常见 emoji 前缀
+	replacer := strings.NewReplacer(
+		"🔴 ", "", "🟢 ", "", "📋 ", "", "✅ ", "", "❌ ", "",
+		"🚀 ", "", "⚠️ ", "", "🔔 ", "", "📊 ", "",
+	)
+	return replacer.Replace(md)
 }
 
 // SendGenericWebhook 发送通用 Webhook（JSON POST + 可选 HMAC 签名）。
