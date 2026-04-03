@@ -204,13 +204,13 @@ async function previewTemplate() {
       </div>
     </div>
 
-    <div class="flex-1 overflow-auto p-6">
+    <div class="flex-1 overflow-auto p-6 space-y-6">
+      <!-- 第一行：全局配置 + 通知模板 并排 -->
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-
-        <el-card shadow="never" class="border-gray-200 xl:col-span-7">
+        <el-card shadow="never" class="border-gray-200 xl:col-span-5">
           <div class="mb-4">
             <h2 class="text-lg font-semibold text-gray-900">全局配置</h2>
-            <div class="text-xs text-gray-500 mt-1">程序级别配置，对所有用户生效。Webhook 地址在告警规则/工单模板/发送组中按需配置。</div>
+            <div class="text-xs text-gray-500 mt-1">程序级别配置，对所有用户生效。</div>
           </div>
 
           <el-form :model="configForm" label-width="140px" class="max-w-4xl pr-2" v-loading="configLoading">
@@ -238,29 +238,69 @@ async function previewTemplate() {
               <ul class="text-xs text-blue-700 space-y-1 list-disc list-inside">
                 <li>企业微信/钉钉/飞书的 Webhook 地址在<b>告警规则</b>、<b>工单模板</b>或<b>发送组</b>中配置</li>
                 <li>系统自动根据 Webhook URL 识别渠道类型，使用对应的消息格式投递</li>
-                <li>通知内容使用下方「通知模板」渲染，支持 Markdown 格式</li>
+                <li>通知内容使用「通知模板」渲染，支持 Markdown 格式</li>
                 <li>投递失败会按上方重试策略自动重试</li>
               </ul>
             </div>
           </el-form>
         </el-card>
 
-        <el-card shadow="never" class="border-gray-200 xl:col-span-5">
+        <el-card shadow="never" class="border-gray-200 xl:col-span-7">
           <div class="flex justify-between items-center mb-3">
             <div>
-              <h2 class="text-lg font-semibold text-gray-900">事件观测</h2>
-              <div class="text-xs text-gray-500 mt-1">用于排查投递状态与失败原因。</div>
+              <h2 class="text-lg font-semibold text-gray-900">通知模板</h2>
+              <div class="text-xs text-gray-500 mt-1">管理各类事件的 Markdown 通知模板。支持 Go template 语法。</div>
             </div>
-            <div class="flex items-center gap-3">
-              <div class="flex items-center gap-2">
-                <el-switch v-model="autoRefreshEnabled" active-text="自动" inactive-text="手动" />
-                <span class="text-xs text-gray-500 hidden sm:inline">每 {{ autoRefreshIntervalSeconds }} 秒</span>
-              </div>
-              <el-button type="primary" plain :loading="loading" @click="loadEvents">刷新</el-button>
-            </div>
+            <el-button plain :loading="templatesLoading" @click="loadTemplates">刷新</el-button>
           </div>
-          <div class="text-xs text-gray-500 mb-3 text-right">最后刷新：{{ lastRefreshAt || '未刷新' }}</div>
 
+          <el-table :data="templates" v-loading="templatesLoading" stripe border class="w-full">
+            <el-table-column label="事件类型" width="160">
+              <template #default="{ row }">
+                <div>
+                  <div class="font-medium text-gray-800">{{ eventTypeLabels[row.event_type] || row.event_type }}</div>
+                  <div class="text-xs text-gray-500 font-mono">{{ row.event_type }}</div>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="title" label="标题模板" min-width="250" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="font-mono text-sm text-gray-700">{{ row.title }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="可用变量" min-width="200" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="text-xs text-gray-500">{{ row.variables || '—' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="updated_at" label="更新时间" width="170" align="center" />
+            <el-table-column label="操作" width="100" fixed="right" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openEditTemplate(row)">编辑</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </div>
+
+      <!-- 第二行：事件观测，独占一行，限高滚动 -->
+      <el-card shadow="never" class="border-gray-200">
+        <div class="flex justify-between items-center mb-3">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900">事件观测</h2>
+            <div class="text-xs text-gray-500 mt-1">用于排查投递状态与失败原因。</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <el-switch v-model="autoRefreshEnabled" active-text="自动" inactive-text="手动" />
+              <span class="text-xs text-gray-500 hidden sm:inline">每 {{ autoRefreshIntervalSeconds }} 秒</span>
+            </div>
+            <el-button type="primary" plain :loading="loading" @click="loadEvents">刷新</el-button>
+          </div>
+        </div>
+        <div class="text-xs text-gray-500 mb-3 text-right">最后刷新：{{ lastRefreshAt || '未刷新' }}</div>
+
+        <div class="max-h-[480px] overflow-auto">
           <el-table :data="events" v-loading="loading" stripe border class="w-full">
             <el-table-column prop="id" label="ID" width="70" align="center" />
             <el-table-column prop="event_type" label="事件类型" width="160" />
@@ -330,44 +370,7 @@ async function previewTemplate() {
               </template>
             </el-table-column>
           </el-table>
-        </el-card>
-      </div>
-
-      <el-card shadow="never" class="border-gray-200 mt-6">
-        <div class="flex justify-between items-center mb-4">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900">通知模板</h2>
-            <div class="text-xs text-gray-500 mt-1">管理各类事件的 Markdown 通知模板。外部通知投递时会使用模板渲染内容，支持 Go template 语法。</div>
-          </div>
-          <el-button plain :loading="templatesLoading" @click="loadTemplates">刷新</el-button>
         </div>
-
-        <el-table :data="templates" v-loading="templatesLoading" stripe border class="w-full">
-          <el-table-column label="事件类型" width="160">
-            <template #default="{ row }">
-              <div>
-                <div class="font-medium text-gray-800">{{ eventTypeLabels[row.event_type] || row.event_type }}</div>
-                <div class="text-xs text-gray-500 font-mono">{{ row.event_type }}</div>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="title" label="标题模板" min-width="250" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span class="font-mono text-sm text-gray-700">{{ row.title }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="可用变量" min-width="200" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span class="text-xs text-gray-500">{{ row.variables || '—' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="updated_at" label="更新时间" width="170" align="center" />
-          <el-table-column label="操作" width="100" fixed="right" align="center">
-            <template #default="{ row }">
-              <el-button link type="primary" @click="openEditTemplate(row)">编辑</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
       </el-card>
 
       <el-dialog v-model="templateDialogVisible" title="编辑通知模板" width="700px" destroy-on-close align-center>
