@@ -27,18 +27,10 @@ func NewNotificationHandler() *NotificationHandler {
 }
 
 type NotificationConfigRequest struct {
-	DefaultChannels          []string          `json:"default_channels"`
-	MaxRetries               int               `json:"max_retries"`
-	RetryIntervalSeconds     int               `json:"retry_interval_seconds"`
-	RetryScanIntervalSeconds int               `json:"retry_scan_interval_seconds"`
-	ChannelMapping           map[string]string `json:"channel_mapping"`
-	MessagePusher            struct {
-		Enabled        bool   `json:"enabled"`
-		Server         string `json:"server"`
-		Username       string `json:"username"`
-		Token          string `json:"token"`
-		TimeoutSeconds int    `json:"timeout_seconds"`
-	} `json:"message_pusher"`
+	DefaultChannels          []string `json:"default_channels"`
+	MaxRetries               int      `json:"max_retries"`
+	RetryIntervalSeconds     int      `json:"retry_interval_seconds"`
+	RetryScanIntervalSeconds int      `json:"retry_scan_interval_seconds"`
 }
 
 func (h *NotificationHandler) GetConfig(c *gin.Context) {
@@ -62,14 +54,6 @@ func (h *NotificationHandler) UpdateConfig(c *gin.Context) {
 		MaxRetries:               req.MaxRetries,
 		RetryIntervalSeconds:     req.RetryIntervalSeconds,
 		RetryScanIntervalSeconds: req.RetryScanIntervalSeconds,
-		ChannelMapping:           req.ChannelMapping,
-		MessagePusher: config.MessagePusherConfig{
-			Enabled:        req.MessagePusher.Enabled,
-			Server:         req.MessagePusher.Server,
-			Username:       req.MessagePusher.Username,
-			Token:          req.MessagePusher.Token,
-			TimeoutSeconds: req.MessagePusher.TimeoutSeconds,
-		},
 	}
 	if err := config.UpdateNotificationConfig(cfg); err != nil {
 		response.Error(c, 500, err.Error())

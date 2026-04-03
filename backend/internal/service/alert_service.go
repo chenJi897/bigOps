@@ -466,7 +466,7 @@ func validateAlertRule(item *model.AlertRule) error {
 		}
 		for _, channel := range channels {
 			switch channel {
-			case "in_app", "email", "webhook", "message_pusher":
+			case "in_app", "email", "webhook":
 			default:
 				return errors.New("存在不支持的通知渠道")
 			}

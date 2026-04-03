@@ -63,10 +63,6 @@ type NotificationService struct {
 
 func NewNotificationService() *NotificationService {
 	timeout := 10 * time.Second
-	cfg := config.Get()
-	if cfg.Notification.MessagePusher.TimeoutSeconds > 0 {
-		timeout = time.Duration(cfg.Notification.MessagePusher.TimeoutSeconds) * time.Second
-	}
 	return &NotificationService{
 		repo:       repository.NewNotificationRepository(),
 		prefRepo:   repository.NewNotificationUserSettingRepository(),
@@ -144,17 +140,16 @@ func (s *NotificationService) PublishTx(tx *gorm.DB, req NotificationPublishRequ
 		hasExternal = true
 	}
 
-	// 兼容旧调用：如果没有 NotifyConfig 但有 Channels，走旧 Message Pusher 逻辑
+	// 如果没有 NotifyConfig 但有 Channels，创建 delivery 记录（无 webhook_url）
 	if len(req.NotifyConfig) == 0 && len(req.Channels) > 0 {
 		for _, channel := range req.Channels {
 			if channel == "in_app" {
 				continue
 			}
-			mpCh := config.Get().Notification.ChannelMapping[channel]
 			if err := tx.Create(&model.NotificationDelivery{
 				EventID:     event.ID,
 				Channel:     channel,
-				Recipient:   mpCh,
+				Recipient:   "system",
 				Status:      "pending",
 				NextRetryAt: &now,
 			}).Error; err != nil {
@@ -355,12 +350,10 @@ func (s *NotificationService) dispatchDelivery(event *model.NotificationEvent, d
 		_ = s.repo.UpdateDelivery(delivery)
 		return
 	default:
-		// 新模式：delivery 自带 Webhook URL
 		if strings.TrimSpace(delivery.WebhookURL) != "" {
 			outcome = s.dispatchViaWebhook(event, delivery)
 		} else {
-			// 旧模式兼容：走 Message Pusher
-			outcome = s.pushViaMessagePusher(event, delivery)
+			outcome = deliveryDispatchOutcome{response: "no webhook_url configured"}
 		}
 	}
 
@@ -710,45 +703,6 @@ func (s *NotificationService) dispatchViaWebhook(event *model.NotificationEvent,
 		return dispatchErrorOutcome(err)
 	}
 	return deliveryDispatchOutcome{success: true, response: fmt.Sprintf("%s webhook ok", delivery.Channel)}
-}
-
-func (s *NotificationService) pushViaMessagePusher(event *model.NotificationEvent, delivery *model.NotificationDelivery) deliveryDispatchOutcome {
-	cfg := config.Get().Notification.MessagePusher
-	if !cfg.Enabled || cfg.Server == "" || cfg.Username == "" || cfg.Token == "" {
-		return deliveryDispatchOutcome{response: "message_pusher channel not configured"}
-	}
-	renderedTitle, renderedContent := s.renderEventContent(event)
-	server := strings.TrimRight(cfg.Server, "/")
-	body := map[string]interface{}{
-		"title":       renderedTitle,
-		"description": renderedTitle,
-		"content":     renderedContent,
-		"token":       cfg.Token,
-	}
-	// 外部投递：优先使用 delivery.Recipient 里的"最终 Message Pusher 通道名"，
-	// 否则回退到平台全局的 channel_mapping（兼容旧数据 Recipient="system"）。
-	mpCh := strings.TrimSpace(delivery.Recipient)
-	if mpCh == "" || mpCh == "system" {
-		mpCh = config.Get().Notification.ChannelMapping[delivery.Channel]
-	}
-	if strings.TrimSpace(mpCh) != "" {
-		body["channel"] = mpCh
-	}
-	data, err := json.Marshal(body)
-	if err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
-	client := s.httpClient
-	if timeout > 0 {
-		client = &http.Client{Timeout: timeout}
-	}
-	resp, err := client.Post(server+"/push/"+cfg.Username, "application/json", bytes.NewBuffer(data))
-	if err != nil {
-		return dispatchErrorOutcome(err)
-	}
-	defer resp.Body.Close()
-	return buildHTTPOutcome("message_pusher", resp)
 }
 
 func dispatchErrorOutcome(err error) deliveryDispatchOutcome {
