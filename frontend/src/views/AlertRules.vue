@@ -4,7 +4,7 @@ defineOptions({ name: 'AlertRules' })
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { alertRuleApi, onCallApi, serviceTreeApi, taskApi, userApi } from '../api'
+import { alertRuleApi, onCallApi, requestTemplateApi, serviceTreeApi, taskApi, userApi } from '../api'
 import NotifyConfigEditor from '../components/NotifyConfigEditor.vue'
 import { notifyGroupApi } from '../api'
 
@@ -23,6 +23,7 @@ const oncallSchedules = ref<any[]>([])
 const serviceTrees = ref<any[]>([])
 const serviceTreeData = ref<any[]>([])
 const notifyGroups = ref<any[]>([])
+const ticketTemplates = ref<any[]>([])
 
 const rulePager = ref({
   page: 1,
@@ -129,6 +130,11 @@ async function fetchServiceTrees() {
   serviceTrees.value = flattenTree(serviceTreeData.value)
 }
 
+async function fetchTicketTemplates() {
+  const res = await requestTemplateApi.list(true)
+  ticketTemplates.value = (res as any).data || []
+}
+
 async function fetchRules(showLoading = true) {
   if (showLoading) {
     loading.value = true
@@ -176,6 +182,7 @@ async function fetchData(showLoading = true) {
     tasks.value.length ? Promise.resolve() : fetchTasks(),
     oncallSchedules.value.length ? Promise.resolve() : fetchOnCallSchedules(),
     serviceTrees.value.length ? Promise.resolve() : fetchServiceTrees(),
+    ticketTemplates.value.length ? Promise.resolve() : fetchTicketTemplates(),
   ])
 }
 
@@ -840,8 +847,13 @@ onUnmounted(() => {
               <el-option label="自动修复" value="execute_task" />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="form.action === 'create_ticket'" label="工单类型 ID">
-            <el-input-number v-model="form.ticket_type_id" :min="0" class="!w-full" />
+          <el-form-item v-if="form.action === 'create_ticket'" label="工单模板">
+            <el-select v-model="form.ticket_type_id" clearable filterable class="w-full" placeholder="选择自动建单使用的模板">
+              <el-option v-for="item in ticketTemplates" :key="item.id" :label="item.name" :value="item.id">
+                <span>{{ item.name }}</span>
+                <span class="text-xs text-gray-400 ml-2">{{ item.category }}</span>
+              </el-option>
+            </el-select>
           </el-form-item>
           <el-form-item v-if="form.action === 'execute_task'" label="修复任务">
             <el-select v-model="form.repair_task_id" clearable filterable class="w-full" placeholder="选择修复任务">
