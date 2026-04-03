@@ -41,7 +41,7 @@ const notifForm = ref({
   enabled: 1,
   enabled_channels: ['in_app', 'wecom', 'dingtalk', 'lark'] as string[],
   subscribed_biz_types: ['alert_event', 'ticket', 'cicd_pipeline', 'task_execution', 'notification'] as string[],
-  // channel_targets: key=通道类型（dingtalk/wecom/lark/webhook），value=Message Pusher 通道名
+  // channel_targets: key=通道类型（dingtalk/wecom/lark/webhook），value=Webhook 接收目标
   channel_targets: {} as Record<string, string>,
 })
 
@@ -243,10 +243,10 @@ onMounted(() => {
 
             <el-form-item label="通道接收目标（可选）" class="mt-6">
               <div class="text-xs text-gray-500 mb-3 leading-snug">
-                仅影响站外通知（企业微信/钉钉/飞书/Webhook）。留空则使用「通知配置中心」的全局通道映射；填写后将按个人偏好发送到对应的 Message Pusher 通道。
+                仅影响站外通知（企业微信/钉钉/飞书/Webhook）。留空则使用告警规则/工单模板/发送组中配置的 Webhook 地址。
               </div>
               <div v-for="item in channelOptions" :key="item.value" v-show="notifForm.enabled_channels.includes(item.value)" class="mb-4">
-                <div class="text-sm text-gray-700 mb-1">{{ item.label }} 接收目标（Message Pusher 通道名）</div>
+                <div class="text-sm text-gray-700 mb-1">{{ item.label }} 接收目标</div>
                 <el-input
                   v-model="notifForm.channel_targets[item.value]"
                   clearable
@@ -267,8 +267,8 @@ onMounted(() => {
             <el-divider border-style="dashed" class="!my-8" />
 
             <div class="text-sm text-gray-500 mb-4">
-              外部通知（企业微信/钉钉/飞书/Webhook）统一通过 Message Pusher 网关投递。
-              管理员负责网关连接；你可以在上方为每个通道指定 Message Pusher 通道名，未填写则使用「通知配置中心」的全局通道映射。
+              外部通知（企业微信/钉钉/飞书/Webhook）通过 Webhook 直接投递。
+              Webhook 地址由管理员在告警规则、工单模板或发送组中配置。
             </div>
 
             <div class="mt-8">

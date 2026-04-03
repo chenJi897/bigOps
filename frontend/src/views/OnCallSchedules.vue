@@ -17,7 +17,6 @@ const channelOptions = [
   { label: '站内信', value: 'in_app' },
   { label: '邮件', value: 'email' },
   { label: 'Webhook', value: 'webhook' },
-  { label: 'Message Pusher', value: 'message_pusher' },
   { label: '企业微信', value: 'wecom' },
   { label: '飞书', value: 'feishu' },
   { label: '钉钉', value: 'dingtalk' },

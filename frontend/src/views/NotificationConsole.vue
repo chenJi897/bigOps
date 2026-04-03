@@ -14,19 +14,6 @@ const configForm = ref<any>({
   max_retries: 3,
   retry_interval_seconds: 60,
   retry_scan_interval_seconds: 60,
-  message_pusher: {
-    enabled: false,
-    server: '',
-    username: '',
-    token: '',
-    timeout_seconds: 10,
-  },
-  channel_mapping: {
-    wecom: 'corp',
-    dingtalk: 'ding',
-    lark: 'lark',
-    webhook: 'custom',
-  },
 })
 
 const channelOptions = [
@@ -35,13 +22,6 @@ const channelOptions = [
   { label: '钉钉', value: 'dingtalk' },
   { label: '飞书', value: 'lark' },
   { label: 'Webhook', value: 'webhook' },
-]
-
-const mappingChannels = [
-  { key: 'wecom', label: '企业微信', placeholder: 'corp 或 corp_app' },
-  { key: 'dingtalk', label: '钉钉', placeholder: 'ding' },
-  { key: 'lark', label: '飞书', placeholder: 'lark 或 lark_app' },
-  { key: 'webhook', label: 'Webhook', placeholder: 'custom 或自定义通道名' },
 ]
 
 const autoRefreshEnabled = ref(false)
@@ -71,19 +51,6 @@ async function loadConfig() {
       max_retries: res.data?.max_retries ?? 3,
       retry_interval_seconds: res.data?.retry_interval_seconds ?? 60,
       retry_scan_interval_seconds: res.data?.retry_scan_interval_seconds ?? 60,
-      message_pusher: {
-        enabled: res.data?.message_pusher?.enabled || false,
-        server: res.data?.message_pusher?.server || '',
-        username: res.data?.message_pusher?.username || '',
-        token: res.data?.message_pusher?.token || '',
-        timeout_seconds: res.data?.message_pusher?.timeout_seconds ?? 10,
-      },
-      channel_mapping: {
-        wecom: res.data?.channel_mapping?.wecom || 'corp',
-        dingtalk: res.data?.channel_mapping?.dingtalk || 'ding',
-        lark: res.data?.channel_mapping?.lark || 'lark',
-        webhook: res.data?.channel_mapping?.webhook || 'custom',
-      },
     }
   } finally {
     configLoading.value = false
@@ -141,7 +108,6 @@ const configSummary = computed(() => {
   return {
     channels: channelLabels.join(' / ') || '未设置',
     retry: `${cfg?.max_retries ?? 0} 次 · ${cfg?.retry_interval_seconds ?? 0}s · 扫描 ${cfg?.retry_scan_interval_seconds ?? 0}s`,
-    mpEnabled: !!cfg?.message_pusher?.enabled,
   }
 })
 
@@ -222,7 +188,7 @@ async function previewTemplate() {
         <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 class="text-xl font-bold text-gray-900">通知配置中心</h1>
-            <p class="text-sm text-gray-500 mt-1">管理 Message Pusher 网关连接、通道映射与重试策略。用户个人通知偏好请在「个人设置」中配置。</p>
+            <p class="text-sm text-gray-500 mt-1">管理全局通知渠道、重试策略与通知模板。外部通知通过 Webhook 直接投递到企业微信/钉钉/飞书。</p>
           </div>
           <div class="flex items-center gap-2">
             <div class="text-xs text-gray-500 mr-2 hidden md:block">{{ savingHint || ' ' }}</div>
@@ -231,9 +197,7 @@ async function previewTemplate() {
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <span class="text-xs font-medium px-2.5 py-1 rounded-full" :class="configSummary.mpEnabled ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-gray-50 text-gray-600 ring-1 ring-gray-200'">
-            Message Pusher {{ configSummary.mpEnabled ? '已启用' : '未启用' }}
-          </span>
+          <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">Webhook 直连</span>
           <span class="text-xs text-gray-500 ml-1">默认渠道：<span class="font-mono text-gray-700">{{ configSummary.channels }}</span></span>
           <span class="text-xs text-gray-500 ml-1">重试：<span class="font-mono text-gray-700">{{ configSummary.retry }}</span></span>
         </div>
@@ -246,7 +210,7 @@ async function previewTemplate() {
         <el-card shadow="never" class="border-gray-200 xl:col-span-7">
           <div class="mb-4">
             <h2 class="text-lg font-semibold text-gray-900">全局配置</h2>
-            <div class="text-xs text-gray-500 mt-1">程序级别配置，对所有用户生效。外部通知统一通过 Message Pusher 网关投递。</div>
+            <div class="text-xs text-gray-500 mt-1">程序级别配置，对所有用户生效。Webhook 地址在告警规则/工单模板/发送组中按需配置。</div>
           </div>
 
           <el-form :model="configForm" label-width="140px" class="max-w-4xl pr-2" v-loading="configLoading">
@@ -269,41 +233,14 @@ async function previewTemplate() {
 
             <el-divider border-style="dashed" class="!my-6" />
 
-            <div class="flex items-center justify-between mb-3">
-              <div class="text-sm font-semibold text-gray-800">Message Pusher 网关</div>
-              <el-switch v-model="configForm.message_pusher.enabled" />
-            </div>
-            <div class="text-xs text-gray-500 mb-4">
-              外部通知（企业微信、钉钉、飞书、Webhook 等）统一通过
-              <a href="https://github.com/songquanpeng/message-pusher" target="_blank" class="text-indigo-600 hover:underline cursor-pointer">Message Pusher</a>
-              网关投递。请先在 Message Pusher 后台配置好各通道。
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <el-form-item label="服务地址" class="md:col-span-2">
-                <el-input v-model="configForm.message_pusher.server" placeholder="http://message-pusher:3000" class="max-w-md" />
-              </el-form-item>
-              <el-form-item label="推送账号">
-                <el-input v-model="configForm.message_pusher.username" placeholder="Message Pusher 用户名" />
-              </el-form-item>
-              <el-form-item label="推送 Token">
-                <el-input v-model="configForm.message_pusher.token" type="password" show-password placeholder="Message Pusher 鉴权 Token" />
-              </el-form-item>
-              <el-form-item label="超时(秒)">
-                <el-input-number v-model="configForm.message_pusher.timeout_seconds" :min="1" :max="120" class="w-full max-w-[220px]" />
-              </el-form-item>
-            </div>
-
-            <el-divider border-style="dashed" class="!my-6" />
-
-            <div class="text-sm font-semibold text-gray-800 mb-2">通道映射</div>
-            <div class="text-xs text-gray-500 mb-4">
-              将 BigOps 通知通道名称映射为 Message Pusher 的 channel 名称。
-              BigOps 投递时会使用映射后的 channel 值调用 Message Pusher。
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <el-form-item v-for="mc in mappingChannels" :key="mc.key" :label="mc.label">
-                <el-input v-model="configForm.channel_mapping[mc.key]" :placeholder="mc.placeholder" />
-              </el-form-item>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div class="text-sm font-semibold text-blue-800 mb-2">Webhook 投递说明</div>
+              <ul class="text-xs text-blue-700 space-y-1 list-disc list-inside">
+                <li>企业微信/钉钉/飞书的 Webhook 地址在<b>告警规则</b>、<b>工单模板</b>或<b>发送组</b>中配置</li>
+                <li>系统自动根据 Webhook URL 识别渠道类型，使用对应的消息格式投递</li>
+                <li>通知内容使用下方「通知模板」渲染，支持 Markdown 格式</li>
+                <li>投递失败会按上方重试策略自动重试</li>
+              </ul>
             </div>
           </el-form>
         </el-card>

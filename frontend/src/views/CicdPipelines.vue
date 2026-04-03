@@ -390,7 +390,7 @@ onMounted(async () => {
             <template #default="{ row }">
               <div class="flex flex-col gap-1.5">
                 <div class="flex flex-wrap gap-1.5">
-                  <el-tag size="small" :type="Array.isArray(row.notify_channels) && row.notify_channels.includes('message_pusher') ? 'warning' : 'info'">
+                  <el-tag size="small" :type="Array.isArray(row.notify_channels) && row.notify_channels.includes('wecom') ? 'warning' : 'info'">
                     {{ Array.isArray(row.notify_channels) && row.notify_channels.length ? row.notify_channels.join('/') : '默认通知' }}
                   </el-tag>
                   <el-tag size="small" :type="normalizeBoolFlag(row.webhook_enabled) ? 'success' : 'info'">
