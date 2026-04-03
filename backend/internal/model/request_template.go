@@ -27,6 +27,7 @@ type RequestTemplate struct {
 	AutoCreateOrder    int8           `gorm:"default:1" json:"auto_create_order"`
 	NotifyApplicant    int8           `gorm:"default:1" json:"notify_applicant"`
 	NotifyChannels     string         `gorm:"type:json" json:"notify_channels"`
+	NotifyConfig       string         `gorm:"type:text" json:"notify_config"` // JSON: 渠道→webhook 配置
 	Status             int8           `gorm:"default:1;index" json:"status"`
 	Sort               int            `gorm:"default:0" json:"sort"`
 	CreatedAt          LocalTime      `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`

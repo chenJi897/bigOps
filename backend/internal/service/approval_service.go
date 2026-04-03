@@ -71,6 +71,17 @@ func (s *ApprovalService) ticketNotifyChannels(ticket *model.Ticket) []string {
 	return parseNotifyChannels(template.NotifyChannels)
 }
 
+func (s *ApprovalService) ticketNotifyConfig(ticket *model.Ticket) map[string]WebhookTarget {
+	if ticket == nil || ticket.RequestTemplateID <= 0 {
+		return nil
+	}
+	template, err := s.requestRepo.GetByID(ticket.RequestTemplateID)
+	if err != nil || template == nil {
+		return nil
+	}
+	return ParseNotifyConfig(template.NotifyConfig)
+}
+
 func (s *ApprovalService) ListPendingByApproverID(approverID int64) ([]*ApprovalTodoItem, error) {
 	records, err := s.instanceRepo.ListPendingRecordsByApproverID(approverID)
 	if err != nil {
@@ -208,6 +219,7 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 			}
 			var notifyErr error
 			channels := s.ticketNotifyChannels(ticket)
+			notifyConfig := s.ticketNotifyConfig(ticket)
 			eventID, notifyErr = s.notifySvc.PublishTx(tx, NotificationPublishRequest{
 				EventType: "approval_rejected",
 				BizType:   "ticket",
@@ -216,7 +228,8 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 				Content:   fmt.Sprintf("工单 %s 在审批阶段 %s 被拒绝", ticket.TicketNo, stage.Name),
 				Level:     "warning",
 				UserIDs:   []int64{ticket.CreatorID},
-				Channels:  channels,
+				Channels:     channels,
+				NotifyConfig: notifyConfig,
 				Payload: map[string]interface{}{
 					"ticket_id":   ticket.ID,
 					"ticket_no":   ticket.TicketNo,
@@ -300,6 +313,7 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 			}
 			var notifyErr error
 			channels := s.ticketNotifyChannels(ticket)
+			notifyConfig := s.ticketNotifyConfig(ticket)
 			eventID, notifyErr = s.notifySvc.PublishTx(tx, NotificationPublishRequest{
 				EventType: "approval_approved",
 				BizType:   "ticket",
@@ -308,7 +322,8 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 				Content:   fmt.Sprintf("工单 %s 审批流程已完成", ticket.TicketNo),
 				Level:     "success",
 				UserIDs:   []int64{ticket.CreatorID},
-				Channels:  channels,
+				Channels:     channels,
+				NotifyConfig: notifyConfig,
 				Payload: map[string]interface{}{
 					"ticket_id":   ticket.ID,
 					"ticket_no":   ticket.TicketNo,
@@ -356,6 +371,7 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 		}
 		var notifyErr error
 		channels := s.ticketNotifyChannels(ticket)
+		notifyConfig := s.ticketNotifyConfig(ticket)
 		eventID, notifyErr = s.notifySvc.PublishTx(tx, NotificationPublishRequest{
 			EventType: "approval_pending",
 			BizType:   "ticket",
@@ -364,7 +380,8 @@ func (s *ApprovalService) act(instanceID, approverID int64, action, comment stri
 			Content:   fmt.Sprintf("工单 %s 进入审批阶段：%s", ticket.TicketNo, nextStage.Name),
 			Level:     "info",
 			UserIDs:   nextApproverIDs,
-			Channels:  channels,
+			Channels:     channels,
+			NotifyConfig: notifyConfig,
 			Payload: map[string]interface{}{
 				"ticket_id":    ticket.ID,
 				"ticket_no":    ticket.TicketNo,

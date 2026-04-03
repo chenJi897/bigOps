@@ -40,6 +40,7 @@ type UpsertRequestTemplateRequest struct {
 	AutoCreateOrder   int8   `json:"auto_create_order"`
 	NotifyApplicant   int8   `json:"notify_applicant"`
 	NotifyChannels    []string `json:"notify_channels"`
+	NotifyConfig      map[string]interface{} `json:"notify_config"`
 	Sort              int    `json:"sort"`
 	Status            *int8  `json:"status"`
 }
@@ -104,6 +105,7 @@ func (h *RequestTemplateHandler) Create(c *gin.Context) {
 		status = *req.Status
 	}
 	notifyChannels, _ := json.Marshal(req.NotifyChannels)
+	notifyConfigPayload, _ := json.Marshal(req.NotifyConfig)
 	item := &model.RequestTemplate{
 		Name:              req.Name,
 		Code:              req.Code,
@@ -121,6 +123,7 @@ func (h *RequestTemplateHandler) Create(c *gin.Context) {
 		AutoCreateOrder:   req.AutoCreateOrder,
 		NotifyApplicant:   req.NotifyApplicant,
 		NotifyChannels:    string(notifyChannels),
+		NotifyConfig:      string(notifyConfigPayload),
 		Sort:              req.Sort,
 		Status:            status,
 	}
@@ -172,6 +175,7 @@ func (h *RequestTemplateHandler) Update(c *gin.Context) {
 		status = *req.Status
 	}
 	notifyChannels, _ := json.Marshal(req.NotifyChannels)
+	notifyConfigPayload, _ := json.Marshal(req.NotifyConfig)
 	item := &model.RequestTemplate{
 		Name:              req.Name,
 		Code:              req.Code,
@@ -189,6 +193,7 @@ func (h *RequestTemplateHandler) Update(c *gin.Context) {
 		AutoCreateOrder:   req.AutoCreateOrder,
 		NotifyApplicant:   req.NotifyApplicant,
 		NotifyChannels:    string(notifyChannels),
+		NotifyConfig:      string(notifyConfigPayload),
 		Sort:              req.Sort,
 		Status:            status,
 	}
