@@ -217,7 +217,7 @@ onMounted(() => {
             <h2 class="text-xl font-semibold text-slate-800 tracking-tight">云账号管理</h2>
             <el-badge v-if="total > 0" :value="total" class="ml-2" type="primary" />
           </div>
-          <el-button type="primary" @click="handleAdd" class="shadow-sm !rounded-md">
+          <el-button v-permission="'cloud_account:create'" type="primary" @click="handleAdd" class="shadow-sm !rounded-md">
             <template #icon><el-icon><Plus /></el-icon></template>
             新增账号
           </el-button>
@@ -273,19 +273,19 @@ onMounted(() => {
           <el-table-column label="操作" min-width="380" fixed="right">
             <template #default="{ row }">
               <div class="flex items-center gap-1">
-                <el-button link type="primary" size="small" @click="handleSync(row)" class="!px-2 hover:bg-indigo-50 !rounded">
+                <el-button v-permission="'cloud_account:sync'" link type="primary" size="small" @click="handleSync(row)" class="!px-2 hover:bg-indigo-50 !rounded">
                   <el-icon class="mr-1"><Refresh /></el-icon>同步
                 </el-button>
                 <el-button link type="primary" size="small" @click="openSyncLogs(row)" class="!px-2 hover:bg-indigo-50 !rounded">
                   <el-icon class="mr-1"><Document /></el-icon>记录
                 </el-button>
-                <el-button link type="primary" size="small" @click="handleEdit(row)" class="!px-2 hover:bg-indigo-50 !rounded">
+                <el-button v-permission="'cloud_account:edit'" link type="primary" size="small" @click="handleEdit(row)" class="!px-2 hover:bg-indigo-50 !rounded">
                   <el-icon class="mr-1"><Edit /></el-icon>编辑
                 </el-button>
                 <el-button link type="primary" size="small" @click="handleUpdateKeys(row)" class="!px-2 hover:bg-indigo-50 !rounded">
                   <el-icon class="mr-1"><Key /></el-icon>密钥
                 </el-button>
-                <el-button link type="danger" size="small" @click="handleDelete(row)" class="!px-2 hover:bg-red-50 !rounded">
+                <el-button v-permission="'cloud_account:delete'" link type="danger" size="small" @click="handleDelete(row)" class="!px-2 hover:bg-red-50 !rounded">
                   <el-icon class="mr-1"><Delete /></el-icon>删除
                 </el-button>
               </div>

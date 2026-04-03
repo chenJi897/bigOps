@@ -80,7 +80,7 @@ onMounted(loadMenus)
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-base font-medium text-gray-800">菜单管理</span>
-          <el-button type="primary" @click="openCreate(0)">
+          <el-button v-permission="'menu:create'" type="primary" @click="openCreate(0)">
             <el-icon class="mr-1"><Plus /></el-icon> 新增顶级菜单
           </el-button>
         </div>
@@ -130,11 +130,11 @@ onMounted(loadMenus)
         <el-table-column label="操作" fixed="right" min-width="240" align="center">
           <template #default="{ row }">
             <div class="flex items-center justify-center gap-1">
-              <el-button link type="success" @click="openCreate(row.id)" v-if="row.type !== 3">添加子项</el-button>
+              <el-button v-permission="'menu:create'" link type="success" @click="openCreate(row.id)" v-if="row.type !== 3">添加子项</el-button>
               <el-divider direction="vertical" v-if="row.type !== 3" />
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'menu:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+              <el-button v-permission="'menu:delete'" link type="danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>

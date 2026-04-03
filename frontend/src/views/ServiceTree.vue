@@ -132,7 +132,7 @@ onMounted(() => {
                 <el-icon class="text-indigo-500"><Folder /></el-icon>
                 服务树
               </h2>
-              <el-button type="primary" @click="handleAdd(0)" class="shadow-sm !rounded-md" size="default">
+              <el-button v-permission="'service_tree:create'" type="primary" @click="handleAdd(0)" class="shadow-sm !rounded-md" size="default">
                 <template #icon><el-icon><Plus /></el-icon></template>
                 新增根节点
               </el-button>
@@ -159,17 +159,17 @@ onMounted(() => {
                 </span>
                 <span class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                   <el-tooltip content="添加子节点" placement="top" :show-after="300">
-                    <el-button link type="primary" @click.stop="handleAdd(data.id)" class="!p-1 hover:bg-indigo-100 rounded text-indigo-500">
+                    <el-button v-permission="'service_tree:create'" link type="primary" @click.stop="handleAdd(data.id)" class="!p-1 hover:bg-indigo-100 rounded text-indigo-500">
                       <el-icon class="text-sm"><Plus /></el-icon>
                     </el-button>
                   </el-tooltip>
                   <el-tooltip content="编辑" placement="top" :show-after="300">
-                    <el-button link type="primary" @click.stop="handleEdit(data)" class="!p-1 hover:bg-indigo-100 rounded text-indigo-500">
+                    <el-button v-permission="'service_tree:edit'" link type="primary" @click.stop="handleEdit(data)" class="!p-1 hover:bg-indigo-100 rounded text-indigo-500">
                       <el-icon class="text-sm"><Edit /></el-icon>
                     </el-button>
                   </el-tooltip>
                   <el-tooltip content="删除" placement="top" :show-after="300">
-                    <el-button link type="danger" @click.stop="handleDelete(data)" class="!p-1 hover:bg-red-100 rounded text-red-500">
+                    <el-button v-permission="'service_tree:delete'" link type="danger" @click.stop="handleDelete(data)" class="!p-1 hover:bg-red-100 rounded text-red-500">
                       <el-icon class="text-sm"><Delete /></el-icon>
                     </el-button>
                   </el-tooltip>

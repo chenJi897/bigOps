@@ -3,7 +3,7 @@ aliyun:
 database:
     charset: utf8mb4
     database: bigops2
-    host: 192.168.0.197
+    host: localhost
     password: DBB4CuIwxc
     port: 3306
     username: root
@@ -34,7 +34,7 @@ notification:
     retry_scan_interval_seconds: 60
 redis:
     db: 0
-    host: 192.168.0.197
+    host: localhost
     password: foobared
     port: 6379
 server:

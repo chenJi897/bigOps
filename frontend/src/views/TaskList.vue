@@ -137,7 +137,7 @@ onMounted(() => { fetchData() })
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-base font-medium text-gray-800">任务管理</span>
-          <el-button type="primary" @click="openCreate">
+          <el-button v-permission="'task:create'" type="primary" @click="openCreate">
             <el-icon class="mr-1"><Plus /></el-icon> 创建任务
           </el-button>
         </div>
@@ -191,9 +191,9 @@ onMounted(() => { fetchData() })
               <el-divider direction="vertical" />
               <el-button link type="primary" @click="openHistory(row)">历史</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'task:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+              <el-button v-permission="'task:delete'" link type="danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>

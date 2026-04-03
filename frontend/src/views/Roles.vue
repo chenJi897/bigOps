@@ -103,7 +103,7 @@ onMounted(loadRoles)
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-base font-medium text-gray-800">角色管理</span>
-          <el-button type="primary" @click="openCreate">
+          <el-button v-permission="'role:create'" type="primary" @click="openCreate">
             <el-icon class="mr-1"><Plus /></el-icon> 新增角色
           </el-button>
         </div>
@@ -137,11 +137,11 @@ onMounted(loadRoles)
         <el-table-column label="操作" fixed="right" min-width="240" align="center">
           <template #default="{ row }">
             <div class="flex items-center justify-center gap-1">
-              <el-button link type="primary" @click="openMenuDialog(row)">菜单权限</el-button>
+              <el-button v-permission="'role:assign_menu'" link type="primary" @click="openMenuDialog(row)">菜单权限</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'role:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="danger" @click="handleDelete(row)" :disabled="row.name === 'admin'">删除</el-button>
+              <el-button v-permission="'role:delete'" link type="danger" @click="handleDelete(row)" :disabled="row.name === 'admin'">删除</el-button>
             </div>
           </template>
         </el-table-column>

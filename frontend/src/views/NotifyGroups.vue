@@ -178,7 +178,7 @@ watch(users, (list) => {
       <div class="flex items-center gap-3">
         <el-input v-model="keyword" placeholder="搜索名称" clearable class="w-48" @keyup.enter="fetchData" />
         <el-button @click="fetchData">搜索</el-button>
-        <el-button type="primary" @click="openCreate">新增发送组</el-button>
+        <el-button v-permission="'notify_group:create'" type="primary" @click="openCreate">新增发送组</el-button>
       </div>
     </div>
 
@@ -211,7 +211,7 @@ watch(users, (list) => {
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button v-permission="'notify_group:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
             <el-button link type="success" :loading="testing" @click="testGroup(row)">测试</el-button>
             <el-button link type="danger" @click="deleteGroup(row)">删除</el-button>
           </template>

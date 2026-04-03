@@ -386,7 +386,7 @@ onMounted(fetchData)
       </div>
       <div class="flex gap-2">
         <el-button @click="fetchData">刷新</el-button>
-        <el-button type="primary" @click="handleAdd"><el-icon class="mr-1"><Plus /></el-icon> 新增工单模板</el-button>
+        <el-button v-permission="'ticket_tpl:create'" type="primary" @click="handleAdd"><el-icon class="mr-1"><Plus /></el-icon> 新增工单模板</el-button>
       </div>
     </div>
 
@@ -427,8 +427,8 @@ onMounted(fetchData)
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="140" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button v-permission="'ticket_tpl:edit'" link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-permission="'ticket_tpl:delete'" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -127,7 +127,7 @@ onMounted(loadProjects)
         <p class="text-sm text-gray-500 mt-1">管理持续集成与部署的项目仓库、默认分支和基础配置。</p>
       </div>
       <div class="flex items-center gap-3">
-        <el-button type="primary" @click="openCreate"><el-icon class="mr-1"><Plus /></el-icon> 新增项目</el-button>
+        <el-button v-permission="'cicd_project:create'" type="primary" @click="openCreate"><el-icon class="mr-1"><Plus /></el-icon> 新增项目</el-button>
       </div>
     </div>
 
@@ -191,9 +191,9 @@ onMounted(loadProjects)
           <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
           <el-table-column label="操作" fixed="right" width="220" align="center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'cicd_project:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-button link :type="row.active === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.active === 1 ? '禁用' : '启用' }}</el-button>
-              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+              <el-button v-permission="'cicd_project:delete'" link type="danger" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>

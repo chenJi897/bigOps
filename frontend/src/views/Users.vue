@@ -156,7 +156,7 @@ onMounted(() => {
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-base font-medium text-gray-800">用户管理</span>
-          <el-button type="primary" @click="openCreateDialog">
+          <el-button v-permission="'user:create'" type="primary" @click="openCreateDialog">
             <el-icon class="mr-1"><Plus /></el-icon> 新增用户
           </el-button>
         </div>
@@ -219,15 +219,15 @@ onMounted(() => {
         <el-table-column label="操作" fixed="right" width="260" align="center">
           <template #default="{ row }">
             <div class="flex items-center justify-center gap-1">
-              <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
+              <el-button v-permission="'user:edit'" link type="primary" @click="openEditDialog(row)">编辑</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="primary" @click="openRoleDialog(row)">角色</el-button>
+              <el-button v-permission="'user:assign_role'" link type="primary" @click="openRoleDialog(row)">角色</el-button>
               <el-divider direction="vertical" />
               <el-button link :type="row.status === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">
                 {{ row.status === 1 ? '禁用' : '启用' }}
               </el-button>
               <el-divider direction="vertical" />
-              <el-button link type="danger" @click="handleDelete(row)" :disabled="row.id === 1">删除</el-button>
+              <el-button v-permission="'user:delete'" link type="danger" @click="handleDelete(row)" :disabled="row.id === 1">删除</el-button>
             </div>
           </template>
         </el-table-column>

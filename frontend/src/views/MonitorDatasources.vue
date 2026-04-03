@@ -95,7 +95,7 @@ onMounted(fetchData)
       <template #header>
         <div class="flex justify-between items-center">
           <span class="text-xl font-bold text-slate-800">监控数据源</span>
-          <el-button type="primary" @click="openAdd">
+          <el-button v-permission="'alert_rule:create'" type="primary" @click="openAdd">
             <el-icon class="mr-1"><Plus /></el-icon> 新增数据源
           </el-button>
         </div>
@@ -129,7 +129,7 @@ onMounted(fetchData)
             <div class="flex items-center justify-center gap-1">
               <el-button link type="success" @click="healthCheck(row)">健康检查</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'alert_rule:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-divider direction="vertical" />
               <el-button link type="danger" @click="removeRow(row)">删除</el-button>
             </div>

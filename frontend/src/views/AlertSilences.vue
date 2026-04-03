@@ -183,7 +183,7 @@ onMounted(async () => {
       </div>
       <div class="flex items-center gap-3">
         <el-button plain @click="fetchData">刷新</el-button>
-        <el-button type="primary" @click="openAdd">新增静默</el-button>
+        <el-button v-permission="'silence:create'" type="primary" @click="openAdd">新增静默</el-button>
       </div>
     </div>
 
@@ -206,7 +206,7 @@ onMounted(async () => {
           <el-table-column prop="reason" label="原因" min-width="220" show-overflow-tooltip />
           <el-table-column label="操作" width="140" fixed="right" align="center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'silence:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-button link type="danger" @click="removeRow(row)">删除</el-button>
             </template>
           </el-table-column>

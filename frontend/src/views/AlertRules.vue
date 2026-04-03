@@ -548,7 +548,7 @@ onUnmounted(() => {
             <el-button plain @click="goOnCallPage">OnCall</el-button>
             <el-button plain @click="goDatasourcePage">数据源</el-button>
             <el-button plain @click="goQueryPage">查询台</el-button>
-            <el-button type="primary" @click="openAdd">
+            <el-button v-permission="'alert_rule:create'" type="primary" @click="openAdd">
               <el-icon class="mr-1"><Plus /></el-icon> 新增规则
             </el-button>
           </div>
@@ -635,9 +635,9 @@ onUnmounted(() => {
         <el-table-column label="操作" width="140" fixed="right" align="center">
           <template #default="{ row }">
             <div class="flex items-center justify-center gap-1">
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'alert_rule:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-divider direction="vertical" />
-              <el-button link type="danger" @click="removeRule(row)">删除</el-button>
+              <el-button v-permission="'alert_rule:delete'" link type="danger" @click="removeRule(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>

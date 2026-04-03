@@ -10,3 +10,5 @@ backend/config/.agent-id
 backend/config/.agent-public-ip.json
 backend/cmd/_*/
 frontend/test-results/
+CLAUDE.md
+AGENTS.md

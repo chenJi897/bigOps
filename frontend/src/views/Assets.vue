@@ -217,7 +217,7 @@ onMounted(() => {
             <h2 class="text-xl font-semibold text-gray-800 tracking-tight">主机资产</h2>
             <el-badge v-if="total > 0" :value="total" :max="999" class="ml-2" type="primary" />
           </div>
-          <el-button type="primary" @click="handleAdd" class="shadow-sm !rounded-md">
+          <el-button v-permission="'asset:create'" type="primary" @click="handleAdd" class="shadow-sm !rounded-md">
             <template #icon><el-icon><Plus /></el-icon></template>
             新增资产
           </el-button>
@@ -337,12 +337,12 @@ onMounted(() => {
             <template #default="{ row }">
               <div class="flex items-center gap-1">
                 <el-tooltip content="编辑" placement="top" :show-after="300">
-                  <el-button link type="primary" @click.stop="handleEdit(row)" class="!p-1.5 hover:bg-indigo-50 rounded">
+                  <el-button v-permission="'asset:edit'" link type="primary" @click.stop="handleEdit(row)" class="!p-1.5 hover:bg-indigo-50 rounded">
                     <el-icon class="text-base"><Edit /></el-icon>
                   </el-button>
                 </el-tooltip>
                 <el-tooltip content="删除" placement="top" :show-after="300">
-                  <el-button link type="danger" @click.stop="handleDelete(row)" class="!p-1.5 hover:bg-red-50 rounded">
+                  <el-button v-permission="'asset:delete'" link type="danger" @click.stop="handleDelete(row)" class="!p-1.5 hover:bg-red-50 rounded">
                     <el-icon class="text-base"><Delete /></el-icon>
                   </el-button>
                 </el-tooltip>

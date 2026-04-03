@@ -354,7 +354,7 @@ onMounted(async () => {
         <p class="text-sm text-gray-500 mt-1">配置流水线的构建、部署任务，审批模板以及环境变量和触发规则。</p>
       </div>
       <div class="flex items-center gap-3">
-        <el-button type="primary" @click="openCreate">新增流水线</el-button>
+        <el-button v-permission="'cicd_pipeline:create'" type="primary" @click="openCreate">新增流水线</el-button>
       </div>
     </div>
 
@@ -436,11 +436,11 @@ onMounted(async () => {
           <el-table-column prop="updated_at" label="更新时间" width="170" align="center" />
           <el-table-column label="操作" width="300" fixed="right" align="center">
             <template #default="{ row }">
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+              <el-button v-permission="'cicd_pipeline:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
               <el-button link :type="row.active === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.active === 1 ? '停用' : '启用' }}</el-button>
               <el-button link type="info" @click="handleTrigger(row)">触发</el-button>
               <el-button link type="primary" @click="goToRuns(row)">运行记录</el-button>
-              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+              <el-button v-permission="'cicd_pipeline:delete'" link type="danger" @click="handleDelete(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
