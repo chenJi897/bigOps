@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineOptions({ name: 'AlertEvents' })
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { alertRuleApi } from '../api'
@@ -12,42 +12,43 @@ const loading = ref(false)
 const events = ref<any[]>([])
 const selectedRows = ref<any[]>([])
 const pager = ref({ page: 1, size: 20, total: 0 })
+const autoRefresh = ref(true)
+let refreshTimer: number | null = null
+
 const filters = ref({
   keyword: String(route.query.keyword || ''),
   status: String(route.query.status || ''),
   severity: String(route.query.severity || ''),
-  agent_id: String(route.query.agent_id || ''),
 })
 
-const statusOptions = [
-  { label: '全部状态', value: '' },
-  { label: '触发中', value: 'firing' },
-  { label: '已确认', value: 'acknowledged' },
-  { label: '已恢复', value: 'resolved' },
-]
+// 统计
+const stats = computed(() => {
+  const all = events.value
+  return {
+    total: pager.value.total,
+    firing: all.filter(e => e.status === 'firing').length,
+    acknowledged: all.filter(e => e.status === 'acknowledged').length,
+    resolved: all.filter(e => e.status === 'resolved').length,
+  }
+})
 
-const severityOptions = [
-  { label: '全部级别', value: '' },
-  { label: '提示', value: 'info' },
-  { label: '警告', value: 'warning' },
-  { label: '严重', value: 'critical' },
-]
-
-const canBatchAck = computed(() => selectedRows.value.some(item => item.status === 'firing'))
-const canBatchResolve = computed(() => selectedRows.value.some(item => item.status !== 'resolved'))
-
-function severityTagType(severity: string) {
-  const map: Record<string, string> = { info: 'info', warning: 'warning', critical: 'danger' }
-  return map[severity] || 'info'
+const severityMap: Record<string, { label: string; color: string; tagType: string }> = {
+  info: { label: '提示', color: '#909399', tagType: 'info' },
+  warning: { label: '警告', color: '#E6A23C', tagType: 'warning' },
+  critical: { label: '严重', color: '#F56C6C', tagType: 'danger' },
 }
 
-function statusTagType(status: string) {
-  const map: Record<string, string> = { firing: 'danger', acknowledged: 'warning', resolved: 'info' }
-  return map[status] || 'info'
+const statusMap: Record<string, { label: string; dot: string; tagType: string }> = {
+  firing: { label: '触发中', dot: 'bg-red-500', tagType: 'danger' },
+  acknowledged: { label: '已确认', dot: 'bg-amber-500', tagType: 'warning' },
+  resolved: { label: '已恢复', dot: 'bg-green-500', tagType: 'success' },
 }
 
-async function fetchEvents() {
-  loading.value = true
+const canBatchAck = computed(() => selectedRows.value.some(e => e.status === 'firing'))
+const canBatchResolve = computed(() => selectedRows.value.some(e => e.status !== 'resolved'))
+
+async function fetchEvents(silent = false) {
+  if (!silent) loading.value = true
   try {
     const res = await alertRuleApi.events({
       page: pager.value.page,
@@ -55,7 +56,6 @@ async function fetchEvents() {
       status: filters.value.status,
       severity: filters.value.severity,
       keyword: filters.value.keyword.trim(),
-      agent_id: filters.value.agent_id.trim(),
     })
     events.value = (res as any).data?.list || []
     pager.value.total = Number((res as any).data?.total || 0)
@@ -64,13 +64,19 @@ async function fetchEvents() {
   }
 }
 
+function setStatusFilter(status: string) {
+  filters.value.status = filters.value.status === status ? '' : status
+  pager.value.page = 1
+  fetchEvents()
+}
+
 function applyFilters() {
   pager.value.page = 1
   fetchEvents()
 }
 
 function resetFilters() {
-  filters.value = { keyword: '', status: '', severity: '', agent_id: '' }
+  filters.value = { keyword: '', status: '', severity: '' }
   pager.value.page = 1
   fetchEvents()
 }
@@ -80,136 +86,227 @@ function handleSelectionChange(rows: any[]) {
 }
 
 async function acknowledge(row: any) {
-  const { value } = await ElMessageBox.prompt('可填写确认备注', '确认告警', { inputPlaceholder: '例如：已知问题，处理中', confirmButtonText: '确认', cancelButtonText: '取消' })
-  await alertRuleApi.ackEvent(row.id, value || '')
-  ElMessage.success('事件已确认')
-  fetchEvents()
+  try {
+    const { value } = await ElMessageBox.prompt('确认备注（可选）', '确认告警', {
+      inputPlaceholder: '例如：已知问题，处理中',
+      confirmButtonText: '确认',
+      cancelButtonText: '取消',
+    })
+    await alertRuleApi.ackEvent(row.id, value || '')
+    ElMessage.success('已确认')
+    fetchEvents()
+  } catch {}
 }
 
 async function resolve(row: any) {
-  const { value } = await ElMessageBox.prompt('请填写关闭说明', '关闭告警', { inputPlaceholder: '例如：已恢复', confirmButtonText: '关闭', cancelButtonText: '取消' })
-  await alertRuleApi.resolveEvent(row.id, value || '')
-  ElMessage.success('事件已关闭')
-  fetchEvents()
+  try {
+    const { value } = await ElMessageBox.prompt('关闭说明（可选）', '关闭告警', {
+      inputPlaceholder: '例如：已恢复',
+      confirmButtonText: '关闭',
+      cancelButtonText: '取消',
+    })
+    await alertRuleApi.resolveEvent(row.id, value || '')
+    ElMessage.success('已关闭')
+    fetchEvents()
+  } catch {}
 }
 
 async function batchAcknowledge() {
   if (!canBatchAck.value) return
-  await Promise.all(selectedRows.value.filter(item => item.status === 'firing').map(item => alertRuleApi.ackEvent(item.id, '批量确认')))
-  ElMessage.success('已批量确认')
-  fetchEvents()
+  try {
+    await ElMessageBox.confirm(`确认批量确认 ${selectedRows.value.filter(e => e.status === 'firing').length} 条告警？`, '批量确认')
+    await Promise.all(selectedRows.value.filter(e => e.status === 'firing').map(e => alertRuleApi.ackEvent(e.id, '批量确认')))
+    ElMessage.success('已批量确认')
+    fetchEvents()
+  } catch {}
 }
 
 async function batchResolve() {
   if (!canBatchResolve.value) return
-  await Promise.all(selectedRows.value.filter(item => item.status !== 'resolved').map(item => alertRuleApi.resolveEvent(item.id, '批量关闭')))
-  ElMessage.success('已批量关闭')
-  fetchEvents()
+  try {
+    await ElMessageBox.confirm(`确认批量关闭 ${selectedRows.value.filter(e => e.status !== 'resolved').length} 条告警？`, '批量关闭')
+    await Promise.all(selectedRows.value.filter(e => e.status !== 'resolved').map(e => alertRuleApi.resolveEvent(e.id, '批量关闭')))
+    ElMessage.success('已批量关闭')
+    fetchEvents()
+  } catch {}
 }
 
 function goTicket(id?: number) {
-  if (!id) return
-  router.push(`/ticket/detail/${id}`)
+  if (id) router.push(`/ticket/detail/${id}`)
 }
-
 function goExecution(id?: number) {
-  if (!id) return
-  router.push(`/task/execution/${id}`)
+  if (id) router.push(`/task/execution/${id}`)
 }
 
-onMounted(fetchEvents)
+function setupTimer() {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
+  if (autoRefresh.value) {
+    refreshTimer = window.setInterval(() => fetchEvents(true), 15000)
+  }
+}
+
+watch(autoRefresh, setupTimer)
+onMounted(() => { fetchEvents(); setupTimer() })
+onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-gray-50">
-    <div class="bg-white border-b border-gray-200 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-xl font-bold text-gray-900">告警事件中心</h1>
-        <p class="text-sm text-gray-500 mt-1">统一处理触发中的告警事件，支持确认、关闭和业务跳转。</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <el-button plain :disabled="!canBatchAck" @click="batchAcknowledge">批量确认</el-button>
-        <el-button type="warning" plain :disabled="!canBatchResolve" @click="batchResolve">批量关闭</el-button>
-        <el-button type="primary" plain @click="fetchEvents">刷新</el-button>
+  <div class="bg-slate-50 -m-5">
+    <!-- 顶部：标题 + 操作 -->
+    <div class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-4">
+      <h1 class="text-lg font-bold text-slate-800 whitespace-nowrap">告警事件</h1>
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg">
+          <span class="text-xs text-slate-500 whitespace-nowrap">自动刷新</span>
+          <el-switch v-model="autoRefresh" size="small" />
+        </div>
+        <el-button plain size="small" :disabled="!canBatchAck" @click="batchAcknowledge">批量确认</el-button>
+        <el-button plain size="small" type="warning" :disabled="!canBatchResolve" @click="batchResolve">批量关闭</el-button>
+        <el-button size="small" type="primary" plain :loading="loading" @click="fetchEvents()">刷新</el-button>
       </div>
     </div>
 
-    <div class="flex-1 overflow-auto p-6">
-      <el-card shadow="never" class="border-gray-200">
-        <el-form inline class="mb-4 flex flex-wrap gap-2">
-          <el-form-item class="mb-0">
-            <el-input v-model="filters.keyword" placeholder="规则 / 主机 / IP" clearable class="w-56" @keyup.enter="applyFilters" />
-          </el-form-item>
-          <el-form-item class="mb-0">
-            <el-input v-model="filters.agent_id" placeholder="Agent ID" clearable class="w-56" @keyup.enter="applyFilters" />
-          </el-form-item>
-          <el-form-item class="mb-0">
-            <el-select v-model="filters.status" placeholder="状态" clearable class="w-36">
-              <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item class="mb-0">
-            <el-select v-model="filters.severity" placeholder="级别" clearable class="w-36">
-              <el-option v-for="item in severityOptions" :key="item.label" :label="item.label" :value="item.value" />
-            </el-select>
-          </el-form-item>
-          <el-form-item class="mb-0">
-            <el-button type="primary" @click="applyFilters">筛选</el-button>
-            <el-button @click="resetFilters">重置</el-button>
-          </el-form-item>
-        </el-form>
+    <div class="p-5">
+      <!-- 统计卡片 -->
+      <div class="grid grid-cols-4 gap-4 mb-5">
+        <div class="bg-white rounded-xl border border-slate-200 px-4 py-3 cursor-pointer hover:shadow-md transition-shadow"
+             :class="{ 'ring-2 ring-slate-400': !filters.status }"
+             @click="setStatusFilter('')">
+          <div class="text-xs text-slate-400 mb-1">全部事件</div>
+          <div class="text-2xl font-bold text-slate-700">{{ stats.total }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-red-200 px-4 py-3 cursor-pointer hover:shadow-md transition-shadow"
+             :class="{ 'ring-2 ring-red-400': filters.status === 'firing' }"
+             @click="setStatusFilter('firing')">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span class="text-xs text-red-500">触发中</span>
+          </div>
+          <div class="text-2xl font-bold text-red-600 mt-1">{{ stats.firing }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-amber-200 px-4 py-3 cursor-pointer hover:shadow-md transition-shadow"
+             :class="{ 'ring-2 ring-amber-400': filters.status === 'acknowledged' }"
+             @click="setStatusFilter('acknowledged')">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span class="text-xs text-amber-600">已确认</span>
+          </div>
+          <div class="text-2xl font-bold text-amber-600 mt-1">{{ stats.acknowledged }}</div>
+        </div>
+        <div class="bg-white rounded-xl border border-green-200 px-4 py-3 cursor-pointer hover:shadow-md transition-shadow"
+             :class="{ 'ring-2 ring-green-400': filters.status === 'resolved' }"
+             @click="setStatusFilter('resolved')">
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+            <span class="text-xs text-green-600">已恢复</span>
+          </div>
+          <div class="text-2xl font-bold text-green-600 mt-1">{{ stats.resolved }}</div>
+        </div>
+      </div>
 
-        <el-table :data="events" v-loading="loading" stripe border class="w-full" @selection-change="handleSelectionChange">
-          <el-table-column type="selection" width="48" align="center" />
-          <el-table-column prop="rule_name" label="规则" min-width="180" show-overflow-tooltip />
-          <el-table-column prop="hostname" label="主机" min-width="160" show-overflow-tooltip />
-          <el-table-column prop="agent_id" label="Agent ID" min-width="220" show-overflow-tooltip />
-          <el-table-column label="级别" width="90" align="center">
+      <!-- 筛选栏 -->
+      <div class="bg-white rounded-xl border border-slate-200 px-4 py-3 mb-4 flex items-center gap-3 flex-wrap">
+        <el-input v-model="filters.keyword" placeholder="搜索规则 / 主机 / IP" clearable class="!w-52" size="small" @keyup.enter="applyFilters">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+        <el-select v-model="filters.severity" placeholder="告警级别" clearable class="!w-28" size="small" @change="applyFilters">
+          <el-option label="全部级别" value="" />
+          <el-option label="提示" value="info" />
+          <el-option label="警告" value="warning" />
+          <el-option label="严重" value="critical" />
+        </el-select>
+        <el-button size="small" type="primary" @click="applyFilters">筛选</el-button>
+        <el-button size="small" @click="resetFilters">重置</el-button>
+        <div class="flex-1"></div>
+        <span class="text-xs text-slate-400">共 {{ pager.total }} 条</span>
+      </div>
+
+      <!-- 事件列表 -->
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <el-table :data="events" v-loading="loading" stripe class="w-full" @selection-change="handleSelectionChange" :row-class-name="(r: any) => r.row.status === 'firing' ? 'firing-row' : ''">
+          <el-table-column type="selection" width="40" align="center" />
+          <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
-              <el-tag size="small" :type="severityTagType(row.severity)">{{ row.severity }}</el-tag>
+              <div class="flex items-center justify-center gap-1.5">
+                <span class="w-2 h-2 rounded-full shrink-0" :class="statusMap[row.status]?.dot || 'bg-gray-400'" :style="row.status === 'firing' ? 'animation: pulse 2s infinite' : ''"></span>
+                <span class="text-xs font-medium" :class="{ 'text-red-600': row.status === 'firing', 'text-amber-600': row.status === 'acknowledged', 'text-green-600': row.status === 'resolved' }">
+                  {{ statusMap[row.status]?.label || row.status }}
+                </span>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="100" align="center">
+          <el-table-column label="级别" width="70" align="center">
             <template #default="{ row }">
-              <el-tag size="small" :type="statusTagType(row.status)">{{ row.status }}</el-tag>
+              <el-tag size="small" :type="severityMap[row.severity]?.tagType || 'info'" effect="dark" round>
+                {{ severityMap[row.severity]?.label || row.severity }}
+              </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="值 / 阈值" width="150" align="right">
-            <template #default="{ row }">{{ Number(row.metric_value || 0).toFixed(1) }} / {{ row.threshold }}</template>
-          </el-table-column>
-          <el-table-column prop="triggered_at" label="触发时间" width="180" align="center" />
-          <el-table-column label="关联" min-width="180">
+          <el-table-column label="告警规则 / 主机" min-width="240" show-overflow-tooltip>
             <template #default="{ row }">
-              <el-button v-if="row.ticket_id" link type="primary" @click="goTicket(row.ticket_id)">工单 #{{ row.ticket_id }}</el-button>
-              <el-button v-if="row.task_execution_id" link type="warning" @click="goExecution(row.task_execution_id)">执行 #{{ row.task_execution_id }}</el-button>
-              <span v-if="!row.ticket_id && !row.task_execution_id" class="text-gray-400">—</span>
+              <div>
+                <div class="font-medium text-slate-800">{{ row.rule_name }}</div>
+                <div class="text-xs text-slate-400 mt-0.5">{{ row.hostname || row.agent_id || '—' }}</div>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="140" fixed="right" align="center">
+          <el-table-column label="值 / 阈值" width="110" align="center">
             <template #default="{ row }">
-              <el-button link type="primary" :disabled="row.status !== 'firing'" @click="acknowledge(row)">确认</el-button>
-              <el-button link type="danger" :disabled="row.status === 'resolved'" @click="resolve(row)">关闭</el-button>
+              <span class="font-mono text-xs">
+                <span :class="row.status === 'firing' ? 'text-red-600 font-bold' : 'text-slate-600'">{{ Number(row.metric_value || 0).toFixed(1) }}</span>
+                <span class="text-slate-300 mx-0.5">/</span>
+                <span class="text-slate-500">{{ row.threshold }}</span>
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="触发时间" width="155" align="center">
+            <template #default="{ row }">
+              <span class="text-xs text-slate-500">{{ row.triggered_at }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right" align="center">
+            <template #default="{ row }">
+              <template v-if="row.status === 'firing'">
+                <el-button link type="primary" size="small" @click="acknowledge(row)">确认</el-button>
+                <el-button link type="danger" size="small" @click="resolve(row)">关闭</el-button>
+              </template>
+              <template v-else-if="row.status === 'acknowledged'">
+                <el-button link type="danger" size="small" @click="resolve(row)">关闭</el-button>
+              </template>
+              <template v-else>
+                <span class="text-xs text-slate-300">已处理</span>
+              </template>
             </template>
           </el-table-column>
         </el-table>
 
-        <div class="mt-6 flex justify-end">
+        <div class="px-4 py-3 border-t border-slate-100 flex justify-end">
           <el-pagination
             background
+            small
             layout="total, sizes, prev, pager, next"
             :total="pager.total"
             :current-page="pager.page"
             :page-size="pager.size"
-            :page-sizes="[10, 20, 50]"
+            :page-sizes="[20, 50, 100]"
             @current-change="(page: number) => { pager.page = page; fetchEvents() }"
             @size-change="(size: number) => { pager.size = size; pager.page = 1; fetchEvents() }"
           />
         </div>
-      </el-card>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Scoped styles replaced with Tailwind utility classes */
+:deep(.firing-row) {
+  background-color: #fef2f2 !important;
+}
+:deep(.firing-row:hover > td) {
+  background-color: #fee2e2 !important;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 </style>
