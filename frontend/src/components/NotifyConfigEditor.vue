@@ -31,9 +31,14 @@ const needsSecret = (ch: string) => ch === 'dingtalk' || ch === 'lark'
 
 onMounted(() => syncFromModel())
 
-let initialSynced = false
-watch(() => props.modelValue, () => {
-  if (!initialSynced) syncFromModel()
+// 父组件数据异步到达时重新同步（编辑场景：父组件 fetch 后才设 modelValue）
+watch(() => props.modelValue, (newVal) => {
+  if (!newVal) return
+  const keys = Object.keys(newVal).filter(k => newVal[k]?.webhook_url)
+  // 只在有新数据且本地还没选的时候同步，避免用户操作被覆盖
+  if (keys.length > 0 && !selectedChannel.value) {
+    syncFromModel()
+  }
 }, { deep: true })
 
 function syncFromModel() {
@@ -48,7 +53,6 @@ function syncFromModel() {
     webhookUrl.value = ''
     secret.value = ''
   }
-  initialSynced = true
 }
 
 function onChannelChange() {
