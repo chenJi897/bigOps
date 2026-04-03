@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * NotifyConfigEditor — 通知配置通用组件
- * 站内通知强制开启不可取消。用户勾选外部渠道后展开 Webhook URL 输入框。
+ * NotifyConfigEditor — 通知渠道配置组件
+ * 站内通知后端强制发送，此处只配置外部渠道（单选）。
  */
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -14,145 +14,106 @@ const emit = defineEmits<{
   (e: 'update:modelValue', val: Record<string, { webhook_url: string; secret: string }>): void
 }>()
 
-const channelLabels: Record<string, string> = {
-  lark: '飞书',
-  dingtalk: '钉钉',
-  wecom: '企业微信',
-  webhook: '自定义 Webhook',
-}
+const channelOptions = [
+  { label: '不启用外部通知', value: '' },
+  { label: '企业微信机器人', value: 'wecom' },
+  { label: '钉钉机器人', value: 'dingtalk' },
+  { label: '飞书机器人', value: 'lark' },
+  { label: '自定义 Webhook', value: 'webhook' },
+]
 
-const enabledTypes = ref<string[]>([])
-const testing = ref<Record<string, boolean>>({})
+const selectedChannel = ref('')
+const webhookUrl = ref('')
+const secret = ref('')
+const testing = ref(false)
 
-const checkedList = ref<string[]>([])
-const forms = ref<Record<string, { webhook_url: string; secret: string }>>({})
+const needsSecret = (ch: string) => ch === 'dingtalk' || ch === 'lark'
 
-onMounted(async () => {
-  try {
-    const res: any = await notificationApi.enabledChannelTypes()
-    enabledTypes.value = res.data || ['lark', 'dingtalk', 'wecom', 'webhook']
-  } catch {
-    enabledTypes.value = ['lark', 'dingtalk', 'wecom', 'webhook']
-  }
-  syncFromModel()
-})
+onMounted(() => syncFromModel())
 
 let initialSynced = false
-
 watch(() => props.modelValue, () => {
   if (!initialSynced) syncFromModel()
 }, { deep: true })
 
 function syncFromModel() {
   const cfg = props.modelValue || {}
-  const checked: string[] = []
-  const f: Record<string, { webhook_url: string; secret: string }> = {}
-  for (const t of enabledTypes.value) {
-    f[t] = cfg[t] && cfg[t].webhook_url
-      ? { ...cfg[t] }
-      : (forms.value[t] || { webhook_url: '', secret: '' })
-    if (cfg[t] && cfg[t].webhook_url) {
-      checked.push(t)
-    }
+  const keys = Object.keys(cfg).filter(k => cfg[k]?.webhook_url)
+  if (keys.length > 0) {
+    selectedChannel.value = keys[0]
+    webhookUrl.value = cfg[keys[0]].webhook_url || ''
+    secret.value = cfg[keys[0]].secret || ''
+  } else {
+    selectedChannel.value = ''
+    webhookUrl.value = ''
+    secret.value = ''
   }
-  checkedList.value = checked
-  forms.value = f
   initialSynced = true
 }
 
-function toggleChannel(ct: string, val: boolean) {
-  if (val) {
-    if (!checkedList.value.includes(ct)) {
-      checkedList.value = [...checkedList.value, ct]
-    }
-    if (!forms.value[ct]) {
-      forms.value = { ...forms.value, [ct]: { webhook_url: '', secret: '' } }
-    }
-  } else {
-    checkedList.value = checkedList.value.filter(c => c !== ct)
-    forms.value = { ...forms.value, [ct]: { webhook_url: '', secret: '' } }
-  }
+function onChannelChange() {
+  webhookUrl.value = ''
+  secret.value = ''
   emitUpdate()
 }
 
 function emitUpdate() {
-  const result: Record<string, { webhook_url: string; secret: string }> = {}
-  for (const t of checkedList.value) {
-    if (forms.value[t]?.webhook_url) {
-      result[t] = { ...forms.value[t] }
-    }
+  if (!selectedChannel.value || !webhookUrl.value) {
+    emit('update:modelValue', {})
+    return
   }
-  emit('update:modelValue', result)
+  emit('update:modelValue', {
+    [selectedChannel.value]: { webhook_url: webhookUrl.value, secret: secret.value },
+  })
 }
 
-function onInput() {
-  emitUpdate()
-}
-
-async function testWebhook(channelType: string) {
-  const form = forms.value[channelType]
-  if (!form?.webhook_url) {
+async function testWebhook() {
+  if (!webhookUrl.value) {
     ElMessage.warning('请先填写 Webhook 地址')
     return
   }
-  testing.value = { ...testing.value, [channelType]: true }
+  testing.value = true
   try {
     await notificationApi.testWebhook({
-      channel_type: channelType,
-      webhook_url: form.webhook_url,
-      secret: form.secret || '',
+      channel_type: selectedChannel.value,
+      webhook_url: webhookUrl.value,
+      secret: secret.value || '',
     })
     ElMessage.success('测试消息发送成功')
   } catch {
     // error handled by interceptor
   } finally {
-    testing.value = { ...testing.value, [channelType]: false }
+    testing.value = false
   }
 }
 </script>
 
 <template>
-  <div class="notify-config-editor space-y-2">
-    <!-- 外部渠道（站内通知强制开启，不在此显示） -->
-    <div v-for="ct in enabledTypes" :key="ct" class="border border-gray-200 rounded-lg overflow-hidden">
-      <div
-        class="flex items-center gap-2 py-2 px-3 cursor-pointer hover:bg-gray-50 transition-colors"
-        @click="toggleChannel(ct, !checkedList.includes(ct))"
-      >
-        <el-checkbox
-          :model-value="checkedList.includes(ct)"
-          @update:model-value="(val: boolean) => toggleChannel(ct, val)"
-          @click.stop
-        />
-        <span class="text-sm font-medium text-gray-700">{{ channelLabels[ct] || ct }}</span>
-      </div>
-      <div v-if="checkedList.includes(ct)" class="px-3 pb-3 pt-1 bg-gray-50/50 border-t border-gray-100">
-        <div class="flex items-center gap-2">
-          <el-input
-            v-model="forms[ct].webhook_url"
-            placeholder="Webhook URL"
-            size="small"
-            class="flex-1"
-            @input="onInput"
-          />
-          <el-input
-            v-if="ct === 'dingtalk' || ct === 'lark'"
-            v-model="forms[ct].secret"
-            placeholder="签名密钥（可选）"
-            size="small"
-            class="w-40"
-            @input="onInput"
-          />
-          <el-button
-            size="small"
-            plain
-            :loading="testing[ct]"
-            @click.stop="testWebhook(ct)"
-          >
-            测试
-          </el-button>
+  <div class="notify-config-editor w-full space-y-3">
+    <el-select v-model="selectedChannel" class="w-full" placeholder="选择外部通知渠道（默认仅站内通知）" @change="onChannelChange">
+      <el-option v-for="item in channelOptions" :key="item.value" :label="item.label" :value="item.value" />
+    </el-select>
+
+    <template v-if="selectedChannel">
+      <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+        <div>
+          <div class="text-xs text-gray-500 mb-1">Webhook 地址</div>
+          <div class="flex items-center gap-2">
+            <el-input
+              v-model="webhookUrl"
+              :placeholder="selectedChannel === 'wecom' ? 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...' : selectedChannel === 'dingtalk' ? 'https://oapi.dingtalk.com/robot/send?access_token=...' : selectedChannel === 'lark' ? 'https://open.feishu.cn/open-apis/bot/v2/hook/...' : 'https://your-webhook-url'"
+              @input="emitUpdate"
+            />
+            <el-button plain :loading="testing" @click="testWebhook">测试</el-button>
+          </div>
+        </div>
+        <div v-if="needsSecret(selectedChannel)">
+          <div class="text-xs text-gray-500 mb-1">
+            {{ selectedChannel === 'dingtalk' ? '加签密钥（机器人安全设置页面，加签一栏下面显示的SEC开头的字符串）' : '签名校验密钥（可选）' }}
+          </div>
+          <el-input v-model="secret" :placeholder="selectedChannel === 'dingtalk' ? 'SECxxxxxxxx' : '可选'" @input="emitUpdate" />
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
