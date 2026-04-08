@@ -205,11 +205,17 @@ func (s *TicketService) Create(ticket *model.Ticket, operatorID int64, operatorN
 
 		if ticket.AssigneeID > 0 && ticket.Status == "processing" {
 			assigneeName := s.getUserName(ticket.AssigneeID)
+			rule := "auto"
+			if tt != nil {
+				rule = tt.AutoAssignRule
+			} else if template != nil {
+				rule = template.AutoAssignRule
+			}
 			if err := tx.Create(&model.TicketActivity{
 				TicketID: ticket.ID,
 				UserID:   0,
 				Type:     "assign",
-				Content:  fmt.Sprintf("自动分派给 %s（%s）", assigneeName, tt.AutoAssignRule),
+				Content:  fmt.Sprintf("自动分派给 %s（%s）", assigneeName, rule),
 				NewValue: assigneeName,
 				IsSystem: true,
 			}).Error; err != nil {
@@ -236,6 +242,9 @@ func (s *TicketService) Assign(id, assigneeID, operatorID int64) error {
 	if err := validateTransition(ticket.Status, "processing"); err != nil {
 		return err
 	}
+	if _, err := s.userRepo.GetByID(assigneeID); err != nil {
+		return errors.New("指定的处理人不存在")
+	}
 
 	oldAssignee := s.getUserName(ticket.AssigneeID)
 	newAssignee := s.getUserName(assigneeID)
@@ -246,14 +255,16 @@ func (s *TicketService) Assign(id, assigneeID, operatorID int64) error {
 		return err
 	}
 
-	s.activityRepo.Create(&model.TicketActivity{
+	if err := s.activityRepo.Create(&model.TicketActivity{
 		TicketID: ticket.ID,
 		UserID:   operatorID,
 		Type:     "assign",
 		Content:  fmt.Sprintf("分配处理人: %s", newAssignee),
 		OldValue: oldAssignee,
 		NewValue: newAssignee,
-	})
+	}); err != nil {
+		return fmt.Errorf("记录活动失败: %w", err)
+	}
 	return nil
 }
 
@@ -287,14 +298,16 @@ func (s *TicketService) Process(id int64, action, content string, operatorID int
 		return err
 	}
 
-	s.activityRepo.Create(&model.TicketActivity{
+	if err := s.activityRepo.Create(&model.TicketActivity{
 		TicketID: ticket.ID,
 		UserID:   operatorID,
 		Type:     action,
 		Content:  content,
 		OldValue: oldStatus,
 		NewValue: targetStatus,
-	})
+	}); err != nil {
+		return fmt.Errorf("记录活动失败: %w", err)
+	}
 	return nil
 }
 
@@ -320,14 +333,16 @@ func (s *TicketService) Close(id int64, resolution, note string, operatorID int6
 		return err
 	}
 
-	s.activityRepo.Create(&model.TicketActivity{
+	if err := s.activityRepo.Create(&model.TicketActivity{
 		TicketID: ticket.ID,
 		UserID:   operatorID,
 		Type:     "close",
 		Content:  fmt.Sprintf("关闭工单，处理结果: %s", resolution),
 		OldValue: oldStatus,
 		NewValue: "closed",
-	})
+	}); err != nil {
+		return fmt.Errorf("记录活动失败: %w", err)
+	}
 	return nil
 }
 
@@ -350,14 +365,16 @@ func (s *TicketService) Reopen(id int64, content string, operatorID int64) error
 		return err
 	}
 
-	s.activityRepo.Create(&model.TicketActivity{
+	if err := s.activityRepo.Create(&model.TicketActivity{
 		TicketID: ticket.ID,
 		UserID:   operatorID,
 		Type:     "reopen",
 		Content:  content,
 		OldValue: oldStatus,
 		NewValue: "processing",
-	})
+	}); err != nil {
+		return fmt.Errorf("记录活动失败: %w", err)
+	}
 	return nil
 }
 
@@ -366,11 +383,17 @@ func (s *TicketService) Transfer(id, newAssigneeID int64, content string, operat
 	if err != nil {
 		return errors.New("工单不存在")
 	}
+	if ticket.Status == "closed" {
+		return errors.New("已关闭的工单不能转交")
+	}
 	if newAssigneeID == 0 {
 		return errors.New("请选择转交人")
 	}
 	if newAssigneeID == ticket.AssigneeID {
 		return errors.New("不能转交给当前处理人")
+	}
+	if _, err := s.userRepo.GetByID(newAssigneeID); err != nil {
+		return errors.New("指定的转交人不存在")
 	}
 
 	oldAssignee := s.getUserName(ticket.AssigneeID)
@@ -381,14 +404,16 @@ func (s *TicketService) Transfer(id, newAssigneeID int64, content string, operat
 		return err
 	}
 
-	s.activityRepo.Create(&model.TicketActivity{
+	if err := s.activityRepo.Create(&model.TicketActivity{
 		TicketID: ticket.ID,
 		UserID:   operatorID,
 		Type:     "transfer",
 		Content:  content,
 		OldValue: oldAssignee,
 		NewValue: newAssignee,
-	})
+	}); err != nil {
+		return fmt.Errorf("记录活动失败: %w", err)
+	}
 	return nil
 }
 
@@ -399,12 +424,14 @@ func (s *TicketService) Comment(id int64, content string, operatorID int64) erro
 	}
 	_ = ticket
 
-	s.activityRepo.Create(&model.TicketActivity{
+	if err := s.activityRepo.Create(&model.TicketActivity{
 		TicketID: id,
 		UserID:   operatorID,
 		Type:     "comment",
 		Content:  content,
-	})
+	}); err != nil {
+		return fmt.Errorf("记录评论失败: %w", err)
+	}
 	return nil
 }
 
