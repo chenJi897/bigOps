@@ -242,12 +242,16 @@ func (s *TicketService) Assign(id, assigneeID, operatorID int64) error {
 	if err := validateTransition(ticket.Status, "processing"); err != nil {
 		return err
 	}
-	if _, err := s.userRepo.GetByID(assigneeID); err != nil {
+	assignee, err := s.userRepo.GetByID(assigneeID)
+	if err != nil {
 		return errors.New("指定的处理人不存在")
 	}
 
 	oldAssignee := s.getUserName(ticket.AssigneeID)
-	newAssignee := s.getUserName(assigneeID)
+	newAssignee := assignee.RealName
+	if newAssignee == "" {
+		newAssignee = assignee.Username
+	}
 
 	ticket.AssigneeID = assigneeID
 	ticket.Status = "processing"
@@ -392,12 +396,16 @@ func (s *TicketService) Transfer(id, newAssigneeID int64, content string, operat
 	if newAssigneeID == ticket.AssigneeID {
 		return errors.New("不能转交给当前处理人")
 	}
-	if _, err := s.userRepo.GetByID(newAssigneeID); err != nil {
+	assignee, err := s.userRepo.GetByID(newAssigneeID)
+	if err != nil {
 		return errors.New("指定的转交人不存在")
 	}
 
 	oldAssignee := s.getUserName(ticket.AssigneeID)
-	newAssignee := s.getUserName(newAssigneeID)
+	newAssignee := assignee.RealName
+	if newAssignee == "" {
+		newAssignee = assignee.Username
+	}
 
 	ticket.AssigneeID = newAssigneeID
 	if err := s.repo.Update(ticket); err != nil {
