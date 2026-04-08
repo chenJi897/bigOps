@@ -16,11 +16,16 @@ import (
 
 type Executor struct{}
 
+type reportOutputStream interface {
+	Send(*pb.ExecuteResponse) error
+	CloseAndRecv() (*pb.ExecuteAck, error)
+}
+
 func NewExecutor() *Executor {
 	return &Executor{}
 }
 
-func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream pb.AgentService_ReportOutputClient) {
+func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream reportOutputStream) {
 	timeout := time.Duration(task.TimeoutSeconds) * time.Second
 	if timeout <= 0 {
 		timeout = 60 * time.Second
@@ -144,7 +149,7 @@ func (e *Executor) buildCommand(ctx context.Context, task *pb.ExecuteRequest) *e
 	return cmd
 }
 
-func (e *Executor) streamOutput(stream pb.AgentService_ReportOutputClient, hostResultID int64, reader io.Reader, isStderr bool) {
+func (e *Executor) streamOutput(stream reportOutputStream, hostResultID int64, reader io.Reader, isStderr bool) {
 	scanner := bufio.NewScanner(reader)
 	// Increase buffer size for long lines
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -166,7 +171,7 @@ func (e *Executor) streamOutput(stream pb.AgentService_ReportOutputClient, hostR
 	}
 }
 
-func (e *Executor) sendError(stream pb.AgentService_ReportOutputClient, hostResultID int64, msg string) {
+func (e *Executor) sendError(stream reportOutputStream, hostResultID int64, msg string) {
 	log.Printf("Task error: host_result_id=%d: %s", hostResultID, msg)
 	if err := stream.Send(&pb.ExecuteResponse{
 		HostResultId: hostResultID,

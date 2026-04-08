@@ -26,10 +26,16 @@ type AgentClient struct {
 	publicIP   string
 	agentID    string
 	metrics    *MetricsCollector
+	reportOutputOpener func() (reportOutputStream, error)
 
 	conn   *grpc.ClientConn
 	client pb.AgentServiceClient
 	mu     sync.Mutex
+	taskWG sync.WaitGroup
+}
+
+type taskExecutor interface {
+	Execute(context.Context, *pb.ExecuteRequest, reportOutputStream)
 }
 
 func NewAgentClient(serverAddr, agentID, hostname, privateIP, publicIP string) *AgentClient {
@@ -66,6 +72,7 @@ func (c *AgentClient) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			c.waitForTasks(3 * time.Second)
 			return
 		default:
 		}
@@ -77,6 +84,7 @@ func (c *AgentClient) Run(ctx context.Context) {
 
 		select {
 		case <-ctx.Done():
+			c.waitForTasks(3 * time.Second)
 			return
 		case <-time.After(reconnectDelay):
 		}
@@ -101,7 +109,11 @@ func (c *AgentClient) heartbeatLoop(ctx context.Context) error {
 			if resp.Task != nil {
 				log.Printf("Received task: execution_id=%d host_result_id=%d",
 					resp.Task.ExecutionId, resp.Task.HostResultId)
-				go c.executeTask(ctx, executor, resp.Task)
+				c.taskWG.Add(1)
+				go func(task *pb.ExecuteRequest) {
+					defer c.taskWG.Done()
+					c.executeTask(ctx, executor, task)
+				}(resp.Task)
 			}
 		}
 	}()
@@ -164,16 +176,30 @@ func (c *AgentClient) getPublicIP() string {
 	return c.publicIP
 }
 
-func (c *AgentClient) executeTask(ctx context.Context, executor *Executor, task *pb.ExecuteRequest) {
+func (c *AgentClient) executeTask(ctx context.Context, executor taskExecutor, task *pb.ExecuteRequest) {
 	log.Printf("Executing task: host_result_id=%d script_type=%s",
 		task.HostResultId, task.ScriptType)
 
 	// Open ReportOutput stream to send results back
-	reportStream, err := c.client.ReportOutput(ctx)
+	reportStream, err := c.openReportStream()
 	if err != nil {
 		log.Printf("Failed to open report stream: %v", err)
 		return
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Task host_result_id=%d panic: %v", task.HostResultId, r)
+			_ = reportStream.Send(&pb.ExecuteResponse{
+				HostResultId: task.HostResultId,
+				OutputLine:   fmt.Sprintf("panic: %v", r),
+				IsStderr:     true,
+				Phase:        "error",
+				ExitCode:     -1,
+				Timestamp:    time.Now().Unix(),
+			})
+			_, _ = reportStream.CloseAndRecv()
+		}
+	}()
 
 	// Execute and stream output
 	executor.Execute(ctx, task, reportStream)
@@ -182,4 +208,56 @@ func (c *AgentClient) executeTask(ctx context.Context, executor *Executor, task 
 	if err != nil {
 		log.Printf("Failed to close report stream: %v", err)
 	}
+}
+
+func (c *AgentClient) openReportStream() (reportOutputStream, error) {
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		stream, cancel, err := c.openReportStreamOnce()
+		if err == nil {
+			return &reportOutputStreamWrapper{stream: stream, cancel: cancel}, nil
+		}
+		if cancel != nil {
+			cancel()
+		}
+		lastErr = err
+		time.Sleep(300 * time.Millisecond)
+	}
+	return nil, lastErr
+}
+
+func (c *AgentClient) openReportStreamOnce() (reportOutputStream, context.CancelFunc, error) {
+	reportCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if c.reportOutputOpener != nil {
+		stream, err := c.reportOutputOpener()
+		return stream, cancel, err
+	}
+	stream, err := c.client.ReportOutput(reportCtx)
+	return stream, cancel, err
+}
+
+func (c *AgentClient) waitForTasks(timeout time.Duration) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		c.taskWG.Wait()
+	}()
+	select {
+	case <-done:
+	case <-time.After(timeout):
+	}
+}
+
+type reportOutputStreamWrapper struct {
+	stream reportOutputStream
+	cancel context.CancelFunc
+}
+
+func (w *reportOutputStreamWrapper) Send(resp *pb.ExecuteResponse) error {
+	return w.stream.Send(resp)
+}
+
+func (w *reportOutputStreamWrapper) CloseAndRecv() (*pb.ExecuteAck, error) {
+	defer w.cancel()
+	return w.stream.CloseAndRecv()
 }

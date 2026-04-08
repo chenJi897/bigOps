@@ -472,8 +472,8 @@ function openMyNotificationSettings() {
           <!-- Toolbar -->
           <div class="flex items-center justify-between pb-3 mb-2 px-1">
           <el-radio-group v-model="notificationFilter" size="small">
-            <el-radio-button label="unread">未读</el-radio-button>
-            <el-radio-button label="all">全部</el-radio-button>
+            <el-radio-button value="unread">未读</el-radio-button>
+            <el-radio-button value="all">全部</el-radio-button>
           </el-radio-group>
           <div class="flex items-center gap-1">
             <el-button size="small" text @click="loadNotifications" class="!px-2">刷新</el-button>

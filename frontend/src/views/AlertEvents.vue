@@ -2,12 +2,11 @@
 defineOptions({ name: 'AlertEvents' })
 
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { alertRuleApi } from '../api'
 
 const route = useRoute()
-const router = useRouter()
 const loading = ref(false)
 const events = ref<any[]>([])
 const selectedRows = ref<any[]>([])
@@ -129,13 +128,6 @@ async function batchResolve() {
     ElMessage.success('已批量关闭')
     fetchEvents()
   } catch {}
-}
-
-function goTicket(id?: number) {
-  if (id) router.push(`/ticket/detail/${id}`)
-}
-function goExecution(id?: number) {
-  if (id) router.push(`/task/execution/${id}`)
 }
 
 function setupTimer() {
@@ -283,7 +275,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
         <div class="px-4 py-3 border-t border-slate-100 flex justify-end">
           <el-pagination
             background
-            small
+            size="small"
             layout="total, sizes, prev, pager, next"
             :total="pager.total"
             :current-page="pager.page"

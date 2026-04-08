@@ -48,7 +48,7 @@ async function fetchData() {
 
 async function loadUsers() {
   try {
-    const res: any = await userApi.list({ page: 1, size: 200 })
+    const res: any = await userApi.list(1, 200)
     users.value = res.data?.list || []
   } catch {}
 }
@@ -240,7 +240,7 @@ watch(users, (list) => {
               <el-option v-for="t in enabledTypes" :key="t" :label="channelLabels[t] || t" :value="t" />
             </el-select>
             <el-input v-model="wh.label" placeholder="标签（如 SRE飞书群）" size="small" class="w-40" />
-            <el-button size="small" type="danger" link @click="removeWebhook(form.webhooks, idx)">删除</el-button>
+            <el-button size="small" type="danger" link @click="removeWebhook(form.webhooks, Number(idx))">删除</el-button>
           </div>
           <div class="flex items-center gap-2">
             <el-input v-model="wh.webhook_url" placeholder="Webhook URL" size="small" class="flex-1" />
@@ -253,7 +253,7 @@ watch(users, (list) => {
         <el-divider content-position="left">站内通知对象</el-divider>
         <el-form-item label="通知人">
           <el-select v-model="form.notify_user_ids" multiple clearable filterable class="w-full" placeholder="选择用户">
-            <el-option v-for="u in userOptions" :key="u.value" :label="u.label" :value="u.value" />
+            <el-option v-for="u in userOptions" :key="u.value" :label="u.label" :value="Number(u.value)" />
           </el-select>
         </el-form-item>
 
@@ -280,7 +280,7 @@ watch(users, (list) => {
           <template v-if="form.escalation_enabled">
             <el-form-item label="升级通知人" label-width="90px">
               <el-select v-model="form.escalation_user_ids" multiple clearable filterable class="w-full" placeholder="选择用户">
-                <el-option v-for="u in userOptions" :key="u.value" :label="u.label" :value="u.value" />
+                <el-option v-for="u in userOptions" :key="u.value" :label="u.label" :value="Number(u.value)" />
               </el-select>
             </el-form-item>
             <div class="text-sm text-gray-500 mb-2">升级 Webhook（可选）：</div>
@@ -289,7 +289,7 @@ watch(users, (list) => {
                 <el-option v-for="t in enabledTypes" :key="t" :label="channelLabels[t] || t" :value="t" />
               </el-select>
               <el-input v-model="wh.webhook_url" placeholder="Webhook URL" size="small" class="flex-1" />
-              <el-button size="small" type="danger" link @click="removeWebhook(form.escalation_webhooks, idx)">删除</el-button>
+              <el-button size="small" type="danger" link @click="removeWebhook(form.escalation_webhooks, Number(idx))">删除</el-button>
             </div>
             <el-button size="small" plain @click="addWebhook(form.escalation_webhooks)">+ 添加升级渠道</el-button>
           </template>

@@ -87,6 +87,8 @@ const dashboardRoute: RouteRecordRaw = {
   ],
 }
 
+layoutRoute.children = [dashboardRoute]
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [...constantRoutes, layoutRoute],
@@ -114,10 +116,6 @@ router.beforeEach(async (to) => {
     try {
       if (!userStore.userInfo) {
         await userStore.fetchUserInfo()
-      }
-
-      if (!router.hasRoute('Dashboard')) {
-        router.addRoute('Layout', dashboardRoute)
       }
 
       const menus = await permissionStore.fetchMenus()
@@ -482,7 +480,7 @@ function resolveTicketModeFromPath(path?: string): 'todo' | 'applied' | undefine
 // 供登出时重置路由状态
 export function resetRouter() {
   routesAdded = false
-  layoutRoute.children = []
+  layoutRoute.children = [dashboardRoute]
   for (const name of dynamicRouteNames) {
     if (router.hasRoute(name)) {
       router.removeRoute(name)

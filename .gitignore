@@ -1,5 +1,6 @@
 .ace-tool/
 .cache/
+.playwright-mcp/
 backend/bin/
 backend/main
 backend/agent

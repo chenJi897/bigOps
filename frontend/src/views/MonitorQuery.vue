@@ -91,8 +91,8 @@ onMounted(loadDatasources)
         </el-form-item>
         <el-form-item label="模式">
           <el-radio-group v-model="mode">
-            <el-radio-button label="instant">即时查询</el-radio-button>
-            <el-radio-button label="range">范围查询</el-radio-button>
+            <el-radio-button value="instant">即时查询</el-radio-button>
+            <el-radio-button value="range">范围查询</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="PromQL" required>

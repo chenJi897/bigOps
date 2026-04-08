@@ -42,20 +42,6 @@ var casbinPrefixWhitelistGET = []string{
 	"/api/v1/service-trees",
 	"/api/v1/cloud-accounts",
 	"/api/v1/sync-tasks",
-	// 监控中心（有菜单权限的用户可读）
-	"/api/v1/monitor/",
-	"/api/v1/alert-rules",
-	"/api/v1/alert-events",
-	"/api/v1/alert-silences",
-	"/api/v1/oncall-schedules",
-	// 任务中心
-	"/api/v1/tasks",
-	"/api/v1/task-executions",
-	"/api/v1/agents",
-	// 发送组
-	"/api/v1/notify-groups",
-	// CI/CD
-	"/api/v1/cicd/",
 }
 
 // CasbinMiddleware Casbin 权限校验中间件。
@@ -73,26 +59,9 @@ func CasbinMiddleware() gin.HandlerFunc {
 		obj := c.Request.URL.Path
 		act := c.Request.Method
 
-		// 白名单放行（auth 相关不限方法，其余仅 GET）
-		for _, path := range casbinWhitelist {
-			if obj == path {
-				if act == "GET" || strings.HasPrefix(path, "/api/v1/auth/") {
-					c.Next()
-					return
-				}
-			}
-		}
-		for _, prefix := range casbinPrefixWhitelistAny {
-			if strings.HasPrefix(obj, prefix) {
-				c.Next()
-				return
-			}
-		}
-		for _, prefix := range casbinPrefixWhitelistGET {
-			if strings.HasPrefix(obj, prefix) && act == "GET" {
-				c.Next()
-				return
-			}
+		if shouldBypassCasbin(obj, act) {
+			c.Next()
+			return
 		}
 
 		// Casbin 权限校验
@@ -112,4 +81,26 @@ func CasbinMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func shouldBypassCasbin(obj, act string) bool {
+	// 白名单放行（auth 相关不限方法，其余仅 GET）
+	for _, path := range casbinWhitelist {
+		if obj == path {
+			if act == "GET" || strings.HasPrefix(path, "/api/v1/auth/") {
+				return true
+			}
+		}
+	}
+	for _, prefix := range casbinPrefixWhitelistAny {
+		if strings.HasPrefix(obj, prefix) {
+			return true
+		}
+	}
+	for _, prefix := range casbinPrefixWhitelistGET {
+		if strings.HasPrefix(obj, prefix) && act == "GET" {
+			return true
+		}
+	}
+	return false
 }

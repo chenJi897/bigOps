@@ -216,8 +216,51 @@ a2f73ad feat: Module 04 任务执行中心 — 全栈实现
   - `StartApprovedRunsByTicketID` 只负责从审批阶段进入部署阶段
 - **Webhook 配置贯通**
   - 流水线创建/更新已支持：
-    - `build_hosts`
-    - `variables`
+- `build_hosts`
+- `variables`
+
+---
+
+## Session: 2026-04-07（权限/Agent/CI-CD 缺陷修复）
+
+### 完成事项
+
+- 修复 `Casbin` 白名单过宽问题：
+  - 监控、任务中心、CI/CD、发送组相关 GET 接口不再默认对白名单放行
+  - 新增 `shouldBypassCasbin()` 并补单测
+- 修复 `CI/CD` 新建流水线默认状态逻辑：
+  - 新建时 `status=0` 会回退到启用态
+  - 更新时保留显式传入状态，不再误改
+  - 新增 `defaultPipelineStatus()` 单测
+- 修复 `Agent` 任务回传链的稳定性：
+  - `ReportOutput` 开流增加重试
+  - `executeTask()` 增加 panic recovery
+  - `AgentClient` 增加任务 goroutine 等待收口
+  - 新增 `client_test.go`
+- 修复 Dashboard 路由初始化时序：
+  - `dashboardRoute` 改为静态挂载到 `Layout` 子路由
+  - `resetRouter()` 保留 dashboard 静态子路由
+
+### 验证结果
+
+- `go test ./internal/middleware -run TestShouldBypassCasbin -count=1` ✓
+- `go test ./internal/service -run TestDefaultPipelineStatus -count=1` ✓
+- `go test ./internal/agent -run 'TestOpenReportStream_RetriesUntilSuccess|TestExecuteTask_RecoversFromExecutorPanic' -count=1` ✓
+- `go test ./internal/agent ./internal/middleware ./internal/service -count=1` ✓
+- `go build ./cmd/core` ✓
+
+### 当前阻塞
+
+- 前端整体构建和浏览器回归被新的 UI 组件栈阻塞：
+  - 缺少 `tailwindcss`
+  - 缺少 `reka-ui`
+  - 缺少 `class-variance-authority`
+  - 缺少 `lucide-vue-next`
+  - 缺少 `vue-sonner`
+  - 缺少 `@tanstack/vue-table`
+  - 缺少 `clsx`
+  - 缺少 `tailwind-merge`
+- 因此本轮 `/dashboard` 路由告警修复只完成了代码收口，未完成浏览器层最终确认
     - `webhook_enabled`
     - `webhook_secret`
   - Webhook 继续以 `pipeline code` 作为公开触发标识

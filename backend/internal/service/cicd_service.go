@@ -229,9 +229,7 @@ func (s *CICDService) CreatePipeline(item *model.CICDPipeline) error {
 	if item.Branch == "" {
 		item.Branch = "main"
 	}
-	if item.Status != 0 {
-		item.Status = 1
-	}
+	item.Status = defaultPipelineStatus(item.Status)
 	return s.pipelineRepo.Create(item)
 }
 
@@ -282,6 +280,13 @@ func (s *CICDService) UpdatePipeline(id int64, item *model.CICDPipeline) error {
 	existing.Description = item.Description
 	existing.Status = item.Status
 	return s.pipelineRepo.Update(existing)
+}
+
+func defaultPipelineStatus(status int8) int8 {
+	if status == 0 {
+		return 1
+	}
+	return status
 }
 
 func (s *CICDService) DeletePipeline(id int64) error {
