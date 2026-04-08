@@ -57,6 +57,33 @@ func TestBuildTaskEnv_MergesStageAndSourceRunID(t *testing.T) {
 	}
 }
 
+func TestShouldNotifyPipelineStatusTransition(t *testing.T) {
+	tests := []struct {
+		name       string
+		before     string
+		after      string
+		wantNotify bool
+	}{
+		{name: "pending to success notifies", before: "pending", after: "success", wantNotify: true},
+		{name: "running to failed notifies", before: "running", after: "failed", wantNotify: true},
+		{name: "running to canceled notifies", before: "running", after: "canceled", wantNotify: true},
+		{name: "success to success no duplicate", before: "success", after: "success", wantNotify: false},
+		{name: "failed to failed no duplicate", before: "failed", after: "failed", wantNotify: false},
+		{name: "canceled to canceled no duplicate", before: "canceled", after: "canceled", wantNotify: false},
+		{name: "running to running no notify", before: "running", after: "running", wantNotify: false},
+		{name: "pending to running no notify", before: "pending", after: "running", wantNotify: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldNotifyPipelineStatusTransition(tt.before, tt.after)
+			if got != tt.wantNotify {
+				t.Fatalf("expected %v, got %v", tt.wantNotify, got)
+			}
+		})
+	}
+}
+
 var mockProject = modelCICDProject()
 var mockPipeline = modelCICDPipeline()
 var mockRun = modelCICDPipelineRun()

@@ -958,11 +958,31 @@ func (s *CICDService) applyRunStatusFromExecution(run *model.CICDPipelineRun, ex
 }
 
 func (s *CICDService) saveRun(run *model.CICDPipelineRun) error {
+	previousStatus := ""
+	if run != nil && run.ID > 0 {
+		if existing, err := s.runRepo.GetByID(run.ID); err == nil && existing != nil {
+			previousStatus = existing.Status
+		}
+	}
 	if err := s.runRepo.Update(run); err != nil {
 		return err
 	}
-	s.notifyPipelineRun(run)
+	if shouldNotifyPipelineStatusTransition(previousStatus, run.Status) {
+		s.notifyPipelineRun(run)
+	}
 	return nil
+}
+
+func shouldNotifyPipelineStatusTransition(previousStatus, currentStatus string) bool {
+	if previousStatus == currentStatus {
+		return false
+	}
+	switch currentStatus {
+	case "success", "failed", "canceled":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *CICDService) notifyPipelineRun(run *model.CICDPipelineRun) {
