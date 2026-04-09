@@ -76,6 +76,17 @@ type WebhookTriggerRequest struct {
 	CommitMessage string `json:"commit_message"`
 }
 
+// ListProjects CI/CD 项目列表。
+// @Summary CI/CD 项目列表
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Param keyword query string false "关键字"
+// @Param status query int false "状态"
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /cicd/projects [get]
 func (h *CICDHandler) ListProjects(c *gin.Context) {
 	page, size := parsePageSize(c)
 	var status *int8
@@ -102,6 +113,15 @@ func (h *CICDHandler) ListProjects(c *gin.Context) {
 	response.Page(c, normalizeProjects(items), total, page, size)
 }
 
+// CreateProject 创建 CI/CD 项目。
+// @Summary 创建 CI/CD 项目
+// @Tags CI/CD
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body UpsertCICDProjectRequest true "创建请求"
+// @Success 200 {object} response.Response
+// @Router /cicd/projects [post]
 func (h *CICDHandler) CreateProject(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -131,11 +151,24 @@ func (h *CICDHandler) CreateProject(c *gin.Context) {
 	response.SuccessWithMessage(c, "创建成功", normalizeProject(item))
 }
 
+// UpdateProject 更新 CI/CD 项目。
+// @Summary 更新 CI/CD 项目
+// @Tags CI/CD
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "项目ID"
+// @Param body body UpsertCICDProjectRequest true "更新请求"
+// @Success 200 {object} response.Response
+// @Router /cicd/projects/{id} [post]
 func (h *CICDHandler) UpdateProject(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpsertCICDProjectRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -161,11 +194,22 @@ func (h *CICDHandler) UpdateProject(c *gin.Context) {
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
+// DeleteProject 删除 CI/CD 项目。
+// @Summary 删除 CI/CD 项目
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "项目ID"
+// @Success 200 {object} response.Response
+// @Router /cicd/projects/{id}/delete [post]
 func (h *CICDHandler) DeleteProject(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.DeleteProject(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -174,11 +218,24 @@ func (h *CICDHandler) DeleteProject(c *gin.Context) {
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
+// UpdateProjectStatus 更新项目状态。
+// @Summary 更新 CI/CD 项目状态
+// @Tags CI/CD
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "项目ID"
+// @Param body body UpdateProjectStatusRequest true "状态请求"
+// @Success 200 {object} response.Response
+// @Router /cicd/projects/{id}/status [post]
 func (h *CICDHandler) UpdateProjectStatus(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	project, err := h.svc.GetProject(id)
 	if err != nil {
 		response.Error(c, 404, "项目不存在")
@@ -213,6 +270,18 @@ func (h *CICDHandler) UpdateProjectStatus(c *gin.Context) {
 	response.SuccessWithMessage(c, "状态更新成功", nil)
 }
 
+// ListPipelines 流水线列表。
+// @Summary 流水线列表
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Param project_id query int false "项目ID"
+// @Param keyword query string false "关键字"
+// @Param status query int false "状态"
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /cicd/pipelines [get]
 func (h *CICDHandler) ListPipelines(c *gin.Context) {
 	page, size := parsePageSize(c)
 	var status *int8
@@ -241,6 +310,15 @@ func (h *CICDHandler) ListPipelines(c *gin.Context) {
 	response.Page(c, normalizePipelines(items, lastRuns), total, page, size)
 }
 
+// CreatePipeline 创建流水线。
+// @Summary 创建流水线
+// @Tags CI/CD
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body UpsertCICDPipelineRequest true "创建请求"
+// @Success 200 {object} response.Response
+// @Router /cicd/pipelines [post]
 func (h *CICDHandler) CreatePipeline(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -259,11 +337,24 @@ func (h *CICDHandler) CreatePipeline(c *gin.Context) {
 	response.SuccessWithMessage(c, "创建成功", normalizePipeline(item, nil))
 }
 
+// UpdatePipeline 更新流水线。
+// @Summary 更新流水线
+// @Tags CI/CD
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "流水线ID"
+// @Param body body UpsertCICDPipelineRequest true "更新请求"
+// @Success 200 {object} response.Response
+// @Router /cicd/pipelines/{id} [post]
 func (h *CICDHandler) UpdatePipeline(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpsertCICDPipelineRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -278,11 +369,22 @@ func (h *CICDHandler) UpdatePipeline(c *gin.Context) {
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
+// DeletePipeline 删除流水线。
+// @Summary 删除流水线
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "流水线ID"
+// @Success 200 {object} response.Response
+// @Router /cicd/pipelines/{id}/delete [post]
 func (h *CICDHandler) DeletePipeline(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.DeletePipeline(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -291,11 +393,24 @@ func (h *CICDHandler) DeletePipeline(c *gin.Context) {
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
+// TriggerPipeline 手动触发流水线。
+// @Summary 手动触发流水线
+// @Tags CI/CD
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "流水线ID"
+// @Param body body TriggerPipelineRequest false "触发参数"
+// @Success 200 {object} response.Response
+// @Router /cicd/pipelines/{id}/trigger [post]
 func (h *CICDHandler) TriggerPipeline(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req TriggerPipelineRequest
 	_ = c.ShouldBindJSON(&req)
 	userID, _ := c.Get("userID")
@@ -309,11 +424,22 @@ func (h *CICDHandler) TriggerPipeline(c *gin.Context) {
 	response.SuccessWithMessage(c, "已触发流水线", run)
 }
 
+// RetryRun 重试流水线运行。
+// @Summary 重试流水线运行
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "运行ID"
+// @Success 200 {object} response.Response
+// @Router /cicd/runs/{id}/retry [post]
 func (h *CICDHandler) RetryRun(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	userID, _ := c.Get("userID")
 	operatorID, _ := userID.(int64)
 	run, err := h.svc.RetryRun(id, operatorID)
@@ -325,11 +451,22 @@ func (h *CICDHandler) RetryRun(c *gin.Context) {
 	response.SuccessWithMessage(c, "已重试运行", normalizeRunSummary(run))
 }
 
+// RollbackRun 回滚流水线运行。
+// @Summary 回滚流水线运行
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "运行ID"
+// @Success 200 {object} response.Response
+// @Router /cicd/runs/{id}/rollback [post]
 func (h *CICDHandler) RollbackRun(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	userID, _ := c.Get("userID")
 	operatorID, _ := userID.(int64)
 	run, err := h.svc.RollbackRun(id, operatorID)
@@ -341,6 +478,15 @@ func (h *CICDHandler) RollbackRun(c *gin.Context) {
 	response.SuccessWithMessage(c, "已触发回滚", normalizeRunSummary(run))
 }
 
+// TriggerByWebhook Webhook 触发流水线。
+// @Summary Webhook 触发流水线
+// @Tags CI/CD
+// @Accept json
+// @Produce json
+// @Param code path string true "流水线 Code"
+// @Param body body WebhookTriggerRequest false "Webhook 参数"
+// @Success 200 {object} response.Response
+// @Router /cicd/webhook/{code} [post]
 func (h *CICDHandler) TriggerByWebhook(c *gin.Context) {
 	var req WebhookTriggerRequest
 	_ = c.ShouldBindJSON(&req)
@@ -354,6 +500,18 @@ func (h *CICDHandler) TriggerByWebhook(c *gin.Context) {
 	response.SuccessWithMessage(c, "Webhook 已触发流水线", normalizeRunSummary(run))
 }
 
+// ListRuns 流水线运行记录列表。
+// @Summary 流水线运行记录列表
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Param project_id query int false "项目ID"
+// @Param pipeline_id query int false "流水线ID"
+// @Param status query string false "状态"
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /cicd/runs [get]
 func (h *CICDHandler) ListRuns(c *gin.Context) {
 	page, size := parsePageSize(c)
 	projectID, _ := strconv.ParseInt(c.Query("project_id"), 10, 64)
@@ -376,8 +534,19 @@ func (h *CICDHandler) ListRuns(c *gin.Context) {
 	response.Page(c, normalized, total, page, size)
 }
 
+// GetRunDetail 流水线运行详情。
+// @Summary 流水线运行详情
+// @Tags CI/CD
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "运行ID"
+// @Success 200 {object} response.Response
+// @Router /cicd/runs/{id} [get]
 func (h *CICDHandler) GetRunDetail(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	run, exec, err := h.svc.GetRunDetail(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

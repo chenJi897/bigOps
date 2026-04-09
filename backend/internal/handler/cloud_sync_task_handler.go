@@ -60,7 +60,10 @@ func (h *CloudSyncTaskHandler) List(c *gin.Context) {
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.CloudSyncTask}} "同步历史"
 // @Router /cloud-accounts/{id}/sync-tasks [get]
 func (h *CloudSyncTaskHandler) GetByAccountID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	page, size := parsePageSize(c)
 
 	tasks, total, err := h.repo.ListByAccountID(id, page, size)

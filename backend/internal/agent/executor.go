@@ -8,9 +8,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/bigops/platform/internal/pkg/scriptguard"
 	pb "github.com/bigops/platform/proto/gen/agent"
 )
 
@@ -33,6 +36,12 @@ func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream 
 
 	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	// Validate script content before execution
+	if err := scriptguard.Validate(task.ScriptContent, task.ScriptType); err != nil {
+		e.sendError(stream, task.HostResultId, fmt.Sprintf("脚本安全检测未通过: %v", err))
+		return
+	}
 
 	// Build command based on script type
 	cmd := e.buildCommand(execCtx, task)
@@ -93,10 +102,13 @@ func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream 
 		}
 	}
 
-	// Check if it was a timeout
+	// Check if it was a timeout — kill entire process group
 	if execCtx.Err() == context.DeadlineExceeded {
 		phase = "error"
 		exitCode = -1
+		if runtime.GOOS == "linux" && cmd.Process != nil {
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		}
 		if err := stream.Send(&pb.ExecuteResponse{
 			HostResultId: task.HostResultId,
 			OutputLine:   "execution timed out",
@@ -131,7 +143,14 @@ func (e *Executor) buildCommand(ctx context.Context, task *pb.ExecuteRequest) *e
 	case "powershell":
 		cmd = exec.CommandContext(ctx, "powershell", "-Command", task.ScriptContent)
 	default: // bash
-		cmd = exec.CommandContext(ctx, "bash", "-c", task.ScriptContent)
+		// Inject ulimit resource limits: max procs 256, max file size 1GB, max open files 1024, no core dump
+		guarded := "ulimit -u 256 -f 1048576 -n 1024 -c 0 2>/dev/null\n" + task.ScriptContent
+		cmd = exec.CommandContext(ctx, "bash", "-c", guarded)
+	}
+
+	// Create new process group so we can kill the entire tree on timeout
+	if runtime.GOOS == "linux" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	}
 
 	if task.WorkDir != "" {

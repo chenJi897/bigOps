@@ -23,16 +23,20 @@ func (r *NotificationRepository) CreateInApp(item *model.InAppNotification) erro
 	return database.GetDB().Create(item).Error
 }
 
-func (r *NotificationRepository) ListInAppByUserID(userID int64, unreadOnly bool) ([]*model.InAppNotification, error) {
+func (r *NotificationRepository) ListInAppByUserID(userID int64, unreadOnly bool, page, size int) ([]*model.InAppNotification, int64, error) {
 	var items []*model.InAppNotification
-	db := database.GetDB().Where("user_id = ?", userID)
+	var total int64
+	db := database.GetDB().Model(&model.InAppNotification{}).Where("user_id = ?", userID)
 	if unreadOnly {
 		db = db.Where("read_at IS NULL")
 	}
-	if err := db.Order("id DESC").Find(&items).Error; err != nil {
-		return nil, err
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return items, nil
+	if err := db.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 func (r *NotificationRepository) CountUnreadByUserID(userID int64) (int64, error) {
@@ -78,16 +82,17 @@ func (r *NotificationRepository) GetEventByID(id int64) (*model.NotificationEven
 	return &item, nil
 }
 
-func (r *NotificationRepository) ListEvents(limit int) ([]*model.NotificationEvent, error) {
+func (r *NotificationRepository) ListEvents(page, size int) ([]*model.NotificationEvent, int64, error) {
 	var items []*model.NotificationEvent
-	db := database.GetDB().Model(&model.NotificationEvent{}).Order("id DESC")
-	if limit > 0 {
-		db = db.Limit(limit)
+	var total int64
+	db := database.GetDB().Model(&model.NotificationEvent{})
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	if err := db.Find(&items).Error; err != nil {
-		return nil, err
+	if err := db.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&items).Error; err != nil {
+		return nil, 0, err
 	}
-	return items, nil
+	return items, total, nil
 }
 
 func (r *NotificationRepository) ListDeliveriesByEventID(eventID int64, pendingOnly bool) ([]*model.NotificationDelivery, error) {

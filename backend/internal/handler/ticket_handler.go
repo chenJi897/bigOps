@@ -136,7 +136,10 @@ func (h *TicketHandler) List(c *gin.Context) {
 // @Success 200 {object} response.Response{data=model.Ticket}
 // @Router /tickets/{id} [get]
 func (h *TicketHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	ticket, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "工单不存在")
@@ -158,7 +161,10 @@ func (h *TicketHandler) GetByID(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tickets/{id}/approval-instance [get]
 func (h *TicketHandler) ApprovalInstance(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	ticket, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "工单不存在")
@@ -245,7 +251,10 @@ func (h *TicketHandler) Create(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tickets/{id}/assign [post]
 func (h *TicketHandler) Assign(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req AssignTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -276,7 +285,10 @@ func (h *TicketHandler) Assign(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tickets/{id}/process [post]
 func (h *TicketHandler) Process(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req ProcessTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -307,7 +319,10 @@ func (h *TicketHandler) Process(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tickets/{id}/close [post]
 func (h *TicketHandler) Close(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req CloseTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -338,7 +353,10 @@ func (h *TicketHandler) Close(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tickets/{id}/reopen [post]
 func (h *TicketHandler) Reopen(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req CommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -369,7 +387,10 @@ func (h *TicketHandler) Reopen(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tickets/{id}/comment [post]
 func (h *TicketHandler) Comment(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req CommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -396,7 +417,10 @@ func (h *TicketHandler) Comment(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tickets/{id}/transfer [post]
 func (h *TicketHandler) Transfer(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req TransferTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -427,7 +451,10 @@ func (h *TicketHandler) Transfer(c *gin.Context) {
 // @Success 200 {object} response.Response{data=response.PageData{list=[]model.TicketActivity}}
 // @Router /tickets/{id}/activities [get]
 func (h *TicketHandler) Activities(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	ticket, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "工单不存在")

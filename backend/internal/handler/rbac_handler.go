@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -92,7 +91,10 @@ type UpdateRoleRequest struct {
 // @Failure 404 {object} response.Response "角色不存在"
 // @Router /roles/{id} [post]
 func (h *RoleHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -134,7 +136,10 @@ type UpdateRoleStatusRequest struct {
 // @Failure 404 {object} response.Response "角色不存在"
 // @Router /roles/{id}/status [post]
 func (h *RoleHandler) UpdateStatus(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateRoleStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -176,7 +181,10 @@ func (h *RoleHandler) UpdateStatus(c *gin.Context) {
 // @Failure 400 {object} response.Response "不允许删除管理员角色"
 // @Router /roles/{id}/delete [post]
 func (h *RoleHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	role, _ := h.roleService.GetByID(id)
 	if err := h.roleService.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
@@ -205,7 +213,10 @@ func (h *RoleHandler) Delete(c *gin.Context) {
 // @Failure 404 {object} response.Response "角色不存在"
 // @Router /roles/{id} [get]
 func (h *RoleHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	role, err := h.roleService.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "角色不存在")
@@ -253,7 +264,10 @@ type SetMenusRequest struct {
 // @Failure 400 {object} response.Response "参数错误"
 // @Router /roles/{id}/menus [post]
 func (h *RoleHandler) SetMenus(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req SetMenusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -290,7 +304,10 @@ type SetUserRolesRequest struct {
 // @Failure 404 {object} response.Response "用户不存在"
 // @Router /users/{id}/roles [post]
 func (h *RoleHandler) SetUserRoles(c *gin.Context) {
-	userID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	userID, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req SetUserRolesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -328,7 +345,10 @@ func (h *RoleHandler) SetUserRoles(c *gin.Context) {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /users/{id}/roles [get]
 func (h *RoleHandler) GetUserRoles(c *gin.Context) {
-	userID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	userID, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	roles, err := h.roleService.GetUserRoles(userID)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")
@@ -412,7 +432,10 @@ func (h *MenuHandler) Create(c *gin.Context) {
 // @Failure 400 {object} response.Response "参数错误"
 // @Router /menus/{id} [post]
 func (h *MenuHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req CreateMenuRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -447,7 +470,10 @@ func (h *MenuHandler) Update(c *gin.Context) {
 // @Failure 400 {object} response.Response "删除失败"
 // @Router /menus/{id}/delete [post]
 func (h *MenuHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.menuService.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return

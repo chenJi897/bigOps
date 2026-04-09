@@ -3,7 +3,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,6 +22,7 @@ import (
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/pkg/safego"
 	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
 	cloudsync "github.com/bigops/platform/internal/service/cloud_sync"
@@ -79,8 +82,9 @@ func main() {
 	}
 	defer database.Close()
 
-	// 自动迁移数据库表结构（开发阶段使用，生产环境建议使用 SQL 迁移脚本）
-	if err := database.GetDB().AutoMigrate(
+	// 自动迁移数据库表结构（通过 database.auto_migrate 配置控制，生产环境建议关闭）
+	if cfg.Database.AutoMigrate {
+		if err := database.GetDB().AutoMigrate(
 		&model.User{},
 		&model.Role{},
 		&model.Menu{},
@@ -121,9 +125,10 @@ func main() {
 		&model.CICDPipelineRun{},
 		&model.MonitorDatasource{},
 	); err != nil {
-		logger.Fatal("Failed to migrate database", zap.Error(err))
+			logger.Fatal("Failed to migrate database", zap.Error(err))
+		}
+		logger.Info("Database migration completed")
 	}
-	logger.Info("Database migration completed")
 
 	// 初始化 Casbin 权限引擎
 	if err := casbinPkg.Init(database.GetDB()); err != nil {
@@ -157,14 +162,15 @@ func main() {
 
 	// 6. 初始化 HTTP 路由并启动服务
 	r := router.Setup(cfg.Server.Mode)
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
+	httpSrv := &http.Server{Addr: addr, Handler: r}
 
-	go func() {
-		addr := fmt.Sprintf(":%d", cfg.Server.Port)
+	safego.Go(func() {
 		logger.Info(fmt.Sprintf("Server starting on %s", addr))
-		if err := r.Run(addr); err != nil {
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
 		}
-	}()
+	})
 
 	// 启动云同步调度器
 	syncScheduler := cloudsync.NewScheduler()
@@ -188,6 +194,15 @@ func main() {
 	<-quit
 
 	logger.Info("Server shutting down...")
+
+	// HTTP: 优雅关闭（5秒超时）
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("HTTP server forced to shutdown", zap.Error(err))
+	} else {
+		logger.Info("HTTP server stopped gracefully")
+	}
 
 	// gRPC: 先尝试优雅关闭（3秒超时），超时则强制关闭
 	grpcDone := make(chan struct{})

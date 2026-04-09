@@ -232,7 +232,8 @@ async function loadNotifications() {
   notificationLoading.value = true
   try {
     const res: any = await notificationApi.inApp(notificationFilter.value === 'unread')
-    notifications.value = res.data || []
+    const data = res.data
+    notifications.value = Array.isArray(data) ? data : (data?.list || [])
   } finally {
     notificationLoading.value = false
   }

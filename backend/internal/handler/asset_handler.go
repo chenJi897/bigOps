@@ -100,7 +100,10 @@ func (h *AssetHandler) List(c *gin.Context) {
 // @Failure 404 {object} response.Response "资产不存在"
 // @Router /assets/{id} [get]
 func (h *AssetHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	asset, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "资产不存在")
@@ -158,7 +161,10 @@ func (h *AssetHandler) Create(c *gin.Context) {
 // @Failure 400 {object} response.Response "参数错误"
 // @Router /assets/{id} [post]
 func (h *AssetHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req CreateAssetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -198,7 +204,10 @@ func (h *AssetHandler) Update(c *gin.Context) {
 // @Failure 400 {object} response.Response "删除失败"
 // @Router /assets/{id}/delete [post]
 func (h *AssetHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -224,7 +233,10 @@ func (h *AssetHandler) Delete(c *gin.Context) {
 // @Failure 500 {object} response.Response "查询失败"
 // @Router /assets/{id}/changes [get]
 func (h *AssetHandler) GetChanges(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	page, size := parsePageSize(c)
 
 	changeRepo := repository.NewAssetChangeRepository()

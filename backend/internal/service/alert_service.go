@@ -11,6 +11,7 @@ import (
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/pkg/safego"
 	"github.com/bigops/platform/internal/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -150,34 +151,44 @@ func (s *AlertService) ResolveEvent(id int64, operator int64, note string) error
 func (s *AlertService) EvaluateAll() (*AlertEvaluationSummary, error) {
 	_ = s.agentRepo.MarkStaleOffline(45 * time.Second)
 
-	agents, _, err := s.agentRepo.List(1, 1000, "")
-	if err != nil {
-		return nil, err
-	}
 	rules, err := s.ruleRepo.ListEnabled()
 	if err != nil {
 		return nil, err
 	}
 	summary := &AlertEvaluationSummary{
-		AgentCount: len(agents),
-		RuleCount:  len(rules),
+		RuleCount: len(rules),
 	}
-	for _, agent := range agents {
-		for _, rule := range rules {
-			outcome, err := s.evaluateRule(agent, rule)
-			if err != nil {
-				summary.ErrorCount++
-				logger.Warn("evaluate alert rule failed", zap.String("agent_id", agent.AgentID), zap.Int64("rule_id", rule.ID), zap.Error(err))
-				continue
+
+	const batchSize = 200
+	for page := 1; ; page++ {
+		agents, _, err := s.agentRepo.List(page, batchSize, "")
+		if err != nil {
+			return nil, err
+		}
+		if len(agents) == 0 {
+			break
+		}
+		summary.AgentCount += len(agents)
+		for _, agent := range agents {
+			for _, rule := range rules {
+				outcome, err := s.evaluateRule(agent, rule)
+				if err != nil {
+					summary.ErrorCount++
+					logger.Warn("evaluate alert rule failed", zap.String("agent_id", agent.AgentID), zap.Int64("rule_id", rule.ID), zap.Error(err))
+					continue
+				}
+				switch outcome {
+				case "triggered":
+					summary.TriggeredCount++
+				case "resolved":
+					summary.ResolvedCount++
+				case "updated":
+					summary.UpdatedCount++
+				}
 			}
-			switch outcome {
-			case "triggered":
-				summary.TriggeredCount++
-			case "resolved":
-				summary.ResolvedCount++
-			case "updated":
-				summary.UpdatedCount++
-			}
+		}
+		if len(agents) < batchSize {
+			break
 		}
 	}
 	return summary, nil
@@ -674,7 +685,7 @@ func NewAlertScheduler() *AlertScheduler {
 
 func (s *AlertScheduler) Start() {
 	ticker := time.NewTicker(30 * time.Second)
-	go func() {
+	safego.Go(func() {
 		defer ticker.Stop()
 		alertSvc := NewAlertService()
 		for {
@@ -687,7 +698,7 @@ func (s *AlertScheduler) Start() {
 				}
 			}
 		}
-	}()
+	})
 }
 
 func (s *AlertScheduler) Stop() {

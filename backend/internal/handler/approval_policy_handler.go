@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -74,7 +73,10 @@ func (h *ApprovalPolicyHandler) GetByID(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	item, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "审批策略不存在")
@@ -129,7 +131,10 @@ func (h *ApprovalPolicyHandler) Update(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpsertApprovalPolicyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -161,7 +166,10 @@ func (h *ApprovalPolicyHandler) Delete(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return

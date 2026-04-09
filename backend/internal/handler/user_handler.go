@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -67,7 +66,10 @@ type UpdateUserRequest struct {
 // @Success 200 {object} response.Response
 // @Router /users/{id} [post]
 func (h *UserHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -110,7 +112,10 @@ type UpdateUserStatusRequest struct {
 // @Failure 404 {object} response.Response "用户不存在"
 // @Router /users/{id}/status [post]
 func (h *UserHandler) UpdateStatus(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateUserStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -149,7 +154,10 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 // @Failure 500 {object} response.Response "删除失败"
 // @Router /users/{id}/delete [post]
 func (h *UserHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	username, err := h.svc.Delete(id)
 	if err != nil {
 		if err.Error() == "不允许删除管理员" {
@@ -182,7 +190,10 @@ type SetDepartmentRequest struct {
 // @Success 200 {object} response.Response
 // @Router /users/{id}/department [post]
 func (h *UserHandler) SetDepartment(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req SetDepartmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")

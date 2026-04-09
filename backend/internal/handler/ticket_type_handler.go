@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -118,7 +117,10 @@ func (h *TicketTypeHandler) Create(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /ticket-types/{id} [post]
 func (h *TicketTypeHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req CreateTicketTypeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")
@@ -150,7 +152,10 @@ func (h *TicketTypeHandler) Update(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /ticket-types/{id}/delete [post]
 func (h *TicketTypeHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return

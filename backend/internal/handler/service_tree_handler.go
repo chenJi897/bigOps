@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -78,7 +77,10 @@ func (h *ServiceTreeHandler) GetTree(c *gin.Context) {
 // @Failure 404 {object} response.Response "节点不存在"
 // @Router /service-trees/{id} [get]
 func (h *ServiceTreeHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	node, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "节点不存在")
@@ -132,7 +134,10 @@ func (h *ServiceTreeHandler) Create(c *gin.Context) {
 // @Failure 400 {object} response.Response "参数错误"
 // @Router /service-trees/{id} [post]
 func (h *ServiceTreeHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateServiceTreeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -165,7 +170,10 @@ func (h *ServiceTreeHandler) Update(c *gin.Context) {
 // @Failure 400 {object} response.Response "存在子节点"
 // @Router /service-trees/{id}/delete [post]
 func (h *ServiceTreeHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -191,7 +199,10 @@ func (h *ServiceTreeHandler) Delete(c *gin.Context) {
 // @Failure 400 {object} response.Response "移动失败"
 // @Router /service-trees/{id}/move [post]
 func (h *ServiceTreeHandler) Move(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req MoveServiceTreeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())

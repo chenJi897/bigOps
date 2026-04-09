@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -75,7 +74,10 @@ func (h *DepartmentHandler) GetAll(c *gin.Context) {
 // @Success 200 {object} response.Response{data=model.Department}
 // @Router /departments/{id} [get]
 func (h *DepartmentHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	dept, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "部门不存在")
@@ -125,7 +127,10 @@ func (h *DepartmentHandler) Create(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /departments/{id} [post]
 func (h *DepartmentHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req CreateDepartmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -156,7 +161,10 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /departments/{id}/delete [post]
 func (h *DepartmentHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return

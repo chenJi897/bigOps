@@ -33,6 +33,18 @@ func main() {
 	publicIPCacheFile := viper.GetString("agent.public_ip_cache_file")
 	publicIPTimeoutSeconds := viper.GetInt("agent.public_ip_timeout_seconds")
 	publicIPRefreshHours := viper.GetInt("agent.public_ip_refresh_hours")
+
+	// Resource limits (inspired by didi/falcon-log-agent)
+	maxCPURate := viper.GetFloat64("agent.max_cpu_rate")
+	maxMemMB := viper.GetInt("agent.max_mem_mb")
+	if maxCPURate > 0 {
+		cores := agent.ApplyCPULimit(maxCPURate)
+		log.Printf("CPU limit applied: GOMAXPROCS=%d (rate=%.0f%%)", cores, maxCPURate*100)
+	}
+	if maxMemMB > 0 {
+		agent.StartMemoryPatrol(maxMemMB, 10*time.Second)
+		log.Printf("Memory patrol started: limit=%dMB", maxMemMB)
+	}
 	if hostname == "" {
 		h, _ := os.Hostname()
 		hostname = h

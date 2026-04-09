@@ -9,6 +9,7 @@ database:
   password: bigops123
   database: bigops
   charset: utf8mb4
+  auto_migrate: true  # 生产环境建议设为 false，使用 SQL 迁移脚本
 
 redis:
   host: localhost

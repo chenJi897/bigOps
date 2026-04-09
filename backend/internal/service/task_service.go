@@ -14,6 +14,7 @@ import (
 	agentgrpc "github.com/bigops/platform/internal/grpc"
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/pkg/scriptguard"
 	"github.com/bigops/platform/internal/repository"
 )
 
@@ -141,6 +142,11 @@ func (s *TaskService) executeTask(taskID int64, hostIPs []string, operatorID int
 	}
 	if len(hostIPs) == 0 {
 		return nil, errors.New("目标主机列表不能为空")
+	}
+
+	// Server-side script safety pre-check
+	if err := scriptguard.Validate(task.ScriptContent, task.ScriptType); err != nil {
+		return nil, fmt.Errorf("脚本安全检测未通过: %w", err)
 	}
 
 	// Marshal target hosts to JSON

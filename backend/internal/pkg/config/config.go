@@ -53,12 +53,13 @@ type ServerConfig struct {
 
 // DatabaseConfig MySQL 数据库连接配置。
 type DatabaseConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
-	Database string `mapstructure:"database"`
-	Charset  string `mapstructure:"charset"`
+	Host        string `mapstructure:"host"`
+	Port        int    `mapstructure:"port"`
+	Username    string `mapstructure:"username"`
+	Password    string `mapstructure:"password"`
+	Database    string `mapstructure:"database"`
+	Charset     string `mapstructure:"charset"`
+	AutoMigrate bool   `mapstructure:"auto_migrate"` // 是否自动迁移表结构，生产环境建议关闭
 }
 
 // RedisConfig Redis 连接配置。

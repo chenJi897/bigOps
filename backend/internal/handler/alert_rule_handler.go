@@ -152,7 +152,10 @@ func (h *AlertRuleHandler) Update(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpsertAlertRuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -203,7 +206,10 @@ func (h *AlertRuleHandler) Delete(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.alertSvc.DeleteRule(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -212,6 +218,20 @@ func (h *AlertRuleHandler) Delete(c *gin.Context) {
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
+// Events 告警事件列表。
+// @Summary 告警事件列表
+// @Tags 告警管理
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Param rule_id query int false "规则ID"
+// @Param status query string false "状态"
+// @Param severity query string false "严重级别"
+// @Param agent_id query string false "Agent ID"
+// @Param keyword query string false "关键字"
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /alert-events [get]
 func (h *AlertRuleHandler) Events(c *gin.Context) {
 	page, size := parsePageSize(c)
 	var ruleID *int64
@@ -236,8 +256,19 @@ func (h *AlertRuleHandler) Events(c *gin.Context) {
 	response.Page(c, items, total, page, size)
 }
 
+// GetEvent 告警事件详情。
+// @Summary 告警事件详情
+// @Tags 告警管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "事件ID"
+// @Success 200 {object} response.Response
+// @Router /alert-events/{id} [get]
 func (h *AlertRuleHandler) GetEvent(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	event, err := h.alertSvc.GetEvent(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -250,11 +281,24 @@ func (h *AlertRuleHandler) GetEvent(c *gin.Context) {
 	response.Success(c, event)
 }
 
+// AcknowledgeEvent 确认告警事件。
+// @Summary 确认告警事件
+// @Tags 告警管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "事件ID"
+// @Param body body AlertEventStatusRequest true "确认请求"
+// @Success 200 {object} response.Response
+// @Router /alert-events/{id}/ack [post]
 func (h *AlertRuleHandler) AcknowledgeEvent(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req AlertEventStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -274,11 +318,24 @@ func (h *AlertRuleHandler) AcknowledgeEvent(c *gin.Context) {
 	response.SuccessWithMessage(c, "事件已确认", nil)
 }
 
+// ResolveEvent 解决告警事件。
+// @Summary 解决告警事件
+// @Tags 告警管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "事件ID"
+// @Param body body AlertEventStatusRequest true "解决请求"
+// @Success 200 {object} response.Response
+// @Router /alert-events/{id}/resolve [post]
 func (h *AlertRuleHandler) ResolveEvent(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req AlertEventStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -298,6 +355,13 @@ func (h *AlertRuleHandler) ResolveEvent(c *gin.Context) {
 	response.SuccessWithMessage(c, "事件已关闭", nil)
 }
 
+// Evaluate 手动触发告警巡检。
+// @Summary 手动触发告警巡检
+// @Tags 告警管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /alert-rules/evaluate [post]
 func (h *AlertRuleHandler) Evaluate(c *gin.Context) {
 	if !requireAdmin(c) {
 		return

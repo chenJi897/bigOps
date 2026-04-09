@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -79,7 +78,10 @@ func (h *CloudAccountHandler) List(c *gin.Context) {
 // @Failure 404 {object} response.Response "云账号不存在"
 // @Router /cloud-accounts/{id} [get]
 func (h *CloudAccountHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	account, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "云账号不存在")
@@ -129,7 +131,10 @@ func (h *CloudAccountHandler) Create(c *gin.Context) {
 // @Failure 400 {object} response.Response "参数错误"
 // @Router /cloud-accounts/{id} [post]
 func (h *CloudAccountHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateCloudAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -160,7 +165,10 @@ func (h *CloudAccountHandler) Update(c *gin.Context) {
 // @Failure 400 {object} response.Response "参数错误"
 // @Router /cloud-accounts/{id}/keys [post]
 func (h *CloudAccountHandler) UpdateKeys(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateCloudAccountKeysRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -189,7 +197,10 @@ func (h *CloudAccountHandler) UpdateKeys(c *gin.Context) {
 // @Failure 400 {object} response.Response "删除失败"
 // @Router /cloud-accounts/{id}/delete [post]
 func (h *CloudAccountHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -213,7 +224,10 @@ func (h *CloudAccountHandler) Delete(c *gin.Context) {
 // @Failure 400 {object} response.Response "同步失败"
 // @Router /cloud-accounts/{id}/sync [post]
 func (h *CloudAccountHandler) Sync(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 
 	// 获取操作人信息
 	userID, _ := c.Get("userID")
@@ -253,7 +267,10 @@ type UpdateSyncConfigRequest struct {
 // @Failure 400 {object} response.Response "参数错误"
 // @Router /cloud-accounts/{id}/sync-config [post]
 func (h *CloudAccountHandler) UpdateSyncConfig(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateSyncConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误")

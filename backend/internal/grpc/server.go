@@ -18,6 +18,7 @@ import (
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/pkg/safego"
 	"github.com/bigops/platform/internal/repository"
 )
 
@@ -488,6 +489,7 @@ func StartGRPCServer(port int) (*grpc.Server, error) {
 	})
 
 	go func() {
+		defer safego.Recover("grpc-server")
 		logger.Info("gRPC server listening", zap.Int("port", port))
 		if err := srv.Serve(lis); err != nil {
 			logger.Error("gRPC server error", zap.Error(err))

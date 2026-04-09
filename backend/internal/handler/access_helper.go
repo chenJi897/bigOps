@@ -11,6 +11,16 @@ import (
 
 const maxPageSize = 100
 
+// parsePathID 从 URL 路径参数解析 int64 ID，解析失败返回 400 并中止请求。
+func parsePathID(c *gin.Context, name string) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param(name), 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "无效的 "+name+" 参数")
+		return 0, false
+	}
+	return id, true
+}
+
 // parsePageSize 解析分页参数并限制 size 上限。
 func parsePageSize(c *gin.Context) (page, size int) {
 	page, _ = strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -28,21 +38,30 @@ func parsePageSize(c *gin.Context) (page, size int) {
 }
 
 func isAdminUser(c *gin.Context) bool {
+	// 同一请求内缓存结果，避免重复查库
+	if cached, exists := c.Get("_isAdmin"); exists {
+		return cached.(bool)
+	}
+
 	userID, exists := c.Get("userID")
 	if !exists {
+		c.Set("_isAdmin", false)
 		return false
 	}
 	currentUserID, _ := userID.(int64)
 	roleRepo := repository.NewRoleRepository()
 	roles, err := roleRepo.GetRolesByUserID(currentUserID)
 	if err != nil {
+		c.Set("_isAdmin", false)
 		return false
 	}
 	for _, role := range roles {
 		if role.Name == "admin" {
+			c.Set("_isAdmin", true)
 			return true
 		}
 	}
+	c.Set("_isAdmin", false)
 	return false
 }
 

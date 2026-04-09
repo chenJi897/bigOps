@@ -13,6 +13,7 @@ import (
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/response"
+	"github.com/bigops/platform/internal/pkg/safego"
 	"github.com/bigops/platform/internal/repository"
 	"github.com/bigops/platform/internal/service"
 )
@@ -103,7 +104,10 @@ func (h *TaskHandler) List(c *gin.Context) {
 // @Success 200 {object} response.Response{data=model.Task}
 // @Router /tasks/{id} [get]
 func (h *TaskHandler) GetByID(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	task, err := h.svc.GetByID(id)
 	if err != nil {
 		response.Error(c, 404, "任务不存在")
@@ -166,7 +170,10 @@ func (h *TaskHandler) Create(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tasks/{id} [post]
 func (h *TaskHandler) Update(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req UpdateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -206,7 +213,10 @@ func (h *TaskHandler) Update(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /tasks/{id}/delete [post]
 func (h *TaskHandler) Delete(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	operatorName := getOperator(c)
 
 	if err := h.svc.Delete(id); err != nil {
@@ -233,7 +243,10 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 // @Success 200 {object} response.Response{data=model.TaskExecution}
 // @Router /tasks/{id}/execute [post]
 func (h *TaskHandler) Execute(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req ExecuteTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -267,7 +280,10 @@ func (h *TaskHandler) Execute(c *gin.Context) {
 // @Success 200 {object} response.Response{data=model.TaskExecution}
 // @Router /task-executions/{id} [get]
 func (h *TaskHandler) GetExecution(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	exec, err := h.svc.GetExecution(id)
 	if err != nil {
 		response.Error(c, 404, "执行记录不存在")
@@ -334,7 +350,10 @@ var wsUpgrader = websocket.Upgrader{
 // @Param id path int true "执行ID"
 // @Router /ws/task-executions/{id}/logs [get]
 func (h *TaskHandler) WSLogs(c *gin.Context) {
-	executionID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	executionID, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if executionID == 0 {
 		response.BadRequest(c, "执行ID无效")
 		return
@@ -354,6 +373,7 @@ func (h *TaskHandler) WSLogs(c *gin.Context) {
 	// Read pump: detect client disconnect
 	done := make(chan struct{})
 	go func() {
+		defer safego.Recover("ws-read-pump")
 		defer close(done)
 		for {
 			if _, _, err := conn.ReadMessage(); err != nil {

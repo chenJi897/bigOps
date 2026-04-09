@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -52,7 +51,10 @@ func (h *ApprovalHandler) Pending(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /approval-instances/{id}/approve [post]
 func (h *ApprovalHandler) Approve(c *gin.Context) {
-	instanceID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	instanceID, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
 	var req ApprovalActionRequest
@@ -83,7 +85,10 @@ func (h *ApprovalHandler) Approve(c *gin.Context) {
 // @Success 200 {object} response.Response
 // @Router /approval-instances/{id}/reject [post]
 func (h *ApprovalHandler) Reject(c *gin.Context) {
-	instanceID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	instanceID, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
 	var req ApprovalActionRequest

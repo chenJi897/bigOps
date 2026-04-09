@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +32,13 @@ type NotificationConfigRequest struct {
 	RetryScanIntervalSeconds int      `json:"retry_scan_interval_seconds"`
 }
 
+// GetConfig 获取通知配置。
+// @Summary 获取通知配置
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notifications/config [get]
 func (h *NotificationHandler) GetConfig(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -40,6 +46,15 @@ func (h *NotificationHandler) GetConfig(c *gin.Context) {
 	response.Success(c, config.Get().Notification)
 }
 
+// UpdateConfig 更新通知配置。
+// @Summary 更新通知配置
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body NotificationConfigRequest true "配置请求"
+// @Success 200 {object} response.Response
+// @Router /notifications/config [post]
 func (h *NotificationHandler) UpdateConfig(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -63,18 +78,36 @@ func (h *NotificationHandler) UpdateConfig(c *gin.Context) {
 	response.SuccessWithMessage(c, "通知配置已更新", cfg)
 }
 
+// ListInApp 站内通知列表。
+// @Summary 站内通知列表
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param unread_only query string false "仅未读" default(0)
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /notifications/in-app [get]
 func (h *NotificationHandler) ListInApp(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
 	unreadOnly := c.DefaultQuery("unread_only", "0") == "1"
-	items, err := h.svc.ListInAppByUserID(currentUserID, unreadOnly)
+	page, size := parsePageSize(c)
+	items, total, err := h.svc.ListInAppByUserID(currentUserID, unreadOnly, page, size)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")
 		return
 	}
-	response.Success(c, items)
+	response.Page(c, items, total, page, size)
 }
 
+// CountUnread 未读通知数量。
+// @Summary 未读通知数量
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notifications/in-app/unread-count [get]
 func (h *NotificationHandler) CountUnread(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
@@ -86,10 +119,21 @@ func (h *NotificationHandler) CountUnread(c *gin.Context) {
 	response.Success(c, gin.H{"count": count})
 }
 
+// MarkRead 标记通知已读。
+// @Summary 标记通知已读
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "通知ID"
+// @Success 200 {object} response.Response
+// @Router /notifications/in-app/{id}/read [post]
 func (h *NotificationHandler) MarkRead(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.MarkRead(currentUserID, id); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -98,6 +142,13 @@ func (h *NotificationHandler) MarkRead(c *gin.Context) {
 	response.SuccessWithMessage(c, "已标记为已读", nil)
 }
 
+// MarkAllRead 标记全部通知已读。
+// @Summary 标记全部通知已读
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notifications/in-app/read-all [post]
 func (h *NotificationHandler) MarkAllRead(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
@@ -109,6 +160,13 @@ func (h *NotificationHandler) MarkAllRead(c *gin.Context) {
 	response.SuccessWithMessage(c, "已全部标记为已读", nil)
 }
 
+// ClearRead 清空已读通知。
+// @Summary 清空已读通知
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notifications/in-app/clear-read [post]
 func (h *NotificationHandler) ClearRead(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
@@ -137,6 +195,13 @@ type NotificationPreferenceRequest struct {
 	Enabled            int8     `json:"enabled"`
 }
 
+// GetPreference 获取个人通知偏好。
+// @Summary 获取个人通知偏好
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notifications/preferences [get]
 func (h *NotificationHandler) GetPreference(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
@@ -148,6 +213,15 @@ func (h *NotificationHandler) GetPreference(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// UpdatePreference 更新个人通知偏好。
+// @Summary 更新个人通知偏好
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body NotificationPreferenceRequest true "偏好设置"
+// @Success 200 {object} response.Response
+// @Router /notifications/preferences [post]
 func (h *NotificationHandler) UpdatePreference(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
@@ -174,6 +248,15 @@ func (h *NotificationHandler) UpdatePreference(c *gin.Context) {
 	response.SuccessWithMessage(c, "个人通知设置已保存", item)
 }
 
+// TestSend 发送测试通知。
+// @Summary 发送测试通知
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body NotificationTestRequest true "测试请求"
+// @Success 200 {object} response.Response
+// @Router /notifications/test [post]
 func (h *NotificationHandler) TestSend(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -213,23 +296,44 @@ func (h *NotificationHandler) TestSend(c *gin.Context) {
 	response.SuccessWithMessage(c, "测试消息已发送", gin.H{"event_id": eventID})
 }
 
+// ListEvents 通知事件列表。
+// @Summary 通知事件列表
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /notifications/events [get]
 func (h *NotificationHandler) ListEvents(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	items, err := h.svc.ListEvents(50)
+	page, size := parsePageSize(c)
+	items, total, err := h.svc.ListEvents(page, size)
 	if err != nil {
 		response.InternalServerError(c, "查询失败")
 		return
 	}
-	response.Success(c, items)
+	response.Page(c, items, total, page, size)
 }
 
+// RetryEvent 重试通知事件。
+// @Summary 重试通知事件
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "事件ID"
+// @Success 200 {object} response.Response
+// @Router /notifications/events/{id}/retry [post]
 func (h *NotificationHandler) RetryEvent(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	count, err := h.svc.RetryEvent(id)
 	if err != nil {
 		response.Error(c, 400, err.Error())
@@ -239,6 +343,13 @@ func (h *NotificationHandler) RetryEvent(c *gin.Context) {
 	response.SuccessWithMessage(c, "已触发重试", gin.H{"delivery_count": count})
 }
 
+// ListTemplates 通知模板列表。
+// @Summary 通知模板列表
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notifications/templates [get]
 func (h *NotificationHandler) ListTemplates(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -251,11 +362,24 @@ func (h *NotificationHandler) ListTemplates(c *gin.Context) {
 	response.Success(c, items)
 }
 
+// UpdateTemplate 更新通知模板。
+// @Summary 更新通知模板
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "模板ID"
+// @Param body body object true "模板内容 {title, content}"
+// @Success 200 {object} response.Response
+// @Router /notifications/templates/{id} [post]
 func (h *NotificationHandler) UpdateTemplate(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req struct {
 		Title   string `json:"title" binding:"required"`
 		Content string `json:"content" binding:"required"`
@@ -272,6 +396,15 @@ func (h *NotificationHandler) UpdateTemplate(c *gin.Context) {
 	response.SuccessWithMessage(c, "模板已更新", nil)
 }
 
+// PreviewTemplate 预览通知模板渲染结果。
+// @Summary 预览通知模板
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body object true "预览请求 {title, content, variables}"
+// @Success 200 {object} response.Response
+// @Router /notifications/templates/preview [post]
 func (h *NotificationHandler) PreviewTemplate(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
@@ -294,6 +427,14 @@ func (h *NotificationHandler) PreviewTemplate(c *gin.Context) {
 }
 
 // TestWebhook 测试 Webhook 连通性。
+// @Summary 测试 Webhook 连通性
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body object true "Webhook 测试 {channel_type, webhook_url, secret}"
+// @Success 200 {object} response.Response
+// @Router /notifications/test-webhook [post]
 func (h *NotificationHandler) TestWebhook(c *gin.Context) {
 	var req struct {
 		ChannelType string `json:"channel_type" binding:"required"`
@@ -314,6 +455,12 @@ func (h *NotificationHandler) TestWebhook(c *gin.Context) {
 }
 
 // GetEnabledChannelTypes 获取管理员允许的通知渠道类型列表。
+// @Summary 获取启用的通知渠道类型
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notifications/enabled-channel-types [get]
 func (h *NotificationHandler) GetEnabledChannelTypes(c *gin.Context) {
 	cfg := config.Get().Notification
 	types := cfg.EnabledChannelTypes
@@ -325,6 +472,16 @@ func (h *NotificationHandler) GetEnabledChannelTypes(c *gin.Context) {
 
 // ========== 发送组 CRUD ==========
 
+// ListGroups 发送组分页列表。
+// @Summary 发送组分页列表
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Param keyword query string false "关键字"
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /notify-groups [get]
 func (h *NotificationHandler) ListGroups(c *gin.Context) {
 	page, size := parsePageSize(c)
 	groupSvc := service.NewNotifyGroupService()
@@ -336,6 +493,13 @@ func (h *NotificationHandler) ListGroups(c *gin.Context) {
 	response.Page(c, items, total, page, size)
 }
 
+// ListAllGroups 发送组全量列表。
+// @Summary 发送组全量列表
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.Response
+// @Router /notify-groups/all [get]
 func (h *NotificationHandler) ListAllGroups(c *gin.Context) {
 	groupSvc := service.NewNotifyGroupService()
 	items, err := groupSvc.ListAll()
@@ -346,8 +510,19 @@ func (h *NotificationHandler) ListAllGroups(c *gin.Context) {
 	response.Success(c, items)
 }
 
+// GetGroup 发送组详情。
+// @Summary 发送组详情
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "发送组ID"
+// @Success 200 {object} response.Response
+// @Router /notify-groups/{id} [get]
 func (h *NotificationHandler) GetGroup(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	groupSvc := service.NewNotifyGroupService()
 	item, err := groupSvc.GetByID(id)
 	if err != nil {
@@ -357,6 +532,15 @@ func (h *NotificationHandler) GetGroup(c *gin.Context) {
 	response.Success(c, item)
 }
 
+// CreateGroup 创建发送组。
+// @Summary 创建发送组
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body model.NotifyGroup true "发送组"
+// @Success 200 {object} response.Response
+// @Router /notify-groups [post]
 func (h *NotificationHandler) CreateGroup(c *gin.Context) {
 	var item model.NotifyGroup
 	if err := c.ShouldBindJSON(&item); err != nil {
@@ -374,8 +558,21 @@ func (h *NotificationHandler) CreateGroup(c *gin.Context) {
 	response.SuccessWithMessage(c, "创建成功", item)
 }
 
+// UpdateGroup 更新发送组。
+// @Summary 更新发送组
+// @Tags 通知管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "发送组ID"
+// @Param body body model.NotifyGroup true "发送组"
+// @Success 200 {object} response.Response
+// @Router /notify-groups/{id} [post]
 func (h *NotificationHandler) UpdateGroup(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var item model.NotifyGroup
 	if err := c.ShouldBindJSON(&item); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -390,11 +587,22 @@ func (h *NotificationHandler) UpdateGroup(c *gin.Context) {
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
+// DeleteGroup 删除发送组。
+// @Summary 删除发送组
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "发送组ID"
+// @Success 200 {object} response.Response
+// @Router /notify-groups/{id}/delete [post]
 func (h *NotificationHandler) DeleteGroup(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	groupSvc := service.NewNotifyGroupService()
 	if err := groupSvc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
@@ -404,8 +612,19 @@ func (h *NotificationHandler) DeleteGroup(c *gin.Context) {
 	response.SuccessWithMessage(c, "删除成功", nil)
 }
 
+// TestGroup 测试发送组。
+// @Summary 测试发送组
+// @Tags 通知管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "发送组ID"
+// @Success 200 {object} response.Response
+// @Router /notify-groups/{id}/test [post]
 func (h *NotificationHandler) TestGroup(c *gin.Context) {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	groupSvc := service.NewNotifyGroupService()
 	group, err := groupSvc.GetByID(id)
 	if err != nil {

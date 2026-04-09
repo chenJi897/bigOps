@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/pkg/safego"
 	"github.com/bigops/platform/internal/service"
 )
 
@@ -37,6 +38,7 @@ func (s *Scheduler) Start() {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
+		defer safego.Recover("cloud-sync-scheduler")
 		logger.Info("云同步调度器已启动，巡检间隔 60s")
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -88,6 +90,7 @@ func (s *Scheduler) check() {
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
+			defer safego.Recover("cloud-sync-task")
 			logger.Info("调度器: 触发定时同步",
 				zap.Int64("account_id", accountID),
 				zap.String("account_name", accountName),

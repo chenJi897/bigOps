@@ -1,6 +1,7 @@
 aliyun:
     ecs_endpoint: ecs.%s.aliyuncs.com
 database:
+    auto_migrate: true
     charset: utf8mb4
     database: bigops2
     host: localhost

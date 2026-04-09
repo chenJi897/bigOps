@@ -10,3 +10,5 @@ agent:
   public_ip_timeout_seconds: 3
   public_ip_refresh_hours: 24
   labels: {}
+  max_cpu_rate: 0.8       # Agent 进程最大 CPU 使用率（0.0~1.0），0 表示不限制
+  max_mem_mb: 512          # Agent 进程最大堆内存（MB），超过则退出，0 表示不限制

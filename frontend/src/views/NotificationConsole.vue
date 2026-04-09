@@ -35,7 +35,8 @@ async function loadEvents() {
   loading.value = true
   try {
     const res: any = await notificationApi.events()
-    events.value = res.data || []
+    const data = res.data
+    events.value = Array.isArray(data) ? data : (data?.list || [])
     lastRefreshAt.value = new Date().toLocaleString()
   } finally {
     loading.value = false

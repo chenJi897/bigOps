@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -98,7 +97,10 @@ func (h *OnCallHandler) Update(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	var req upsertOnCallRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -129,7 +131,10 @@ func (h *OnCallHandler) Delete(c *gin.Context) {
 	if !requireAdmin(c) {
 		return
 	}
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
 	if err := h.svc.Delete(id); err != nil {
 		response.Error(c, 400, err.Error())
 		return

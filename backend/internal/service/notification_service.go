@@ -17,6 +17,7 @@ import (
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
+	"github.com/bigops/platform/internal/pkg/safego"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
@@ -213,9 +214,9 @@ func (s *NotificationService) Publish(req NotificationPublishRequest) (int64, er
 }
 
 func (s *NotificationService) DispatchEventAsync(eventID int64) {
-	go func() {
+	safego.Go(func() {
 		_ = s.DispatchEvent(eventID)
-	}()
+	})
 }
 
 func (s *NotificationService) DispatchEvent(eventID int64) error {
@@ -234,8 +235,8 @@ func (s *NotificationService) DispatchEvent(eventID int64) error {
 	return nil
 }
 
-func (s *NotificationService) ListInAppByUserID(userID int64, unreadOnly bool) ([]*model.InAppNotification, error) {
-	return s.repo.ListInAppByUserID(userID, unreadOnly)
+func (s *NotificationService) ListInAppByUserID(userID int64, unreadOnly bool, page, size int) ([]*model.InAppNotification, int64, error) {
+	return s.repo.ListInAppByUserID(userID, unreadOnly, page, size)
 }
 
 func (s *NotificationService) CountUnreadByUserID(userID int64) (int64, error) {
@@ -266,15 +267,15 @@ func (s *NotificationService) ClearRead(userID int64) (int64, error) {
 	return s.repo.ClearReadByUserID(userID)
 }
 
-func (s *NotificationService) ListEvents(limit int) ([]*model.NotificationEvent, error) {
-	events, err := s.repo.ListEvents(limit)
+func (s *NotificationService) ListEvents(page, size int) ([]*model.NotificationEvent, int64, error) {
+	events, total, err := s.repo.ListEvents(page, size)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	for _, event := range events {
 		deliveries, err := s.repo.ListDeliveriesByEventID(event.ID, false)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		event.Deliveries = make([]model.NotificationDelivery, 0, len(deliveries))
 		event.CanRetry = false
@@ -288,7 +289,7 @@ func (s *NotificationService) ListEvents(limit int) ([]*model.NotificationEvent,
 		}
 		event.StatusSummary = eventStatusSummary(event.Status)
 	}
-	return events, nil
+	return events, total, nil
 }
 
 func (s *NotificationService) RetryEvent(eventID int64) (int, error) {
@@ -435,7 +436,7 @@ func (s *NotificationScheduler) Start() {
 		interval = 60
 	}
 	s.ticker = time.NewTicker(time.Duration(interval) * time.Second)
-	go func() {
+	safego.Go(func() {
 		notifySvc := NewNotificationService()
 		logger.Info("通知重试调度器已启动", zap.Int("interval_seconds", interval))
 		for {
@@ -449,7 +450,7 @@ func (s *NotificationScheduler) Start() {
 				}
 			}
 		}
-	}()
+	})
 }
 
 func (s *NotificationScheduler) Stop() {
