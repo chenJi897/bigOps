@@ -586,6 +586,22 @@ func (s *MonitorService) GoldenSignalsByDimension(windowMinutes int, dimension s
 		item.avgValCnt += row.SampleCnt
 	}
 
+	agentNameMap := map[string]string{}
+	if dimType == "instance" || dimType == "service" {
+		agents, _, _ := s.agentRepo.List(1, 10000, "")
+		for _, a := range agents {
+			agentNameMap[a.AgentID] = firstNonEmptyString(a.Hostname, a.IP, a.AgentID)
+			agentNameMap[a.IP] = firstNonEmptyString(a.Hostname, a.IP)
+		}
+	}
+
+	metricTypeLabel := map[string]string{
+		"cpu_usage":    "CPU 使用率",
+		"memory_usage": "内存使用率",
+		"disk_usage":   "磁盘使用率",
+		"latency":      "心跳延迟",
+	}
+
 	result := make([]GoldenSignalDimensionItem, 0, len(grouped))
 	for key, item := range grouped {
 		er := 0.0
@@ -596,10 +612,25 @@ func (s *MonitorService) GoldenSignalsByDimension(windowMinutes int, dimension s
 		if item.avgValCnt > 0 {
 			avg = item.avgValSum / float64(item.avgValCnt)
 		}
+		displayName := key
+		switch dimType {
+		case "instance":
+			if name, ok := agentNameMap[key]; ok {
+				displayName = name
+			}
+		case "service":
+			if name, ok := agentNameMap[key]; ok && displayName == key {
+				displayName = name
+			}
+		case "interface":
+			if label, ok := metricTypeLabel[key]; ok {
+				displayName = label
+			}
+		}
 		result = append(result, GoldenSignalDimensionItem{
 			DimensionType: dimType,
 			DimensionKey:  key,
-			DimensionName: key,
+			DimensionName: displayName,
 			TotalRequests: item.total,
 			TotalErrors:   item.errors,
 			ErrorRatePct:  round2(er),

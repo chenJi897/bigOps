@@ -543,7 +543,7 @@ onUnmounted(() => {
     <el-card shadow="never" class="border-0 shadow-sm rounded-2xl mb-6">
       <template #header>
         <div class="flex items-center justify-between">
-          <span class="font-medium text-slate-800">Golden Signals 维度拆分</span>
+          <span class="font-medium text-slate-800">Golden Signals — {{ goldenDimensionTypeLabel[goldenDimension] || goldenDimension }}维度</span>
           <div class="flex items-center gap-2">
             <el-tag :type="sloTagType()">
               SLO {{ goldenSignals.slo_breached ? '未达标' : '达标' }}
@@ -553,18 +553,22 @@ onUnmounted(() => {
           </div>
         </div>
       </template>
-      <el-table :data="goldenDimensionRows.slice(0, 10)" size="small" stripe>
-        <el-table-column prop="dimension_type" label="维度类型" width="100">
+      <el-table :data="goldenDimensionRows.slice(0, 15)" size="small" stripe empty-text="暂无维度数据">
+        <el-table-column prop="dimension_name" :label="goldenDimension === 'instance' ? '实例(主机)' : goldenDimension === 'interface' ? '指标类型' : '服务/IP'" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="total_requests" label="采样总数" width="100" align="right" />
+        <el-table-column prop="total_errors" label="超阈值" width="80" align="right">
           <template #default="{ row }">
-            <span>{{ goldenDimensionTypeText(row.dimension_type) }}</span>
+            <span :class="row.total_errors > 0 ? 'text-red-500 font-medium' : ''">{{ row.total_errors }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="dimension_name" label="维度名称" min-width="180" />
-        <el-table-column prop="dimension_key" label="维度键" min-width="180" />
-        <el-table-column prop="total_requests" label="请求总数" width="120" align="right" />
-        <el-table-column prop="total_errors" label="错误数" width="100" align="right" />
-        <el-table-column prop="error_rate_pct" label="错误率(%)" width="120" align="right" />
-        <el-table-column prop="avg_latency_ms" label="平均延迟(ms)" width="130" align="right" />
+        <el-table-column prop="error_rate_pct" label="错误率" width="90" align="right">
+          <template #default="{ row }">
+            <span :class="row.error_rate_pct > 5 ? 'text-red-500 font-medium' : ''">{{ row.error_rate_pct }}%</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="avg_latency_ms" label="均值" width="90" align="right">
+          <template #default="{ row }">{{ Number(row.avg_latency_ms || 0).toFixed(1) }}</template>
+        </el-table-column>
       </el-table>
     </el-card>
 
