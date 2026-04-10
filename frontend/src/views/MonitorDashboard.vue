@@ -546,6 +546,12 @@ onUnmounted(() => {
               SLO {{ goldenSignals.slo_breached ? '未达标' : '达标' }}
               (A>= {{ goldenSignals.slo_target_availability }}%, L<= {{ goldenSignals.slo_target_latency_ms }}ms)
             </el-tag>
+            <el-tag :type="goldenSignals.confidence_level === 'high' ? 'success' : goldenSignals.confidence_level === 'medium' ? 'warning' : 'danger'" effect="plain" size="small">
+              可信度: {{ goldenSignals.confidence_level || '-' }}
+            </el-tag>
+            <el-tag type="info" effect="plain" size="small">
+              覆盖 {{ goldenSignals.agent_coverage || 0 }}/{{ goldenSignals.agent_total || 0 }} ({{ Number(goldenSignals.coverage_rate_pct || 0).toFixed(0) }}%)
+            </el-tag>
             <el-button size="small" plain @click="openSLODialog">设置 SLO</el-button>
           </div>
         </div>

@@ -93,6 +93,10 @@ type GoldenSignalsSummary struct {
 	SLOTargetAvailability float64 `json:"slo_target_availability"`
 	SLOTargetLatencyMs    float64 `json:"slo_target_latency_ms"`
 	SLOBreached           bool    `json:"slo_breached"`
+	AgentCoverage         int     `json:"agent_coverage"`
+	AgentTotal            int     `json:"agent_total"`
+	CoverageRatePct       float64 `json:"coverage_rate_pct"`
+	ConfidenceLevel       string  `json:"confidence_level"`
 }
 
 type GoldenSignalDimensionItem struct {
@@ -512,6 +516,25 @@ func (s *MonitorService) GoldenSignals(windowMinutes int) (*GoldenSignalsSummary
 	sloAvail := s.getSLOAvailability()
 	sloLatency := s.getSLOLatencyMs()
 
+	agentTotal := 0
+	agentCoverage := 0
+	if _, total, err := s.agentRepo.List(1, 1, ""); err == nil {
+		agentTotal = int(total)
+	}
+	if _, onlineTotal, err := s.agentRepo.List(1, 1, "online"); err == nil {
+		agentCoverage = int(onlineTotal)
+	}
+	coverageRate := 0.0
+	if agentTotal > 0 {
+		coverageRate = float64(agentCoverage) / float64(agentTotal) * 100
+	}
+	confidence := "high"
+	if totalSamples < 10 {
+		confidence = "low"
+	} else if coverageRate < 80 || totalSamples < 100 {
+		confidence = "medium"
+	}
+
 	return &GoldenSignalsSummary{
 		WindowMinutes:         windowMinutes,
 		AvailabilityPct:       round2(availability),
@@ -523,6 +546,10 @@ func (s *MonitorService) GoldenSignals(windowMinutes int) (*GoldenSignalsSummary
 		SLOTargetAvailability: sloAvail,
 		SLOTargetLatencyMs:    sloLatency,
 		SLOBreached:           availability < sloAvail || latencyMs > sloLatency,
+		AgentCoverage:         agentCoverage,
+		AgentTotal:            agentTotal,
+		CoverageRatePct:       round2(coverageRate),
+		ConfidenceLevel:       confidence,
 	}, nil
 }
 

@@ -1039,6 +1039,41 @@ func (s *AlertService) EscalateUnacknowledged() {
 	}
 }
 
+// CheckSLATimeouts finds assigned alerts past SLA deadline and logs a reminder activity.
+func (s *AlertService) CheckSLATimeouts() {
+	events, _ := s.eventRepo.ListAssignedPastSLA()
+	for _, event := range events {
+		if err := s.activityRepo.Create(&model.AlertEventActivity{
+			EventID:    event.ID,
+			Action:     "sla_breach",
+			FromStatus: event.Status,
+			ToStatus:   event.Status,
+			OperatorID: 0,
+			Note:       fmt.Sprintf("SLA 已超时（截止: %s），请尽快处理", time.Time(*event.SLADeadlineAt).Format("2006-01-02 15:04:05")),
+		}); err != nil {
+			logger.Warn("sla breach activity create failed", zap.Error(err))
+		}
+		event.Escalated = 2
+		_ = s.eventRepo.Update(event)
+		logger.Warn("alert SLA breached", zap.Int64("event_id", event.ID), zap.Int64("assignee", event.AssigneeID))
+	}
+}
+
+// DisableExpiredSilences disables silence rules past their ends_at.
+func (s *AlertService) DisableExpiredSilences() {
+	silenceRepo := repository.NewAlertSilenceRepository()
+	silences, _ := silenceRepo.ListEnabled()
+	now := time.Now()
+	for _, silence := range silences {
+		endsAt := time.Time(silence.EndsAt)
+		if now.After(endsAt) {
+			silence.Enabled = 0
+			_ = silenceRepo.Update(silence)
+			logger.Info("auto-disabled expired silence", zap.Int64("silence_id", silence.ID), zap.String("name", silence.Name))
+		}
+	}
+}
+
 // TopologyView returns the health status of hosts in the same ServiceTree as the alert.
 type AlertTopologyNode struct {
 	AgentID    string  `json:"agent_id"`
@@ -1279,6 +1314,8 @@ func (s *AlertScheduler) Start() {
 				}
 			case <-escalationTicker.C:
 				alertSvc.EscalateUnacknowledged()
+				alertSvc.CheckSLATimeouts()
+				alertSvc.DisableExpiredSilences()
 			}
 		}
 	})

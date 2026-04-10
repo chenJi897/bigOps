@@ -235,6 +235,16 @@ func (r *AlertEventRepository) ListByTicketID(ticketID int64) ([]*model.AlertEve
 	return items, nil
 }
 
+func (r *AlertEventRepository) ListAssignedPastSLA() ([]*model.AlertEvent, error) {
+	var items []*model.AlertEvent
+	if err := database.GetDB().
+		Where("assignee_id > 0 AND sla_deadline_at IS NOT NULL AND sla_deadline_at < NOW() AND status IN ('firing','acknowledged') AND escalated < 2").
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (r *AlertEventRepository) ListByRuleAgent(ruleID int64, agentID string, limit int) ([]*model.AlertEvent, error) {
 	if limit <= 0 {
 		limit = 50

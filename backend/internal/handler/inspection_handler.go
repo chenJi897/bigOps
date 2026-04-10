@@ -280,3 +280,12 @@ func (h *InspectionHandler) ExportRecordReport(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="`+url.PathEscape(filename)+`"`)
 	c.Data(200, contentType, payload)
 }
+
+func (h *InspectionHandler) HealthScores(c *gin.Context) {
+	scores, err := h.svc.HealthScores()
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, scores)
+}

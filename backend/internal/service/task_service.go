@@ -68,6 +68,30 @@ func validateTaskTypeCombo(task *model.Task) error {
 	return nil
 }
 
+func inferRiskLevel(task *model.Task) {
+	if task.RiskLevel != "" && task.RiskLevel != "auto" {
+		return
+	}
+	task.RiskLevel = "low"
+	content := strings.ToLower(task.ScriptContent)
+	for _, pattern := range model.DangerousCommandPatterns {
+		if strings.Contains(content, pattern) {
+			task.RiskLevel = "critical"
+			task.RequireApproval = 1
+			return
+		}
+	}
+	if task.RunAsUser == "root" {
+		if task.RiskLevel == "low" {
+			task.RiskLevel = "medium"
+		}
+	}
+	if strings.Contains(content, "systemctl restart") || strings.Contains(content, "service") {
+		task.RiskLevel = "high"
+		task.RequireApproval = 1
+	}
+}
+
 // Create validates and creates a new task.
 func (s *TaskService) Create(task *model.Task) error {
 	if task.Name == "" {
@@ -77,6 +101,7 @@ func (s *TaskService) Create(task *model.Task) error {
 	if err := validateTaskTypeCombo(task); err != nil {
 		return err
 	}
+	inferRiskLevel(task)
 	if task.Timeout <= 0 {
 		task.Timeout = 60
 	}
@@ -109,6 +134,11 @@ func (s *TaskService) Update(id int64, updates *model.Task) error {
 	if err := validateTaskTypeCombo(existing); err != nil {
 		return err
 	}
+	if updates.RiskLevel != "" {
+		existing.RiskLevel = updates.RiskLevel
+	}
+	existing.RequireApproval = updates.RequireApproval
+	inferRiskLevel(existing)
 	return s.taskRepo.UpdateTask(existing)
 }
 

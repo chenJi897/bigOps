@@ -41,6 +41,17 @@ func (r *AlertSilenceRepository) List() ([]*model.AlertSilence, error) {
 	return items, nil
 }
 
+func (r *AlertSilenceRepository) ListEnabled() ([]*model.AlertSilence, error) {
+	var items []*model.AlertSilence
+	if err := database.GetDB().
+		Where("enabled = 1").
+		Order("id DESC").
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (r *AlertSilenceRepository) ListActive(now time.Time) ([]*model.AlertSilence, error) {
 	var items []*model.AlertSilence
 	if err := database.GetDB().

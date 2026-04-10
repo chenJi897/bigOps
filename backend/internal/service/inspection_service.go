@@ -443,3 +443,76 @@ func buildInspectionReportCSV(report map[string]interface{}) ([]byte, error) {
 	}
 	return buffer.Bytes(), nil
 }
+
+// CheckPlanConflict returns an error if another enabled plan uses the same template+cron.
+func (s *InspectionService) CheckPlanConflict(templateID int64, cronExpr string, excludePlanID int64) error {
+	plans, _, _ := s.repo.ListPlans(1, 1000)
+	for _, p := range plans {
+		if p.ID == excludePlanID || p.Enabled == 0 {
+			continue
+		}
+		if p.TemplateID == templateID && p.CronExpr == cronExpr {
+			return fmt.Errorf("冲突：计划「%s」(ID:%d) 已使用相同模板+Cron 表达式", p.Name, p.ID)
+		}
+	}
+	return nil
+}
+
+// HealthScore calculates a health percentage for a template over the last N records.
+type InspectionHealthScore struct {
+	TemplateID   int64   `json:"template_id"`
+	TemplateName string  `json:"template_name"`
+	TotalRuns    int     `json:"total_runs"`
+	SuccessRuns  int     `json:"success_runs"`
+	FailedRuns   int     `json:"failed_runs"`
+	HealthPct    float64 `json:"health_pct"`
+}
+
+func (s *InspectionService) HealthScores() ([]InspectionHealthScore, error) {
+	templates, _, err := s.repo.ListTemplates(1, 1000)
+	if err != nil {
+		return nil, err
+	}
+	records, _, _ := s.repo.ListRecords(1, 500)
+
+	tplMap := map[int64]string{}
+	for _, t := range templates {
+		tplMap[t.ID] = t.Name
+	}
+
+	type counter struct{ total, success, failed int }
+	counts := map[int64]*counter{}
+	for _, r := range records {
+		c := counts[r.TemplateID]
+		if c == nil {
+			c = &counter{}
+			counts[r.TemplateID] = c
+		}
+		c.total++
+		switch r.Status {
+		case "success":
+			c.success++
+		case "failed", "partial_fail", "canceled":
+			c.failed++
+		}
+	}
+
+	result := make([]InspectionHealthScore, 0, len(templates))
+	for _, t := range templates {
+		c := counts[t.ID]
+		score := InspectionHealthScore{
+			TemplateID:   t.ID,
+			TemplateName: t.Name,
+		}
+		if c != nil {
+			score.TotalRuns = c.total
+			score.SuccessRuns = c.success
+			score.FailedRuns = c.failed
+			if c.total > 0 {
+				score.HealthPct = float64(c.success) / float64(c.total) * 100
+			}
+		}
+		result = append(result, score)
+	}
+	return result, nil
+}

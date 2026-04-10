@@ -41,24 +41,28 @@ func NewTaskHandler() *TaskHandler {
 
 // CreateTaskRequest 创建任务请求参数。
 type CreateTaskRequest struct {
-	Name          string `json:"name" binding:"required" example:"磁盘清理脚本"`
-	TaskType      string `json:"task_type" example:"shell"`
-	ScriptType    string `json:"script_type" example:"bash"`
-	ScriptContent string `json:"script_content" example:"df -h"`
-	Timeout       int    `json:"timeout" example:"60"`
-	RunAsUser     string `json:"run_as_user" example:"root"`
-	Description   string `json:"description" example:"清理临时文件"`
+	Name            string `json:"name" binding:"required" example:"磁盘清理脚本"`
+	TaskType        string `json:"task_type" example:"script"`
+	ScriptType      string `json:"script_type" example:"bash"`
+	ScriptContent   string `json:"script_content" example:"df -h"`
+	Timeout         int    `json:"timeout" example:"60"`
+	RunAsUser       string `json:"run_as_user" example:"root"`
+	Description     string `json:"description" example:"清理临时文件"`
+	RiskLevel       string `json:"risk_level" example:"low"`
+	RequireApproval int8   `json:"require_approval" example:"0"`
 }
 
 // UpdateTaskRequest 更新任务请求参数。
 type UpdateTaskRequest struct {
-	Name          string `json:"name" example:"磁盘清理脚本"`
-	TaskType      string `json:"task_type" example:"shell"`
-	ScriptType    string `json:"script_type" example:"bash"`
-	ScriptContent string `json:"script_content" example:"df -h"`
-	Timeout       int    `json:"timeout" example:"60"`
-	RunAsUser     string `json:"run_as_user" example:"root"`
-	Description   string `json:"description" example:"清理临时文件"`
+	Name            string `json:"name" example:"磁盘清理脚本"`
+	TaskType        string `json:"task_type" example:"script"`
+	ScriptType      string `json:"script_type" example:"bash"`
+	ScriptContent   string `json:"script_content" example:"df -h"`
+	Timeout         int    `json:"timeout" example:"60"`
+	RunAsUser       string `json:"run_as_user" example:"root"`
+	Description     string `json:"description" example:"清理临时文件"`
+	RiskLevel       string `json:"risk_level" example:"low"`
+	RequireApproval int8   `json:"require_approval" example:"0"`
 }
 
 // ExecuteTaskRequest 执行任务请求参数。
@@ -145,14 +149,16 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	operatorName := getOperator(c)
 
 	task := &model.Task{
-		Name:          req.Name,
-		TaskType:      req.TaskType,
-		ScriptType:    req.ScriptType,
-		ScriptContent: req.ScriptContent,
-		Timeout:       req.Timeout,
-		RunAsUser:     req.RunAsUser,
-		Description:   req.Description,
-		CreatorID:     operatorID,
+		Name:            req.Name,
+		TaskType:        req.TaskType,
+		ScriptType:      req.ScriptType,
+		ScriptContent:   req.ScriptContent,
+		Timeout:         req.Timeout,
+		RunAsUser:       req.RunAsUser,
+		Description:     req.Description,
+		RiskLevel:       req.RiskLevel,
+		RequireApproval: req.RequireApproval,
+		CreatorID:       operatorID,
 	}
 
 	if err := h.svc.Create(task); err != nil {
@@ -190,13 +196,15 @@ func (h *TaskHandler) Update(c *gin.Context) {
 
 	operatorName := getOperator(c)
 	updates := &model.Task{
-		Name:          req.Name,
-		TaskType:      req.TaskType,
-		ScriptType:    req.ScriptType,
-		ScriptContent: req.ScriptContent,
-		Timeout:       req.Timeout,
-		RunAsUser:     req.RunAsUser,
-		Description:   req.Description,
+		Name:            req.Name,
+		TaskType:        req.TaskType,
+		ScriptType:      req.ScriptType,
+		ScriptContent:   req.ScriptContent,
+		Timeout:         req.Timeout,
+		RunAsUser:       req.RunAsUser,
+		Description:     req.Description,
+		RiskLevel:       req.RiskLevel,
+		RequireApproval: req.RequireApproval,
 	}
 
 	if err := h.svc.Update(id, updates); err != nil {

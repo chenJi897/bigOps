@@ -315,6 +315,7 @@ func Setup(mode string) *gin.Engine {
 			authGroup.GET("/inspection/records/:id/report/export", inspectionHandler.ExportRecordReport)
 			authGroup.GET("/inspection/templates/:id/trend", inspectionHandler.TemplateTrend)
 			authGroup.GET("/inspection/records/diff", inspectionHandler.DiffRecords)
+			authGroup.GET("/inspection/health-scores", inspectionHandler.HealthScores)
 			authGroup.GET("/alert-events/:id/topology", alertRuleHandler.TopologyView)
 			authGroup.POST("/alert-events/change-risk", alertRuleHandler.ChangeRiskAssessment)
 			authGroup.GET("/agents", taskHandler.ListAgents)

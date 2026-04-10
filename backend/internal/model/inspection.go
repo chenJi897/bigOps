@@ -9,6 +9,7 @@ type InspectionTemplate struct {
 	TaskID            int64          `gorm:"not null" json:"task_id"`
 	RemediationTaskID int64          `gorm:"default:0" json:"remediation_task_id"`
 	DefaultHosts      string         `gorm:"type:json" json:"default_hosts"`
+	MaxRetries        int            `gorm:"default:0" json:"max_retries"`
 	Enabled           int8           `gorm:"default:1" json:"enabled"`
 	CreatedBy    int64          `gorm:"not null;default:0" json:"created_by"`
 	UpdatedBy    int64          `gorm:"not null;default:0" json:"updated_by"`
