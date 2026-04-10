@@ -13,3 +13,17 @@ backend/cmd/_*/
 frontend/test-results/
 CLAUDE.md
 AGENTS.md
+
+# 本地截图、对话导出等勿提交
+/conversation-*.txt
+/alert-events*.png
+/tpl-*.png
+/login-screenshot.png
+/task-templates-page.png
+/current-state.png
+/current-login-page
+/full-page-after-load
+/login-page-final
+/login-page-snapshot
+artifacts/
+frontend/.env
