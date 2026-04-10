@@ -325,6 +325,11 @@ export const taskApi = {
     api.post(`/task-executions/${id}/retry`, host_ips?.length ? { host_ips } : {}, { params: { scope } }),
   executionReportUrl: (id: number, format: 'markdown' | 'json' = 'markdown') =>
     `/api/v1/task-executions/${id}/report?format=${format}`,
+  requestApproval: (id: number, host_ips: string[]) => api.post(`/tasks/${id}/request-approval`, { host_ips }),
+  taskApprovals: (id: number) => api.get(`/tasks/${id}/approvals`),
+  pendingApprovals: (page = 1, size = 20) => api.get('/task-approvals/pending', { params: { page, size } }),
+  approveTask: (id: number, comment = '') => api.post(`/task-approvals/${id}/approve`, { comment }),
+  rejectTask: (id: number, comment: string) => api.post(`/task-approvals/${id}/reject`, { comment }),
 }
 
 // Agent 管理

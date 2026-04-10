@@ -1039,22 +1039,41 @@ func (s *AlertService) EscalateUnacknowledged() {
 	}
 }
 
-// CheckSLATimeouts finds assigned alerts past SLA deadline and logs a reminder activity.
+// CheckSLATimeouts finds assigned alerts past SLA deadline, logs activity and sends notification.
 func (s *AlertService) CheckSLATimeouts() {
 	events, _ := s.eventRepo.ListAssignedPastSLA()
 	for _, event := range events {
+		slaNote := fmt.Sprintf("SLA 已超时（截止: %s），请尽快处理", time.Time(*event.SLADeadlineAt).Format("2006-01-02 15:04:05"))
 		if err := s.activityRepo.Create(&model.AlertEventActivity{
 			EventID:    event.ID,
 			Action:     "sla_breach",
 			FromStatus: event.Status,
 			ToStatus:   event.Status,
 			OperatorID: 0,
-			Note:       fmt.Sprintf("SLA 已超时（截止: %s），请尽快处理", time.Time(*event.SLADeadlineAt).Format("2006-01-02 15:04:05")),
+			Note:       slaNote,
 		}); err != nil {
 			logger.Warn("sla breach activity create failed", zap.Error(err))
 		}
 		event.Escalated = 2
 		_ = s.eventRepo.Update(event)
+
+		if event.AssigneeID > 0 {
+			if notifyID, notifyErr := s.notifySvc.Publish(NotificationPublishRequest{
+				EventType: "sla_breach",
+				BizType:   "alert_event",
+				BizID:     event.ID,
+				Title:     fmt.Sprintf("SLA 超时催办：%s", event.RuleName),
+				Content:   fmt.Sprintf("告警 #%d（%s）已超过 SLA 截止时间，请立即处理。", event.ID, event.RuleName),
+				Level:     "error",
+				UserIDs:   []int64{event.AssigneeID},
+				Channels:  []string{"in_app"},
+			}); notifyErr != nil {
+				logger.Warn("sla breach notification failed", zap.Error(notifyErr))
+			} else if notifyID > 0 {
+				s.notifySvc.DispatchEventAsync(notifyID)
+			}
+		}
+
 		logger.Warn("alert SLA breached", zap.Int64("event_id", event.ID), zap.Int64("assignee", event.AssigneeID))
 	}
 }

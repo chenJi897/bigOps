@@ -406,6 +406,152 @@ func (h *TaskHandler) RetryExecution(c *gin.Context) {
 	response.SuccessWithMessage(c, "重试已创建", exec)
 }
 
+// RequestApproval 申请任务审批。
+// @Summary 申请任务审批
+// @Tags 任务管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "任务ID"
+// @Success 200 {object} response.Response
+// @Router /tasks/{id}/request-approval [post]
+func (h *TaskHandler) RequestApproval(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	var req struct {
+		HostIPs []string `json:"host_ips"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	userID, _ := c.Get("userID")
+	operatorID, _ := userID.(int64)
+	operatorName := getOperator(c)
+
+	approval, err := h.svc.RequestApproval(id, operatorID, req.HostIPs)
+	if err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	logger.Info("任务审批申请", zap.String("operator", operatorName), zap.Int64("task_id", id))
+	c.Set("audit_action", "request_approval")
+	c.Set("audit_resource", "task")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", "申请任务审批")
+	response.SuccessWithMessage(c, "审批申请已提交", approval)
+}
+
+// ListPendingApprovals 待审批列表。
+// @Summary 待审批列表
+// @Tags 任务管理
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Success 200 {object} response.Response
+// @Router /task-approvals/pending [get]
+func (h *TaskHandler) ListPendingApprovals(c *gin.Context) {
+	page, size := parsePageSize(c)
+	items, total, err := h.svc.ListPendingApprovals(page, size)
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Page(c, items, total, page, size)
+}
+
+// ListTaskApprovals 任务审批记录。
+// @Summary 任务审批记录
+// @Tags 任务管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "任务ID"
+// @Success 200 {object} response.Response
+// @Router /tasks/{id}/approvals [get]
+func (h *TaskHandler) ListTaskApprovals(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	items, err := h.svc.ListTaskApprovals(id)
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, items)
+}
+
+// ApproveExecution 审批通过。
+// @Summary 审批通过
+// @Tags 任务管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "审批ID"
+// @Success 200 {object} response.Response
+// @Router /task-approvals/{id}/approve [post]
+func (h *TaskHandler) ApproveExecution(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	var req struct {
+		Comment string `json:"comment"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	userID, _ := c.Get("userID")
+	operatorID, _ := userID.(int64)
+	operatorName := getOperator(c)
+
+	if err := h.svc.ApproveTask(id, operatorID, req.Comment); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	logger.Info("任务审批通过", zap.String("operator", operatorName), zap.Int64("approval_id", id))
+	c.Set("audit_action", "approve")
+	c.Set("audit_resource", "task_approval")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", "任务审批通过")
+	response.SuccessWithMessage(c, "审批通过", nil)
+}
+
+// RejectExecution 审批拒绝。
+// @Summary 审批拒绝
+// @Tags 任务管理
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "审批ID"
+// @Success 200 {object} response.Response
+// @Router /task-approvals/{id}/reject [post]
+func (h *TaskHandler) RejectExecution(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	var req struct {
+		Comment string `json:"comment" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请填写拒绝原因")
+		return
+	}
+	userID, _ := c.Get("userID")
+	operatorID, _ := userID.(int64)
+	operatorName := getOperator(c)
+
+	if err := h.svc.RejectTask(id, operatorID, req.Comment); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	logger.Info("任务审批拒绝", zap.String("operator", operatorName), zap.Int64("approval_id", id))
+	c.Set("audit_action", "reject")
+	c.Set("audit_resource", "task_approval")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", "任务审批拒绝: "+req.Comment)
+	response.SuccessWithMessage(c, "审批已拒绝", nil)
+}
+
 func classifyTaskExecErrorCode(err error) int {
 	if err == nil {
 		return 0

@@ -43,15 +43,21 @@
       </el-table-column>
       <el-table-column prop="timeout" label="超时(s)" width="80" align="center" />
       <el-table-column prop="run_as_user" label="执行用户" width="90" />
+      <el-table-column label="风险" width="90" align="center">
+        <template #default="{ row }">
+          <el-tag :type="riskTagType(row.risk_level)" size="small">{{ riskLabel(row.risk_level) }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="80" align="center">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="created_at" label="创建时间" width="160" />
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="260" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link size="small" @click="openEditDialog(row)">编辑</el-button>
+          <el-button v-if="row.require_approval === 1" type="warning" link size="small" @click="requestApproval(row)">申请审批</el-button>
           <el-button type="success" link size="small" @click="openExecuteDialog(row)">执行</el-button>
           <el-button type="danger" link size="small" @click="deleteTask(row)">删除</el-button>
         </template>
@@ -210,6 +216,30 @@ function taskTypeLabel(t: string) {
   return m[t] || t
 }
 
+function riskLabel(level: string) {
+  const m: Record<string, string> = { low: '低', medium: '中', high: '高', critical: '极高' }
+  return m[level] || level || '低'
+}
+
+function riskTagType(level: string) {
+  const m: Record<string, string> = { low: 'success', medium: 'warning', high: 'danger', critical: 'danger' }
+  return m[level] || 'info'
+}
+
+async function requestApproval(row: any) {
+  try {
+    await ElMessageBox.confirm(
+      `任务「${row.name}」为${riskLabel(row.risk_level)}风险，需要审批后才能执行。是否提交审批申请？`,
+      '审批确认',
+      { type: 'warning', confirmButtonText: '提交审批', cancelButtonText: '取消' }
+    )
+    await taskApi.requestApproval(row.id, [])
+    ElMessage.success('审批申请已提交，请等待管理员审批')
+  } catch (e: any) {
+    if (e !== 'cancel' && e?.message) ElMessage.error(e.message)
+  }
+}
+
 async function loadTasks() {
   loading.value = true
   try {
@@ -301,6 +331,16 @@ async function deleteTask(row: any) {
 }
 
 function openExecuteDialog(row: any) {
+  if (row.require_approval === 1) {
+    ElMessageBox.confirm(
+      `任务「${row.name}」为${riskLabel(row.risk_level)}风险，需审批通过后才能执行。确定继续？`,
+      '风险提示',
+      { type: 'warning', confirmButtonText: '继续', cancelButtonText: '取消' }
+    ).then(() => {
+      execTask.value = row; execHostsText.value = ''; execVisible.value = true
+    }).catch(() => {})
+    return
+  }
   execTask.value = row; execHostsText.value = ''; execVisible.value = true
 }
 

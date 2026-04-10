@@ -47,6 +47,7 @@ type InspectionRecord struct {
 	TemplateID      int64          `gorm:"index" json:"template_id"`
 	TaskExecutionID int64          `gorm:"index" json:"task_execution_id"`
 	Status          string         `gorm:"size:32;index;default:running" json:"status"`
+	RetryCount      int            `gorm:"default:0" json:"retry_count"`
 	StartedAt       *LocalTime     `json:"started_at,omitempty"`
 	FinishedAt      *LocalTime     `json:"finished_at,omitempty"`
 	ReportJSON      string         `gorm:"type:json" json:"report_json"`

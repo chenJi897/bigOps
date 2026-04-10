@@ -21,19 +21,21 @@ import (
 
 // TaskService handles task CRUD and execution dispatch.
 type TaskService struct {
-	taskRepo  *repository.TaskRepository
-	execRepo  *repository.TaskExecutionRepository
-	agentRepo *repository.AgentRepository
-	userRepo  *repository.UserRepository
+	taskRepo     *repository.TaskRepository
+	execRepo     *repository.TaskExecutionRepository
+	agentRepo    *repository.AgentRepository
+	userRepo     *repository.UserRepository
+	approvalRepo *repository.TaskApprovalRepository
 }
 
 // NewTaskService creates a new TaskService.
 func NewTaskService() *TaskService {
 	return &TaskService{
-		taskRepo:  repository.NewTaskRepository(),
-		execRepo:  repository.NewTaskExecutionRepository(),
-		agentRepo: repository.NewAgentRepository(),
-		userRepo:  repository.NewUserRepository(),
+		taskRepo:     repository.NewTaskRepository(),
+		execRepo:     repository.NewTaskExecutionRepository(),
+		agentRepo:    repository.NewAgentRepository(),
+		userRepo:     repository.NewUserRepository(),
+		approvalRepo: repository.NewTaskApprovalRepository(),
 	}
 }
 
@@ -196,6 +198,12 @@ func (s *TaskService) executeTask(taskID int64, hostIPs []string, operatorID int
 	}
 	if task.Status != 1 {
 		return nil, errors.New("任务已禁用")
+	}
+	if task.RequireApproval == 1 {
+		approved, err := s.approvalRepo.FindLatestApprovedByTask(taskID)
+		if err != nil || approved.ID == 0 {
+			return nil, errors.New("该任务需要审批，当前不允许直接执行")
+		}
 	}
 	if len(hostIPs) == 0 {
 		return nil, errors.New("目标主机列表不能为空")
@@ -589,6 +597,93 @@ func (s *TaskService) getUserName(id int64) string {
 		return user.Username
 	}
 	return ""
+}
+
+// ---------- Approval ----------
+
+// RequestApproval creates a pending approval request for a high-risk task.
+func (s *TaskService) RequestApproval(taskID int64, requestorID int64, hostIPs []string) (*model.TaskApproval, error) {
+	task, err := s.taskRepo.GetTask(taskID)
+	if err != nil {
+		return nil, errors.New("任务不存在")
+	}
+	if task.RequireApproval != 1 {
+		return nil, errors.New("该任务不需要审批")
+	}
+	if existing, err := s.approvalRepo.FindPendingByTask(taskID); err == nil && existing.ID > 0 {
+		return nil, errors.New("该任务已有待审批的申请")
+	}
+	hostsJSON, _ := json.Marshal(hostIPs)
+	approval := &model.TaskApproval{
+		TaskID:      taskID,
+		RequestorID: requestorID,
+		Status:      model.TaskApprovalStatusPending,
+		HostIPs:     string(hostsJSON),
+	}
+	if err := s.approvalRepo.Create(approval); err != nil {
+		return nil, err
+	}
+	approval.TaskName = task.Name
+	return approval, nil
+}
+
+// ApproveTask approves a pending task approval request.
+func (s *TaskService) ApproveTask(approvalID int64, approverID int64, comment string) error {
+	approval, err := s.approvalRepo.GetByID(approvalID)
+	if err != nil {
+		return errors.New("审批记录不存在")
+	}
+	if approval.Status != model.TaskApprovalStatusPending {
+		return errors.New("该审批已处理")
+	}
+	approval.Status = model.TaskApprovalStatusApproved
+	approval.ApproverID = approverID
+	approval.Comment = comment
+	logger.Info("task approval approved",
+		zap.Int64("approval_id", approvalID),
+		zap.Int64("task_id", approval.TaskID),
+		zap.Int64("approver_id", approverID),
+	)
+	return s.approvalRepo.Update(approval)
+}
+
+// RejectTask rejects a pending task approval request.
+func (s *TaskService) RejectTask(approvalID int64, approverID int64, comment string) error {
+	approval, err := s.approvalRepo.GetByID(approvalID)
+	if err != nil {
+		return errors.New("审批记录不存在")
+	}
+	if approval.Status != model.TaskApprovalStatusPending {
+		return errors.New("该审批已处理")
+	}
+	approval.Status = model.TaskApprovalStatusRejected
+	approval.ApproverID = approverID
+	approval.Comment = comment
+	logger.Info("task approval rejected",
+		zap.Int64("approval_id", approvalID),
+		zap.Int64("task_id", approval.TaskID),
+		zap.Int64("approver_id", approverID),
+	)
+	return s.approvalRepo.Update(approval)
+}
+
+// ListPendingApprovals returns paginated pending approval records.
+func (s *TaskService) ListPendingApprovals(page, size int) ([]*model.TaskApproval, int64, error) {
+	items, total, err := s.approvalRepo.ListPending(page, size)
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, item := range items {
+		if task, e := s.taskRepo.GetTask(item.TaskID); e == nil {
+			item.TaskName = task.Name
+		}
+	}
+	return items, total, nil
+}
+
+// ListTaskApprovals returns all approval records for a specific task.
+func (s *TaskService) ListTaskApprovals(taskID int64) ([]*model.TaskApproval, error) {
+	return s.approvalRepo.ListByTask(taskID)
 }
 
 // GenerateMarkdownReport produces a human-readable Markdown report from an execution record.

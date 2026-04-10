@@ -75,6 +75,11 @@ func (s *InspectionService) UpsertPlan(id int64, req *model.InspectionPlan) erro
 	if req.CronExpr == "" {
 		return errors.New("cron 表达式不能为空")
 	}
+	if req.Enabled != 0 {
+		if err := s.CheckPlanConflict(req.TemplateID, req.CronExpr, id); err != nil {
+			return err
+		}
+	}
 	if id == 0 {
 		return s.repo.CreatePlan(req)
 	}
@@ -251,7 +256,51 @@ func (s *InspectionService) SyncRecordStatus(executionID int64) {
 			alertEvent.TicketID = ticket.ID
 			_ = s.eventRepo.Update(alertEvent)
 		}
+
+		s.autoRetryIfAllowed(record)
 	}
+}
+
+// autoRetryIfAllowed triggers a retry execution if the template allows retries and the record hasn't exhausted its retry limit.
+func (s *InspectionService) autoRetryIfAllowed(record *model.InspectionRecord) {
+	tpl, err := s.repo.GetTemplate(record.TemplateID)
+	if err != nil || tpl.MaxRetries <= 0 {
+		return
+	}
+	if record.RetryCount >= tpl.MaxRetries {
+		return
+	}
+	plan, err := s.repo.GetPlan(record.PlanID)
+	if err != nil {
+		return
+	}
+	hosts := make([]string, 0)
+	_ = json.Unmarshal([]byte(tpl.DefaultHosts), &hosts)
+	if len(hosts) == 0 {
+		return
+	}
+	retryExec, err := s.taskSvc.ExecuteTask(tpl.TaskID, hosts, 0)
+	if err != nil {
+		return
+	}
+	now := model.LocalTime(time.Now())
+	retryRecord := &model.InspectionRecord{
+		PlanID:          plan.ID,
+		TemplateID:      tpl.ID,
+		TaskExecutionID: retryExec.ID,
+		Status:          "running",
+		RetryCount:      record.RetryCount + 1,
+		StartedAt:       &now,
+	}
+	retryPayload, _ := json.Marshal(map[string]interface{}{
+		"retry_from":    record.ID,
+		"retry_count":   retryRecord.RetryCount,
+		"max_retries":   tpl.MaxRetries,
+		"template_name": tpl.Name,
+		"status":        "running",
+	})
+	retryRecord.ReportJSON = string(retryPayload)
+	_ = s.repo.CreateRecord(retryRecord)
 }
 
 func (s *InspectionService) ListRecords(page, size int) ([]*model.InspectionRecord, int64, error) {

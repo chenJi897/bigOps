@@ -754,6 +754,7 @@ type AnomalyItem struct {
 	Baseline   float64 `json:"baseline_avg"`
 	StdDev     float64 `json:"std_dev"`
 	ZScore     float64 `json:"z_score"`
+	Category   string  `json:"category"` // spike/drop/sustained_high/capacity_risk
 }
 
 func (s *MonitorService) DetectAnomalies(stddevMultiplier float64) ([]AnomalyItem, error) {
@@ -782,6 +783,7 @@ func (s *MonitorService) DetectAnomalies(stddevMultiplier float64) ([]AnomalyIte
 		current := metricCurrentValue(agent, row.MetricType)
 		zScore := (current - row.AvgValue) / row.StdDev
 		if zScore > stddevMultiplier || zScore < -stddevMultiplier {
+			cat := classifyAnomaly(row.MetricType, current, row.AvgValue, zScore)
 			anomalies = append(anomalies, AnomalyItem{
 				AgentID:    row.AgentID,
 				Hostname:   agent.Hostname,
@@ -791,6 +793,7 @@ func (s *MonitorService) DetectAnomalies(stddevMultiplier float64) ([]AnomalyIte
 				Baseline:   round2(row.AvgValue),
 				StdDev:     round2(row.StdDev),
 				ZScore:     round2(zScore),
+				Category:   cat,
 			})
 		}
 	}
@@ -880,4 +883,23 @@ func (s *MonitorService) PredictCapacity(metricType string, threshold float64) (
 
 func round2(v float64) float64 {
 	return float64(int(v*100+0.5)) / 100
+}
+
+func classifyAnomaly(metricType string, current, baseline, zScore float64) string {
+	if current > 90 && (metricType == "cpu_usage" || metricType == "memory_usage" || metricType == "disk_usage") {
+		return "capacity_risk"
+	}
+	if zScore > 3 {
+		return "spike"
+	}
+	if zScore < -3 {
+		return "drop"
+	}
+	if current > baseline*1.3 {
+		return "sustained_high"
+	}
+	if zScore > 0 {
+		return "spike"
+	}
+	return "drop"
 }

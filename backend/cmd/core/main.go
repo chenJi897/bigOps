@@ -129,6 +129,7 @@ func main() {
 			&model.InspectionTemplate{},
 			&model.InspectionPlan{},
 			&model.InspectionRecord{},
+			&model.TaskApproval{},
 		); err != nil {
 			logger.Fatal("Failed to migrate database", zap.Error(err))
 		}
