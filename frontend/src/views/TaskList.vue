@@ -128,7 +128,7 @@ async function fetchHistory() {
 
 function openExecution(row: any) {
   historyVisible.value = false
-  router.push('/task/execution/' + row.id)
+  router.push('/task/executions/' + row.id)
 }
 
 onMounted(() => { fetchData() })

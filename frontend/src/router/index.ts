@@ -287,12 +287,13 @@ function ensureCompanionRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
   })
 
   // 任务中心固定路由（不依赖后端动态菜单）
+  // componentName 用 TaskList 以匹配数据库 task_list 菜单，避免重复注册
   ensureHiddenRoute(nextRoutes, {
     path: 'task/templates',
     name: 'TaskTemplates',
     component: viewModules.TaskTemplates,
     title: '任务模板',
-    componentName: 'TaskTemplates',
+    componentName: 'TaskList',
     activeMenu: '/task',
   })
 

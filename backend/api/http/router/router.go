@@ -310,11 +310,11 @@ func Setup(mode string) *gin.Engine {
 		}
 
 		// WebSocket 路由（认证但不审计）
+		wsTaskHandler := handler.NewTaskHandler()
 		wsGroup := v1.Group("")
 		wsGroup.Use(middleware.AuthMiddleware())
 		{
-			taskHandler := handler.NewTaskHandler()
-			wsGroup.GET("/ws/task-executions/:id/logs", taskHandler.WSLogs)
+			wsGroup.GET("/ws/task-executions/:id/logs", wsTaskHandler.WSLogs)
 		}
 	}
 

@@ -270,8 +270,10 @@ const successRate = computed(() => {
 })
 const failRate = computed(() => {
   if (!execution.value.total_count) return 0
-  const failCount = Math.max(0, execution.value.total_count - execution.value.success_count)
-  return Math.round((failCount / execution.value.total_count) * 100)
+  const realFailCount = hosts.value.filter(
+    (h: any) => h.status === 'failed' || h.status === 'timeout' || h.status === 'canceled',
+  ).length
+  return Math.round((realFailCount / execution.value.total_count) * 100)
 })
 const avgHostDuration = computed(() => {
   if (!hosts.value.length) return 0
@@ -510,7 +512,6 @@ function openWS(isReconnect = false) {
       }
       applyRealtimeHostUpdate(payload)
       if (payload.phase === 'error') {
-        execution.value.status = 'failed'
         refreshExecutionDetail().catch(() => {})
       }
       if (payload.phase === 'finished' || payload.phase === 'success') {

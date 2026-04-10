@@ -380,14 +380,22 @@ func (s *TaskService) ListExecutions(taskID int64, page, size int) ([]*model.Tas
 	if err != nil {
 		return nil, 0, err
 	}
-	// Fill names
-	nameMap := make(map[int64]string)
+	operatorNameMap := make(map[int64]string)
+	taskNameMap := make(map[int64]string)
 	for _, item := range items {
 		if item.OperatorID > 0 {
-			if _, ok := nameMap[item.OperatorID]; !ok {
-				nameMap[item.OperatorID] = s.getUserName(item.OperatorID)
+			if _, ok := operatorNameMap[item.OperatorID]; !ok {
+				operatorNameMap[item.OperatorID] = s.getUserName(item.OperatorID)
 			}
-			item.OperatorName = nameMap[item.OperatorID]
+			item.OperatorName = operatorNameMap[item.OperatorID]
+		}
+		if item.TaskID > 0 {
+			if _, ok := taskNameMap[item.TaskID]; !ok {
+				if t, err := s.taskRepo.GetTask(item.TaskID); err == nil {
+					taskNameMap[item.TaskID] = t.Name
+				}
+			}
+			item.TaskName = taskNameMap[item.TaskID]
 		}
 	}
 	return items, total, nil
@@ -507,10 +515,11 @@ func (s *TaskService) RetryExecution(id int64, operatorID int64, scope string, o
 }
 
 func truncateRunes(s string, max int) string {
-	if max <= 0 || len(s) <= max {
+	r := []rune(s)
+	if max <= 0 || len(r) <= max {
 		return s
 	}
-	return s[:max]
+	return string(r[:max])
 }
 
 func (s *TaskService) getUserName(id int64) string {

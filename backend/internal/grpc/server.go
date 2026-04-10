@@ -338,14 +338,15 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 
 		switch phase {
 		case "running":
-			// Mark as running if still pending
+			if hr.Status == "canceled" {
+				continue
+			}
 			updates := map[string]interface{}{}
 			if hr.Status == "pending" {
 				updates["status"] = "running"
 				now := model.LocalTime(time.Now())
 				updates["started_at"] = &now
 			}
-			// Atomic append output using CONCAT to avoid race conditions
 			appendLine := outputLine + "\n"
 			if isStderr {
 				updates["stderr"] = gorm.Expr("CONCAT(COALESCE(stderr,''), ?)", appendLine)
@@ -367,11 +368,16 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 			})
 
 		case "finished", "error":
-			// Final update（基于最新库内记录计算耗时，避免 StartedAt 在 running 阶段才写入）
 			hrLatest, errHR := s.execRepo.GetHostResult(hostResultID)
 			if errHR != nil {
 				logger.Warn("reload host result failed", zap.Int64("host_result_id", hostResultID), zap.Error(errHR))
 				hrLatest = hr
+			}
+			if hrLatest.Status == "canceled" {
+				logger.Info("skipping finished report for canceled host result",
+					zap.Int64("host_result_id", hostResultID), zap.String("phase", phase))
+				s.checkExecutionCompletion(hrLatest.ExecutionID)
+				continue
 			}
 			finishTime := time.Now()
 			now := model.LocalTime(finishTime)
@@ -394,7 +400,6 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 			} else {
 				finalUpdates["status"] = "failed"
 			}
-			// Append any remaining output
 			if outputLine != "" {
 				appendLine := outputLine + "\n"
 				if isStderr {
@@ -403,7 +408,9 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 					finalUpdates["stdout"] = gorm.Expr("CONCAT(COALESCE(stdout,''), ?)", appendLine)
 				}
 			}
-			if err := database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hrLatest.ID).Updates(finalUpdates).Error; err != nil {
+			if err := database.GetDB().Model(&model.TaskHostResult{}).
+				Where("id = ? AND status != 'canceled'", hrLatest.ID).
+				Updates(finalUpdates).Error; err != nil {
 				logger.Warn("update host result final status failed", zap.Int64("host_result_id", hrLatest.ID), zap.Error(err))
 			}
 			doneCount, totalCount, successCount, failCount := s.getExecutionProgressCounts(hrLatest.ExecutionID)
