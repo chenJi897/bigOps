@@ -235,6 +235,10 @@ export const monitorApi = {
   goldenSignals: (minutes = 60) => api.get('/monitor/golden-signals', { params: { minutes } }),
   goldenSignalsDimensions: (minutes = 60, dimension: 'service' | 'interface' | 'instance' = 'service') =>
     api.get('/monitor/golden-signals/dimensions', { params: { minutes, dimension } }),
+  sloConfig: () => api.get('/monitor/slo-config'),
+  updateSloConfig: (data: { target_availability?: number; target_latency_ms?: number }) => api.post('/monitor/slo-config', data),
+  anomalies: (params?: { stddev_multiplier?: number }) => api.get('/monitor/anomalies', { params }),
+  capacityPrediction: (params?: { metric_type?: string; threshold?: number }) => api.get('/monitor/capacity-prediction', { params }),
 }
 
 export const alertSilenceApi = {
@@ -302,13 +306,6 @@ export const alertRuleApi = {
   assignEvent: (id: number, assigneeId: number) => api.post(`/alert-events/${id}/assign`, { assignee_id: assigneeId }),
   eventTopology: (id: number) => api.get(`/alert-events/${id}/topology`),
   changeRisk: (data: { task_id: number; hosts: string[] }) => api.post('/alert-events/change-risk', data),
-}
-
-export const monitorApi = {
-  sloConfig: () => api.get('/monitor/slo-config'),
-  updateSloConfig: (data: { target_availability?: number; target_latency_ms?: number }) => api.post('/monitor/slo-config', data),
-  anomalies: (params?: { stddev_multiplier?: number }) => api.get('/monitor/anomalies', { params }),
-  capacityPrediction: (params?: { metric_type?: string; threshold?: number }) => api.get('/monitor/capacity-prediction', { params }),
 }
 
 // 任务管理
