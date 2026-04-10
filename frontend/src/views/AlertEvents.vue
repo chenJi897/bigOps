@@ -204,14 +204,14 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
 </script>
 
 <template>
-  <div class="bg-slate-50 -m-5">
+  <div class="bg-slate-50 -m-5 alert-events-root">
     <!-- 顶部：标题 + 操作 -->
     <div class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-4">
       <h1 class="text-lg font-bold text-slate-800 whitespace-nowrap">告警事件</h1>
       <div class="flex items-center gap-2 flex-wrap">
         <el-radio-group v-model="viewMode" size="small">
-          <el-radio-button label="events">事件视图</el-radio-button>
-          <el-radio-button label="groups">收敛分组</el-radio-button>
+          <el-radio-button value="events">事件视图</el-radio-button>
+          <el-radio-button value="groups">收敛分组</el-radio-button>
         </el-radio-group>
         <el-select v-if="viewMode === 'groups'" v-model="groupWindowMinutes" class="!w-32" size="small" @change="fetchEvents()">
           <el-option :value="1" label="1分钟窗口" />
@@ -400,9 +400,8 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
         </div>
       </div>
     </div>
-  </div>
 
-  <el-drawer v-model="timelineVisible" title="告警时间轴" size="36%">
+  <el-drawer v-model="timelineVisible" title="告警时间轴" size="36%" append-to-body>
     <div v-loading="timelineLoading">
       <template v-if="timelineData">
         <div class="mb-3 text-xs text-slate-500">规则：{{ timelineData.rule_name }}，关联事件数：{{ timelineData.related_count }}</div>
@@ -422,7 +421,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
     </div>
   </el-drawer>
 
-  <el-drawer v-model="rootCauseVisible" title="根因分析" size="36%">
+  <el-drawer v-model="rootCauseVisible" title="根因分析" size="36%" append-to-body>
     <div v-loading="rootCauseLoading">
       <template v-if="rootCauseData">
         <el-descriptions :column="1" border>
@@ -451,6 +450,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
       <el-empty v-else description="暂无数据" />
     </div>
   </el-drawer>
+  </div>
 </template>
 
 <style scoped>
