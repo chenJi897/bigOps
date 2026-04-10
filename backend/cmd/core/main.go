@@ -125,6 +125,7 @@ func main() {
 			&model.CICDPipeline{},
 			&model.CICDPipelineRun{},
 			&model.MonitorDatasource{},
+			&model.AlertEventActivity{},
 			&model.InspectionTemplate{},
 			&model.InspectionPlan{},
 			&model.InspectionRecord{},
@@ -137,6 +138,10 @@ func main() {
 	// 幂等种子：任务中心「执行记录」菜单写入 DB（侧栏依赖 menus 表；仅加迁移文件不会自动执行）
 	if err := bootstrap.EnsureTaskExecutionsMenu(database.GetDB()); err != nil {
 		logger.Warn("EnsureTaskExecutionsMenu failed", zap.Error(err))
+	}
+	// 幂等种子：巡检中心菜单写入 DB（用于浏览器 E2E 验证巡检闭环）
+	if err := bootstrap.EnsureInspectionMenus(database.GetDB()); err != nil {
+		logger.Warn("EnsureInspectionMenus failed", zap.Error(err))
 	}
 
 	// 初始化 Casbin 权限引擎
@@ -168,6 +173,12 @@ func main() {
 		logger.Fatal("Failed to start gRPC server", zap.Error(err))
 	}
 	logger.Info(fmt.Sprintf("gRPC server started on :%d", grpcPort))
+
+	// 注册执行完成回调：巡检记录状态回写
+	inspSvc := service.NewInspectionService()
+	grpcserver.GetAgentManager().OnExecutionComplete(func(executionID int64) {
+		inspSvc.SyncRecordStatus(executionID)
+	})
 
 	// 6. 初始化 HTTP 路由并启动服务
 	r := router.Setup(cfg.Server.Mode)

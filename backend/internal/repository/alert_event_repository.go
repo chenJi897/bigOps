@@ -133,6 +133,58 @@ func (r *AlertEventRepository) ListLatest(limit int) ([]*model.AlertEvent, error
 	return items, nil
 }
 
+type AlertEventGroupRow struct {
+	RuleID       int64   `json:"rule_id"`
+	RuleName     string  `json:"rule_name"`
+	Severity     string  `json:"severity"`
+	AgentID      string  `json:"agent_id"`
+	Status       string  `json:"status"`
+	TotalCount   int64   `json:"total_count"`
+	FirstAt      string  `json:"first_triggered_at"`
+	LastAt       string  `json:"last_triggered_at"`
+	LatestID     int64   `json:"latest_event_id"`
+	LatestHost   string  `json:"latest_host"`
+}
+
+func (r *AlertEventRepository) GroupByFingerprint(q AlertEventListQuery) ([]AlertEventGroupRow, int64, error) {
+	db := database.GetDB().Table("alert_events").
+		Select(`rule_id, rule_name, severity, agent_id,
+			MAX(status) as status,
+			COUNT(*) as total_count,
+			MIN(triggered_at) as first_at,
+			MAX(triggered_at) as last_at,
+			MAX(id) as latest_id,
+			COALESCE(MAX(hostname),'') as latest_host`).
+		Where("deleted_at IS NULL")
+
+	if q.Status != "" {
+		db = db.Where("status = ?", q.Status)
+	}
+	if q.Severity != "" {
+		db = db.Where("severity = ?", q.Severity)
+	}
+	if q.AgentID != "" {
+		db = db.Where("agent_id = ?", q.AgentID)
+	}
+	if q.Keyword != "" {
+		kw := "%" + q.Keyword + "%"
+		db = db.Where("rule_name LIKE ? OR hostname LIKE ? OR ip LIKE ?", kw, kw, kw)
+	}
+	db = db.Group("rule_id, rule_name, severity, agent_id")
+
+	var total int64
+	if err := database.GetDB().Table("(?) as sub", db).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var rows []AlertEventGroupRow
+	offset := (q.Page - 1) * q.Size
+	if err := db.Order("last_at DESC").Offset(offset).Limit(q.Size).Scan(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
+}
+
 func (r *AlertEventRepository) ListByRuleAgent(ruleID int64, agentID string, limit int) ([]*model.AlertEvent, error) {
 	if limit <= 0 {
 		limit = 50

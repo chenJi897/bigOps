@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bigops/platform/internal/model"
+	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/repository"
 )
 
@@ -456,57 +457,78 @@ func (s *MonitorService) GoldenSignals(windowMinutes int) (*GoldenSignalsSummary
 		windowMinutes = 60
 	}
 	since := time.Now().Add(-time.Duration(windowMinutes) * time.Minute)
-	executions, err := s.taskExecRepo.ListRecent(&since, 1000)
+
+	_ = s.agentRepo.MarkStaleOffline(45 * time.Second)
+	agents, _, _ := s.agentRepo.List(1, 10000, "")
+	onlineCount := int64(0)
+	totalAgents := int64(len(agents))
+	for _, a := range agents {
+		if a.Status == "online" {
+			onlineCount++
+		}
+	}
+
+	threshold := 80.0
+	rows, err := s.sampleRepo.AggregateByWindow(since, threshold)
 	if err != nil {
 		return nil, err
 	}
 
-	var total int64
-	var errorsCount int64
-	var latencySum float64
-	var latencyCount int64
-	for _, exec := range executions {
-		if exec == nil {
-			continue
-		}
-		total++
-		if exec.Status == "failed" || exec.Status == "canceled" {
-			errorsCount++
-		}
-		if exec.StartedAt != nil && exec.FinishedAt != nil {
-			latency := time.Time(*exec.FinishedAt).Sub(time.Time(*exec.StartedAt)).Milliseconds()
-			if latency >= 0 {
-				latencySum += float64(latency)
-				latencyCount++
-			}
+	var totalSamples int64
+	var errorSamples int64
+	var latencyProxy float64
+	for _, row := range rows {
+		totalSamples += row.SampleCnt
+		errorSamples += row.OverThresh
+		if row.MetricType == "cpu_usage" {
+			latencyProxy = row.AvgValue
 		}
 	}
 
 	availability := 100.0
+	if totalAgents > 0 {
+		availability = float64(onlineCount) / float64(totalAgents) * 100
+	}
 	errorRate := 0.0
-	avgLatency := 0.0
+	if totalSamples > 0 {
+		errorRate = float64(errorSamples) / float64(totalSamples) * 100
+	}
 	throughput := 0.0
-	if total > 0 {
-		errorRate = float64(errorsCount) / float64(total) * 100
-		availability = 100 - errorRate
-		throughput = float64(total) / float64(windowMinutes)
+	if windowMinutes > 0 {
+		throughput = float64(totalSamples) / float64(windowMinutes)
 	}
-	if latencyCount > 0 {
-		avgLatency = latencySum / float64(latencyCount)
-	}
+
+	sloAvail := s.getSLOAvailability()
+	sloLatency := s.getSLOLatencyMs()
 
 	return &GoldenSignalsSummary{
 		WindowMinutes:         windowMinutes,
 		AvailabilityPct:       round2(availability),
 		ErrorRatePct:          round2(errorRate),
-		AvgLatencyMs:          round2(avgLatency),
+		AvgLatencyMs:          round2(latencyProxy),
 		ThroughputPerMinute:   round2(throughput),
-		TotalRequests:         total,
-		TotalErrors:           errorsCount,
-		SLOTargetAvailability: 99.9,
-		SLOTargetLatencyMs:    3000,
-		SLOBreached:           availability < 99.9 || avgLatency > 3000,
+		TotalRequests:         totalSamples,
+		TotalErrors:           errorSamples,
+		SLOTargetAvailability: sloAvail,
+		SLOTargetLatencyMs:    sloLatency,
+		SLOBreached:           availability < sloAvail || latencyProxy > sloLatency,
 	}, nil
+}
+
+func (s *MonitorService) getSLOAvailability() float64 {
+	cfg := config.Get()
+	if cfg.SLO.TargetAvailability > 0 {
+		return cfg.SLO.TargetAvailability
+	}
+	return 99.9
+}
+
+func (s *MonitorService) getSLOLatencyMs() float64 {
+	cfg := config.Get()
+	if cfg.SLO.TargetLatencyMs > 0 {
+		return cfg.SLO.TargetLatencyMs
+	}
+	return 3000
 }
 
 func (s *MonitorService) GoldenSignalsByDimension(windowMinutes int, dimension string) ([]GoldenSignalDimensionItem, error) {
@@ -514,78 +536,57 @@ func (s *MonitorService) GoldenSignalsByDimension(windowMinutes int, dimension s
 		windowMinutes = 60
 	}
 	since := time.Now().Add(-time.Duration(windowMinutes) * time.Minute)
-	executions, err := s.taskExecRepo.ListRecent(&since, 2000)
+	dimType := normalizeGoldenDimension(dimension)
+
+	sampleDim := "ip"
+	switch dimType {
+	case "instance":
+		sampleDim = "instance"
+	case "interface", "metric_type":
+		sampleDim = "metric_type"
+	default:
+		sampleDim = "ip"
+	}
+
+	rows, err := s.sampleRepo.AggregateByDimension(since, sampleDim, 80.0)
 	if err != nil {
 		return nil, err
 	}
-	dimType := normalizeGoldenDimension(dimension)
+
 	type agg struct {
 		total      int64
 		errors     int64
-		latencySum float64
-		latencyCnt int64
+		avgValSum  float64
+		avgValCnt  int64
 	}
 	grouped := map[string]*agg{}
-	labelMap := map[string]string{}
-	for _, exec := range executions {
-		if exec == nil {
-			continue
-		}
-		key := "unknown"
-		label := "未知"
-		switch dimType {
-		case "service":
-			key = "task:" + strconv.FormatInt(exec.TaskID, 10)
-			label = s.resolveTaskName(exec.TaskID)
-		case "interface":
-			key = "task_type:" + s.resolveTaskType(exec.TaskID)
-			label = s.resolveTaskTypeLabel(exec.TaskID)
-		case "instance":
-			var hosts []string
-			_ = json.Unmarshal([]byte(exec.TargetHosts), &hosts)
-			if len(hosts) > 0 {
-				key = "host:" + hosts[0]
-				label = hosts[0]
-			}
-		case "operator":
-			key = "operator:" + strconv.FormatInt(exec.OperatorID, 10)
-			label = s.resolveOperatorName(exec.OperatorID)
-		default:
-			key = "task:" + strconv.FormatInt(exec.TaskID, 10)
-			label = s.resolveTaskName(exec.TaskID)
-		}
-		labelMap[key] = label
+	for _, row := range rows {
+		key := row.DimensionKey
 		item := grouped[key]
 		if item == nil {
 			item = &agg{}
 			grouped[key] = item
 		}
-		item.total++
-		if exec.Status == "failed" || exec.Status == "canceled" {
-			item.errors++
-		}
-		if exec.StartedAt != nil && exec.FinishedAt != nil {
-			latency := time.Time(*exec.FinishedAt).Sub(time.Time(*exec.StartedAt)).Milliseconds()
-			if latency >= 0 {
-				item.latencySum += float64(latency)
-				item.latencyCnt++
-			}
-		}
+		item.total += row.SampleCnt
+		item.errors += row.OverThresh
+		item.avgValSum += row.AvgValue * float64(row.SampleCnt)
+		item.avgValCnt += row.SampleCnt
 	}
+
 	result := make([]GoldenSignalDimensionItem, 0, len(grouped))
 	for key, item := range grouped {
-		avg := 0.0
-		if item.latencyCnt > 0 {
-			avg = item.latencySum / float64(item.latencyCnt)
-		}
 		er := 0.0
 		if item.total > 0 {
 			er = float64(item.errors) / float64(item.total) * 100
 		}
+		avg := 0.0
+		if item.avgValCnt > 0 {
+			avg = item.avgValSum / float64(item.avgValCnt)
+		}
 		result = append(result, GoldenSignalDimensionItem{
 			DimensionType: dimType,
 			DimensionKey:  key,
-			DimensionName: firstNonEmptyString(labelMap[key], key),
+			DimensionName: key,
 			TotalRequests: item.total,
 			TotalErrors:   item.errors,
 			ErrorRatePct:  round2(er),

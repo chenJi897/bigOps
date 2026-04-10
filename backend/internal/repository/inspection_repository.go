@@ -109,6 +109,16 @@ func (r *InspectionRepository) GetRecord(id int64) (*model.InspectionRecord, err
 	return &item, nil
 }
 
+func (r *InspectionRepository) GetRecordByExecutionID(executionID int64) (*model.InspectionRecord, error) {
+	var item model.InspectionRecord
+	if err := database.GetDB().
+		Where("task_execution_id = ?", executionID).
+		First(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
 func (r *InspectionRepository) ListRecordsByTemplate(templateID int64, limit int) ([]*model.InspectionRecord, error) {
 	if limit <= 0 {
 		limit = 30

@@ -4,7 +4,7 @@ database:
     auto_migrate: true
     charset: utf8mb4
     database: bigops2
-    host: localhost
+    host: 192.168.0.197
     password: DBB4CuIwxc
     port: 3306
     username: root
@@ -35,9 +35,12 @@ notification:
     retry_scan_interval_seconds: 60
 redis:
     db: 0
-    host: localhost
+    host: 192.168.0.197
     password: foobared
     port: 6379
 server:
     mode: debug
     port: 8080
+slo:
+    target_availability: 99.9
+    target_latency_ms: 3000

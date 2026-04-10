@@ -10,16 +10,22 @@ import (
 
 // Config 根配置结构体，聚合所有子系统的配置。
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Log      LogConfig      `mapstructure:"log"`
-	Encrypt  EncryptConfig  `mapstructure:"encrypt"`
-	Aliyun   AliyunConfig   `mapstructure:"aliyun"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Database     DatabaseConfig     `mapstructure:"database"`
+	Redis        RedisConfig        `mapstructure:"redis"`
+	JWT          JWTConfig          `mapstructure:"jwt"`
+	Log          LogConfig          `mapstructure:"log"`
+	Encrypt      EncryptConfig      `mapstructure:"encrypt"`
+	Aliyun       AliyunConfig       `mapstructure:"aliyun"`
 	Notification NotificationConfig `mapstructure:"notification"`
-	GRPC     GRPCConfig     `mapstructure:"grpc"`
-	Agent    AgentConfig    `mapstructure:"agent"`
+	GRPC         GRPCConfig         `mapstructure:"grpc"`
+	Agent        AgentConfig        `mapstructure:"agent"`
+	SLO          SLOConfig          `mapstructure:"slo"`
+}
+
+type SLOConfig struct {
+	TargetAvailability float64 `mapstructure:"target_availability"` // e.g. 99.9
+	TargetLatencyMs    float64 `mapstructure:"target_latency_ms"`   // e.g. 3000
 }
 
 // GRPCConfig gRPC 服务器配置。

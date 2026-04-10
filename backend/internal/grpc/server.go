@@ -561,6 +561,10 @@ func (s *Server) checkExecutionCompletion(executionID int64) {
 		zap.Int("success", successCount),
 		zap.Int("fail", failCount),
 	)
+
+	safego.Go(func() {
+		mgr.fireCompletionHooks(executionID)
+	})
 }
 
 // StartGRPCServer creates and starts the gRPC server on the given port.

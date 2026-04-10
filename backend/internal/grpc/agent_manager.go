@@ -40,6 +40,9 @@ type LogLine struct {
 }
 
 // AgentManager tracks connected agents and manages WebSocket log subscriptions.
+// ExecutionCompletionFunc is called when a task execution completes.
+type ExecutionCompletionFunc func(executionID int64)
+
 type AgentManager struct {
 	mu     sync.RWMutex
 	agents map[string]*AgentStream // key: agentID
@@ -49,6 +52,9 @@ type AgentManager struct {
 	// WebSocket log subscribers: executionID -> list of channels
 	logSubsMu sync.RWMutex
 	logSubs   map[int64][]chan *LogLine
+
+	completionHooksMu sync.RWMutex
+	completionHooks   []ExecutionCompletionFunc
 }
 
 var manager *AgentManager
@@ -155,6 +161,24 @@ func (m *AgentManager) OnlineCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.agents)
+}
+
+// --- Execution Completion Hooks ---
+
+func (m *AgentManager) OnExecutionComplete(fn ExecutionCompletionFunc) {
+	m.completionHooksMu.Lock()
+	defer m.completionHooksMu.Unlock()
+	m.completionHooks = append(m.completionHooks, fn)
+}
+
+func (m *AgentManager) fireCompletionHooks(executionID int64) {
+	m.completionHooksMu.RLock()
+	hooks := make([]ExecutionCompletionFunc, len(m.completionHooks))
+	copy(hooks, m.completionHooks)
+	m.completionHooksMu.RUnlock()
+	for _, fn := range hooks {
+		fn(executionID)
+	}
 }
 
 // --- WebSocket Log Pub/Sub ---

@@ -79,6 +79,64 @@ func (r *AgentMetricSampleRepository) ListTrend(agentID, metricType string, star
 	return items, nil
 }
 
+type MetricAggRow struct {
+	MetricType string  `json:"metric_type"`
+	AvgValue   float64 `json:"avg_value"`
+	MaxValue   float64 `json:"max_value"`
+	SampleCnt  int64   `json:"sample_count"`
+	OverThresh int64   `json:"over_threshold"`
+}
+
+func (r *AgentMetricSampleRepository) AggregateByWindow(since time.Time, threshold float64) ([]MetricAggRow, error) {
+	var rows []MetricAggRow
+	if err := database.GetDB().Table("agent_metric_samples").
+		Select(`metric_type,
+			AVG(metric_value) as avg_value,
+			MAX(metric_value) as max_value,
+			COUNT(*) as sample_cnt,
+			SUM(CASE WHEN metric_value >= ? THEN 1 ELSE 0 END) as over_thresh`, threshold).
+		Where("collected_at >= ? AND deleted_at IS NULL", since).
+		Group("metric_type").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+type MetricDimensionRow struct {
+	DimensionKey string  `json:"dimension_key"`
+	MetricType   string  `json:"metric_type"`
+	AvgValue     float64 `json:"avg_value"`
+	MaxValue     float64 `json:"max_value"`
+	SampleCnt    int64   `json:"sample_count"`
+	OverThresh   int64   `json:"over_threshold"`
+}
+
+func (r *AgentMetricSampleRepository) AggregateByDimension(since time.Time, dimension string, threshold float64) ([]MetricDimensionRow, error) {
+	dimCol := "agent_id"
+	switch dimension {
+	case "instance":
+		dimCol = "agent_id"
+	case "metric_type":
+		dimCol = "metric_type"
+	default:
+		dimCol = "ip"
+	}
+	var rows []MetricDimensionRow
+	if err := database.GetDB().Table("agent_metric_samples").
+		Select(dimCol+` as dimension_key, metric_type,
+			AVG(metric_value) as avg_value,
+			MAX(metric_value) as max_value,
+			COUNT(*) as sample_cnt,
+			SUM(CASE WHEN metric_value >= ? THEN 1 ELSE 0 END) as over_thresh`, threshold).
+		Where("collected_at >= ? AND deleted_at IS NULL", since).
+		Group(dimCol+", metric_type").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (r *AgentMetricSampleRepository) GetLatestCollectedAt() (*model.LocalTime, error) {
 	var item model.AgentMetricSample
 	if err := database.GetDB().Order("collected_at DESC, id DESC").First(&item).Error; err != nil {

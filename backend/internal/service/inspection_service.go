@@ -125,31 +125,98 @@ func (s *InspectionService) ExecutePlan(planID int64) (*model.InspectionRecord, 
 	if err := s.repo.CreateRecord(record); err != nil {
 		return nil, err
 	}
-	// 巡检与告警联动（第一版）：当执行初始状态非 running 时落一条告警事件。
-	if exec.Status == "failed" || exec.Status == "canceled" {
+	plan.LastRunAt = &now
+	_ = s.repo.UpdatePlan(plan)
+	return record, nil
+}
+
+// SyncRecordStatus 在任务执行完成后回写巡检记录状态、真实报告和告警联动。
+// 由 gRPC checkExecutionCompletion 调用。
+func (s *InspectionService) SyncRecordStatus(executionID int64) {
+	record, err := s.repo.GetRecordByExecutionID(executionID)
+	if err != nil {
+		return
+	}
+	if record.Status != "running" {
+		return
+	}
+	exec, err := s.taskSvc.GetExecution(executionID)
+	if err != nil {
+		return
+	}
+
+	now := model.LocalTime(time.Now())
+	record.Status = exec.Status
+	record.FinishedAt = &now
+
+	hostSummaries := make([]map[string]interface{}, 0, len(exec.HostResults))
+	for _, hr := range exec.HostResults {
+		summary := map[string]interface{}{
+			"host_ip":       hr.HostIP,
+			"hostname":      hr.Hostname,
+			"status":        hr.Status,
+			"exit_code":     hr.ExitCode,
+			"duration_ms":   hr.DurationMs,
+			"error_summary": hr.ErrorSummary,
+		}
+		if len(hr.Stdout) > 1024 {
+			summary["stdout_tail"] = string([]rune(hr.Stdout)[max(0, len([]rune(hr.Stdout))-512):])
+		} else {
+			summary["stdout"] = hr.Stdout
+		}
+		if hr.Stderr != "" {
+			if len(hr.Stderr) > 512 {
+				summary["stderr_tail"] = string([]rune(hr.Stderr)[max(0, len([]rune(hr.Stderr))-256):])
+			} else {
+				summary["stderr"] = hr.Stderr
+			}
+		}
+		hostSummaries = append(hostSummaries, summary)
+	}
+
+	report := map[string]interface{}{
+		"execution_id":  exec.ID,
+		"task_id":       exec.TaskID,
+		"task_name":     exec.TaskName,
+		"status":        exec.Status,
+		"total_count":   exec.TotalCount,
+		"success_count": exec.SuccessCount,
+		"fail_count":    exec.FailCount,
+		"started_at":    exec.StartedAt,
+		"finished_at":   exec.FinishedAt,
+		"host_results":  hostSummaries,
+	}
+	if reportJSON, err := json.Marshal(report); err == nil {
+		record.ReportJSON = string(reportJSON)
+	}
+	_ = s.repo.UpdateRecord(record)
+
+	if exec.Status == "failed" || exec.Status == "partial_fail" || exec.Status == "canceled" {
+		tplName := ""
+		if tpl, err := s.repo.GetTemplate(record.TemplateID); err == nil {
+			tplName = tpl.Name
+		}
+		severity := "warning"
+		if exec.Status == "failed" {
+			severity = "critical"
+		}
 		_ = s.eventRepo.Create(&model.AlertEvent{
 			RuleID:          0,
 			RuleName:        "巡检任务异常",
 			AgentID:         "inspection",
-			Hostname:        tpl.Name,
-			IP:              "",
+			Hostname:        tplName,
 			MetricType:      "inspection_failed",
-			MetricValue:     1,
+			MetricValue:     float64(exec.FailCount),
 			Threshold:       0,
 			Operator:        "gt",
-			Severity:        "warning",
+			Severity:        severity,
 			Action:          model.AlertRuleActionNotifyOnly,
 			Status:          model.AlertEventStatusFiring,
-			Description:     "巡检计划执行失败，请检查任务执行记录",
+			Description:     fmt.Sprintf("巡检执行%s: 成功%d 失败%d 总计%d", exec.Status, exec.SuccessCount, exec.FailCount, exec.TotalCount),
 			TriggeredAt:     now,
-			ServiceTreeID:   0,
-			OwnerID:         0,
 			TaskExecutionID: exec.ID,
 		})
 	}
-	plan.LastRunAt = &now
-	_ = s.repo.UpdatePlan(plan)
-	return record, nil
 }
 
 func (s *InspectionService) ListRecords(page, size int) ([]*model.InspectionRecord, int64, error) {

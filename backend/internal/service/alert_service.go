@@ -19,15 +19,16 @@ import (
 )
 
 type AlertService struct {
-	ruleRepo    *repository.AlertRuleRepository
-	eventRepo   *repository.AlertEventRepository
-	agentRepo   *repository.AgentRepository
-	assetRepo   *repository.AssetRepository
-	silenceRepo *repository.AlertSilenceRepository
-	notifySvc   *NotificationService
-	ticketSvc   *TicketService
-	taskSvc     *TaskService
-	oncallSvc   *OnCallService
+	ruleRepo     *repository.AlertRuleRepository
+	eventRepo    *repository.AlertEventRepository
+	activityRepo *repository.AlertEventActivityRepository
+	agentRepo    *repository.AgentRepository
+	assetRepo    *repository.AssetRepository
+	silenceRepo  *repository.AlertSilenceRepository
+	notifySvc    *NotificationService
+	ticketSvc    *TicketService
+	taskSvc      *TaskService
+	oncallSvc    *OnCallService
 }
 
 type AlertEvaluationSummary struct {
@@ -95,15 +96,16 @@ type AlertEventContext struct {
 
 func NewAlertService() *AlertService {
 	return &AlertService{
-		ruleRepo:    repository.NewAlertRuleRepository(),
-		eventRepo:   repository.NewAlertEventRepository(),
-		agentRepo:   repository.NewAgentRepository(),
-		assetRepo:   repository.NewAssetRepository(),
-		silenceRepo: repository.NewAlertSilenceRepository(),
-		notifySvc:   NewNotificationService(),
-		ticketSvc:   NewTicketService(),
-		taskSvc:     NewTaskService(),
-		oncallSvc:   NewOnCallService(),
+		ruleRepo:     repository.NewAlertRuleRepository(),
+		eventRepo:    repository.NewAlertEventRepository(),
+		activityRepo: repository.NewAlertEventActivityRepository(),
+		agentRepo:    repository.NewAgentRepository(),
+		assetRepo:    repository.NewAssetRepository(),
+		silenceRepo:  repository.NewAlertSilenceRepository(),
+		notifySvc:    NewNotificationService(),
+		ticketSvc:    NewTicketService(),
+		taskSvc:      NewTaskService(),
+		oncallSvc:    NewOnCallService(),
 	}
 }
 
@@ -170,87 +172,32 @@ func (s *AlertService) GetEvent(id int64) (*model.AlertEvent, error) {
 }
 
 func (s *AlertService) ListEventGroups(q repository.AlertEventListQuery, windowMinutes int) ([]*AlertEventGroup, int64, error) {
-	if windowMinutes <= 0 {
-		windowMinutes = 5
-	}
 	if q.Page <= 0 {
 		q.Page = 1
 	}
 	if q.Size <= 0 {
 		q.Size = 20
 	}
-	baseQuery := q
-	baseQuery.Page = 1
-	baseQuery.Size = 1000
-	items, _, err := s.eventRepo.List(baseQuery)
+
+	rows, total, err := s.eventRepo.GroupByFingerprint(q)
 	if err != nil {
 		return nil, 0, err
 	}
-	type acc struct {
-		group *AlertEventGroup
+
+	groups := make([]*AlertEventGroup, 0, len(rows))
+	for _, row := range rows {
+		fp := fmt.Sprintf("%d|%s|%s", row.RuleID, row.Severity, row.AgentID)
+		groups = append(groups, &AlertEventGroup{
+			Fingerprint:    fp,
+			RuleName:       row.RuleName,
+			Severity:       row.Severity,
+			Status:         row.Status,
+			TotalCount:     int(row.TotalCount),
+			LatestEventID:  row.LatestID,
+			LatestHost:     row.LatestHost,
+		})
 	}
-	buckets := make(map[string]*acc)
-	for _, ev := range items {
-		if ev == nil {
-			continue
-		}
-		ts := time.Time(ev.TriggeredAt)
-		slot := ts.Unix() / int64(windowMinutes*60)
-		fp := buildAlertFingerprint(ev)
-		key := fmt.Sprintf("%s:%d", fp, slot)
-		existed, ok := buckets[key]
-		if !ok {
-			buckets[key] = &acc{
-				group: &AlertEventGroup{
-					Fingerprint:    fp,
-					RuleName:       ev.RuleName,
-					Severity:       ev.Severity,
-					Status:         ev.Status,
-					TotalCount:     1,
-					FirstTriggered: ev.TriggeredAt,
-					LastTriggered:  ev.TriggeredAt,
-					LatestEventID:  ev.ID,
-					LatestHost:     firstNonEmptyAlertHost(ev),
-					ServiceTreeID:  ev.ServiceTreeID,
-					OwnerID:        ev.OwnerID,
-				},
-			}
-			continue
-		}
-		g := existed.group
-		g.TotalCount++
-		if time.Time(ev.TriggeredAt).Before(time.Time(g.FirstTriggered)) {
-			g.FirstTriggered = ev.TriggeredAt
-		}
-		if time.Time(ev.TriggeredAt).After(time.Time(g.LastTriggered)) {
-			g.LastTriggered = ev.TriggeredAt
-			g.LatestEventID = ev.ID
-			g.LatestHost = firstNonEmptyAlertHost(ev)
-			g.Status = ev.Status
-		}
-	}
-	groups := make([]*AlertEventGroup, 0, len(buckets))
-	for _, item := range buckets {
-		g := item.group
-		g.DurationSec = int64(time.Time(g.LastTriggered).Sub(time.Time(g.FirstTriggered)).Seconds())
-		if g.DurationSec < 0 {
-			g.DurationSec = 0
-		}
-		groups = append(groups, g)
-	}
-	sort.Slice(groups, func(i, j int) bool {
-		return time.Time(groups[i].LastTriggered).After(time.Time(groups[j].LastTriggered))
-	})
-	total := int64(len(groups))
-	start := (q.Page - 1) * q.Size
-	if start >= len(groups) {
-		return []*AlertEventGroup{}, total, nil
-	}
-	end := start + q.Size
-	if end > len(groups) {
-		end = len(groups)
-	}
-	return groups[start:end], total, nil
+	return groups, total, nil
 }
 
 func (s *AlertService) GetEventTimeline(id int64) (*AlertEventTimeline, error) {
@@ -262,7 +209,10 @@ func (s *AlertService) GetEventTimeline(id int64) (*AlertEventTimeline, error) {
 	if err != nil {
 		return nil, err
 	}
-	items := make([]AlertTimelineItem, 0, 4)
+
+	items := make([]AlertTimelineItem, 0, 16)
+
+	// 当前事件的生命周期节点
 	items = append(items, AlertTimelineItem{
 		Type:      "triggered",
 		Timestamp: &event.TriggeredAt,
@@ -284,6 +234,39 @@ func (s *AlertService) GetEventTimeline(id int64) (*AlertEventTimeline, error) {
 			Operator:  event.ResolvedBy,
 		})
 	}
+
+	// 同规则同主机的关联事件节点
+	for _, rel := range related {
+		if rel.ID == event.ID {
+			continue
+		}
+		items = append(items, AlertTimelineItem{
+			Type:      "related_triggered",
+			Timestamp: &rel.TriggeredAt,
+			Note:      fmt.Sprintf("关联事件 #%d: %s (severity=%s)", rel.ID, rel.Description, rel.Severity),
+		})
+		if rel.ResolvedAt != nil {
+			items = append(items, AlertTimelineItem{
+				Type:      "related_resolved",
+				Timestamp: rel.ResolvedAt,
+				Note:      fmt.Sprintf("关联事件 #%d 已恢复", rel.ID),
+			})
+		}
+	}
+
+	// 状态变更审计记录
+	if activities, err := s.activityRepo.ListByEventID(id); err == nil {
+		for _, act := range activities {
+			ts := act.CreatedAt
+			items = append(items, AlertTimelineItem{
+				Type:      "activity",
+				Timestamp: &ts,
+				Note:      fmt.Sprintf("%s → %s: %s", act.FromStatus, act.ToStatus, act.Note),
+				Operator:  act.OperatorID,
+			})
+		}
+	}
+
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].Timestamp == nil {
 			return false
@@ -312,26 +295,69 @@ func (s *AlertService) AnalyzeRootCause(id int64) (*AlertRootCauseResult, error)
 	if err != nil {
 		return nil, err
 	}
+
 	evidence := []string{
 		fmt.Sprintf("规则=%s", event.RuleName),
 		fmt.Sprintf("主机=%s", firstNonEmptyAlertHost(event)),
 		fmt.Sprintf("指标=%s 当前值=%.2f 阈值=%.2f", event.MetricType, event.MetricValue, event.Threshold),
 	}
-	confidence := 0.65
-	if len(related) >= 3 {
-		confidence = 0.8
-		evidence = append(evidence, fmt.Sprintf("最近存在 %d 条同规则同主机事件，具备持续性特征", len(related)))
+	confidence := 0.50
+	primarySuspect := "unknown"
+
+	// Factor 1: 持续性 — 同规则同主机的近期事件数量
+	if len(related) >= 5 {
+		confidence += 0.20
+		evidence = append(evidence, fmt.Sprintf("高频复发: 最近 %d 条同规则同主机事件", len(related)))
+		primarySuspect = "recurring_threshold_breach"
+	} else if len(related) >= 2 {
+		confidence += 0.10
+		evidence = append(evidence, fmt.Sprintf("近期存在 %d 条同规则同主机事件", len(related)))
+		primarySuspect = "intermittent_issue"
 	}
+
+	// Factor 2: 变更关联 — 查询告警触发前 30 分钟内的任务执行
+	triggerTime := time.Time(event.TriggeredAt)
+	lookbackStart := triggerTime.Add(-30 * time.Minute)
+	recentExecs, _ := s.taskSvc.execRepo.ListRecent(&lookbackStart, 50)
+	changeCount := 0
+	for _, exec := range recentExecs {
+		if exec == nil || exec.StartedAt == nil {
+			continue
+		}
+		execTime := time.Time(*exec.StartedAt)
+		if execTime.Before(triggerTime) && execTime.After(lookbackStart) {
+			changeCount++
+		}
+	}
+	if changeCount > 0 {
+		confidence += 0.15
+		evidence = append(evidence, fmt.Sprintf("告警前 30 分钟内有 %d 次任务执行（可能的变更触发）", changeCount))
+		if changeCount >= 3 {
+			primarySuspect = "change_induced"
+		}
+	}
+
+	// Factor 3: 服务树关联
 	if event.ServiceTreeID > 0 {
 		confidence += 0.05
-		evidence = append(evidence, fmt.Sprintf("已关联服务树 ID=%d", event.ServiceTreeID))
+		evidence = append(evidence, fmt.Sprintf("已关联服务树 ID=%d，建议检查同服务其他主机", event.ServiceTreeID))
 	}
+
+	// Factor 4: 自动修复是否已触发
+	if event.TaskExecutionID > 0 {
+		evidence = append(evidence, fmt.Sprintf("已触发自动修复任务 execution_id=%d", event.TaskExecutionID))
+	}
+
 	if confidence > 0.95 {
 		confidence = 0.95
 	}
+	if primarySuspect == "unknown" {
+		primarySuspect = "single_occurrence"
+	}
+
 	return &AlertRootCauseResult{
 		EventID:           event.ID,
-		PrimarySuspect:    "rule_agent_hotspot",
+		PrimarySuspect:    primarySuspect,
 		Confidence:        confidence,
 		Evidence:          evidence,
 		RelatedEventCount: len(related),
@@ -381,12 +407,23 @@ func (s *AlertService) AcknowledgeEvent(id int64, operator int64, note string) e
 	if event.Status == model.AlertEventStatusResolved {
 		return errors.New("事件已经结束，无法确认")
 	}
+	fromStatus := event.Status
 	now := model.LocalTime(time.Now())
 	event.Status = model.AlertEventStatusAcknowledged
 	event.AcknowledgedBy = operator
 	event.AcknowledgedAt = &now
 	event.AcknowledgementNote = note
-	return s.eventRepo.Update(event)
+	if err := s.eventRepo.Update(event); err != nil {
+		return err
+	}
+	_ = s.activityRepo.Create(&model.AlertEventActivity{
+		EventID:    id,
+		FromStatus: fromStatus,
+		ToStatus:   model.AlertEventStatusAcknowledged,
+		OperatorID: operator,
+		Note:       note,
+	})
+	return nil
 }
 
 // ResolveEvent 支持人工关闭告警事件。
@@ -398,12 +435,23 @@ func (s *AlertService) ResolveEvent(id int64, operator int64, note string) error
 	if event.Status == model.AlertEventStatusResolved {
 		return nil
 	}
+	fromStatus := event.Status
 	now := model.LocalTime(time.Now())
 	event.Status = model.AlertEventStatusResolved
 	event.ResolvedAt = &now
 	event.ResolvedBy = operator
 	event.ResolutionNote = note
-	return s.eventRepo.Update(event)
+	if err := s.eventRepo.Update(event); err != nil {
+		return err
+	}
+	_ = s.activityRepo.Create(&model.AlertEventActivity{
+		EventID:    id,
+		FromStatus: fromStatus,
+		ToStatus:   model.AlertEventStatusResolved,
+		OperatorID: operator,
+		Note:       note,
+	})
+	return nil
 }
 
 func (s *AlertService) EvaluateAll() (*AlertEvaluationSummary, error) {
@@ -609,6 +657,13 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 		if notificationEventID > 0 {
 			s.notifySvc.DispatchEventAsync(notificationEventID)
 		}
+		_ = s.activityRepo.Create(&model.AlertEventActivity{
+			EventID:    event.ID,
+			FromStatus: model.AlertEventStatusFiring,
+			ToStatus:   model.AlertEventStatusResolved,
+			OperatorID: 0,
+			Note:       "指标自动恢复",
+		})
 		return "resolved", nil
 	default:
 		return "noop", nil
