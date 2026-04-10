@@ -110,6 +110,14 @@ func (s *Server) upsertHeartbeat(agentID string, msg *pb.HeartbeatRequest, hbTim
 	privateIP, publicIP := resolveAgentIPs(msg, peerIP)
 	metricIP := firstNonEmpty(privateIP, publicIP)
 
+	rttMs := 0.0
+	if agentTs := msg.GetTimestamp(); agentTs > 0 {
+		rttMs = float64(time.Now().UnixMilli()-agentTs) / 2.0
+		if rttMs < 0 {
+			rttMs = 0
+		}
+	}
+
 	if err := s.agentRepo.Upsert(&model.AgentInfo{
 		AgentID:        agentID,
 		Hostname:       msg.GetHostname(),
@@ -128,6 +136,7 @@ func (s *Server) upsertHeartbeat(agentID string, msg *pb.HeartbeatRequest, hbTim
 		DiskTotal:      msg.GetDiskTotal(),
 		DiskUsed:       msg.GetDiskUsed(),
 		DiskUsagePct:   msg.GetDiskUsagePercent(),
+		LatencyMs:      rttMs,
 		LastHeartbeat:  &hbTime,
 	}); err != nil {
 		logger.Warn("upsert agent heartbeat failed", zap.String("agent_id", agentID), zap.Error(err))
@@ -159,6 +168,15 @@ func (s *Server) upsertHeartbeat(agentID string, msg *pb.HeartbeatRequest, hbTim
 			MetricType:  "disk_usage",
 			MetricValue: msg.GetDiskUsagePercent(),
 			Unit:        "%",
+			CollectedAt: hbTime,
+		},
+		{
+			AgentID:     agentID,
+			Hostname:    msg.GetHostname(),
+			IP:          metricIP,
+			MetricType:  "latency",
+			MetricValue: rttMs,
+			Unit:        "ms",
 			CollectedAt: hbTime,
 		},
 	}

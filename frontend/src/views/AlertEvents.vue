@@ -138,6 +138,20 @@ async function resolve(row: any) {
   } catch {}
 }
 
+async function commentEvent(row: any) {
+  try {
+    const { value } = await ElMessageBox.prompt('添加评论', '告警评论', {
+      inputPlaceholder: '输入评论内容...',
+      inputType: 'textarea',
+      confirmButtonText: '提交',
+      cancelButtonText: '取消',
+    })
+    if (!value) return
+    await alertRuleApi.commentEvent(row.id, value)
+    ElMessage.success('评论已添加')
+  } catch {}
+}
+
 async function batchAcknowledge() {
   if (!canBatchAck.value) return
   try {
@@ -326,7 +340,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
               <span class="text-xs text-slate-500">{{ row.triggered_at }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right" align="center">
+          <el-table-column label="操作" width="180" fixed="right" align="center">
             <template #default="{ row }">
               <template v-if="row.status === 'firing'">
                 <el-button link type="primary" size="small" @click="acknowledge(row)">确认</el-button>
@@ -335,10 +349,9 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
               <template v-else-if="row.status === 'acknowledged'">
                 <el-button link type="danger" size="small" @click="resolve(row)">关闭</el-button>
               </template>
-              <template v-else>
-                <el-button link size="small" @click="openTimelineByEventID(row.id)">时间轴</el-button>
-                <el-button link type="warning" size="small" @click="openRootCauseByEventID(row.id)">根因</el-button>
-              </template>
+              <el-button link size="small" @click="openTimelineByEventID(row.id)">时间轴</el-button>
+              <el-button link type="warning" size="small" @click="openRootCauseByEventID(row.id)">根因</el-button>
+              <el-button link type="info" size="small" @click="commentEvent(row)">评论</el-button>
             </template>
           </el-table-column>
         </el-table>

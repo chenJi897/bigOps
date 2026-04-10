@@ -3,12 +3,13 @@ package model
 import "gorm.io/gorm"
 
 type InspectionTemplate struct {
-	ID           int64          `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name         string         `gorm:"size:128;not null;uniqueIndex" json:"name"`
-	Description  string         `gorm:"size:512" json:"description"`
-	TaskID       int64          `gorm:"not null" json:"task_id"`
-	DefaultHosts string         `gorm:"type:json" json:"default_hosts"`
-	Enabled      int8           `gorm:"default:1" json:"enabled"`
+	ID                int64          `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name              string         `gorm:"size:128;not null;uniqueIndex" json:"name"`
+	Description       string         `gorm:"size:512" json:"description"`
+	TaskID            int64          `gorm:"not null" json:"task_id"`
+	RemediationTaskID int64          `gorm:"default:0" json:"remediation_task_id"`
+	DefaultHosts      string         `gorm:"type:json" json:"default_hosts"`
+	Enabled           int8           `gorm:"default:1" json:"enabled"`
 	CreatedBy    int64          `gorm:"not null;default:0" json:"created_by"`
 	UpdatedBy    int64          `gorm:"not null;default:0" json:"updated_by"`
 	CreatedAt    LocalTime      `json:"created_at"`

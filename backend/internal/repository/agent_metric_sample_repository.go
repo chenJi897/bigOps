@@ -113,6 +113,9 @@ type MetricDimensionRow struct {
 }
 
 func (r *AgentMetricSampleRepository) AggregateByDimension(since time.Time, dimension string, threshold float64) ([]MetricDimensionRow, error) {
+	if dimension == "service" {
+		return r.aggregateByServiceTree(since, threshold)
+	}
 	dimCol := "agent_id"
 	switch dimension {
 	case "instance":
@@ -131,6 +134,50 @@ func (r *AgentMetricSampleRepository) AggregateByDimension(since time.Time, dime
 			SUM(CASE WHEN metric_value >= ? THEN 1 ELSE 0 END) as over_thresh`, threshold).
 		Where("collected_at >= ? AND deleted_at IS NULL", since).
 		Group(dimCol+", metric_type").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func (r *AgentMetricSampleRepository) aggregateByServiceTree(since time.Time, threshold float64) ([]MetricDimensionRow, error) {
+	var rows []MetricDimensionRow
+	q := database.GetDB().Table("agent_metric_samples s").
+		Joins("LEFT JOIN agent_infos a ON s.agent_id = a.agent_id").
+		Joins("LEFT JOIN assets ast ON (a.private_ip = ast.ip OR a.public_ip = ast.ip OR a.ip = ast.ip) AND ast.deleted_at IS NULL").
+		Joins("LEFT JOIN service_trees st ON ast.service_tree_id = st.id AND st.deleted_at IS NULL").
+		Select(`COALESCE(st.name, CONCAT('IP:', s.ip)) as dimension_key, s.metric_type,
+			AVG(s.metric_value) as avg_value,
+			MAX(s.metric_value) as max_value,
+			COUNT(*) as sample_cnt,
+			SUM(CASE WHEN s.metric_value >= ? THEN 1 ELSE 0 END) as over_thresh`, threshold).
+		Where("s.collected_at >= ? AND s.deleted_at IS NULL", since).
+		Group("dimension_key, s.metric_type")
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+type AgentBaselineRow struct {
+	AgentID    string  `json:"agent_id"`
+	MetricType string  `json:"metric_type"`
+	AvgValue   float64 `json:"avg_value"`
+	StdDev     float64 `json:"std_dev"`
+	SampleCnt  int64   `json:"sample_count"`
+}
+
+func (r *AgentMetricSampleRepository) AggregateBaselineByAgent() ([]AgentBaselineRow, error) {
+	since := time.Now().Add(-24 * time.Hour)
+	var rows []AgentBaselineRow
+	if err := database.GetDB().Table("agent_metric_samples").
+		Select(`agent_id, metric_type,
+			AVG(metric_value) as avg_value,
+			STDDEV_POP(metric_value) as std_dev,
+			COUNT(*) as sample_cnt`).
+		Where("collected_at >= ? AND deleted_at IS NULL", since).
+		Group("agent_id, metric_type").
+		Having("COUNT(*) >= 10").
 		Scan(&rows).Error; err != nil {
 		return nil, err
 	}

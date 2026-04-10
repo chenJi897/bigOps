@@ -119,6 +119,18 @@ func (r *InspectionRepository) GetRecordByExecutionID(executionID int64) (*model
 	return &item, nil
 }
 
+func (r *InspectionRepository) ListRunningRecords() ([]*model.InspectionRecord, error) {
+	var items []*model.InspectionRecord
+	if err := database.GetDB().
+		Where("status = ?", "running").
+		Order("id ASC").
+		Limit(200).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (r *InspectionRepository) ListRecordsByTemplate(templateID int64, limit int) ([]*model.InspectionRecord, error) {
 	if limit <= 0 {
 		limit = 30

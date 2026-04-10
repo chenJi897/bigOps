@@ -179,7 +179,7 @@ func (s *AlertService) ListEventGroups(q repository.AlertEventListQuery, windowM
 		q.Size = 20
 	}
 
-	rows, total, err := s.eventRepo.GroupByFingerprint(q)
+	rows, total, err := s.eventRepo.GroupByFingerprint(q, windowMinutes)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -187,15 +187,32 @@ func (s *AlertService) ListEventGroups(q repository.AlertEventListQuery, windowM
 	groups := make([]*AlertEventGroup, 0, len(rows))
 	for _, row := range rows {
 		fp := fmt.Sprintf("%d|%s|%s", row.RuleID, row.Severity, row.AgentID)
-		groups = append(groups, &AlertEventGroup{
-			Fingerprint:    fp,
-			RuleName:       row.RuleName,
-			Severity:       row.Severity,
-			Status:         row.Status,
-			TotalCount:     int(row.TotalCount),
-			LatestEventID:  row.LatestID,
-			LatestHost:     row.LatestHost,
-		})
+		g := &AlertEventGroup{
+			Fingerprint:   fp,
+			RuleName:      row.RuleName,
+			Severity:      row.Severity,
+			Status:        row.Status,
+			TotalCount:    int(row.TotalCount),
+			LatestEventID: row.LatestID,
+			LatestHost:    row.LatestHost,
+		}
+		if row.FirstAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", row.FirstAt); err == nil {
+				lt := model.LocalTime(t)
+				g.FirstTriggered = lt
+			}
+		}
+		if row.LastAt != "" {
+			if t, err := time.Parse("2006-01-02 15:04:05", row.LastAt); err == nil {
+				lt := model.LocalTime(t)
+				g.LastTriggered = lt
+				dur := time.Since(time.Time(g.FirstTriggered))
+				if !time.Time(g.FirstTriggered).IsZero() {
+					g.DurationSec = int64(dur.Seconds())
+				}
+			}
+		}
+		groups = append(groups, g)
 	}
 	return groups, total, nil
 }
@@ -337,6 +354,24 @@ func (s *AlertService) AnalyzeRootCause(id int64) (*AlertRootCauseResult, error)
 		}
 	}
 
+	// Factor 2b: CI/CD 部署关联
+	cicdRepo := repository.NewCICDPipelineRunRepository()
+	cicdRuns, _, _ := cicdRepo.List(repository.CICDPipelineRunListQuery{Page: 1, Size: 20})
+	deployCount := 0
+	for _, run := range cicdRuns {
+		runStart := time.Time(run.StartedAt)
+		if runStart.Before(triggerTime) && runStart.After(lookbackStart) {
+			deployCount++
+		}
+	}
+	if deployCount > 0 {
+		confidence += 0.10
+		evidence = append(evidence, fmt.Sprintf("告警前 30 分钟内有 %d 次 CI/CD 部署", deployCount))
+		if deployCount >= 1 && primarySuspect == "unknown" {
+			primarySuspect = "deployment_induced"
+		}
+	}
+
 	// Factor 3: 服务树关联
 	if event.ServiceTreeID > 0 {
 		confidence += 0.05
@@ -416,13 +451,15 @@ func (s *AlertService) AcknowledgeEvent(id int64, operator int64, note string) e
 	if err := s.eventRepo.Update(event); err != nil {
 		return err
 	}
-	_ = s.activityRepo.Create(&model.AlertEventActivity{
+	if err := s.activityRepo.Create(&model.AlertEventActivity{
 		EventID:    id,
 		FromStatus: fromStatus,
 		ToStatus:   model.AlertEventStatusAcknowledged,
 		OperatorID: operator,
 		Note:       note,
-	})
+	}); err != nil {
+		logger.Warn("activity audit create failed", zap.Int64("event_id", id), zap.Error(err))
+	}
 	return nil
 }
 
@@ -444,13 +481,60 @@ func (s *AlertService) ResolveEvent(id int64, operator int64, note string) error
 	if err := s.eventRepo.Update(event); err != nil {
 		return err
 	}
-	_ = s.activityRepo.Create(&model.AlertEventActivity{
+	if err := s.activityRepo.Create(&model.AlertEventActivity{
 		EventID:    id,
 		FromStatus: fromStatus,
 		ToStatus:   model.AlertEventStatusResolved,
 		OperatorID: operator,
 		Note:       note,
-	})
+	}); err != nil {
+		logger.Warn("activity audit create failed", zap.Int64("event_id", id), zap.Error(err))
+	}
+	return nil
+}
+
+// CommentEvent adds a comment/note to an alert event's activity timeline.
+func (s *AlertService) CommentEvent(id int64, operator int64, note string) error {
+	event, err := s.eventRepo.GetByID(id)
+	if err != nil {
+		return errors.New("事件不存在")
+	}
+	if note == "" {
+		return errors.New("评论内容不能为空")
+	}
+	if err := s.activityRepo.Create(&model.AlertEventActivity{
+		EventID:    event.ID,
+		Action:     "comment",
+		FromStatus: event.Status,
+		ToStatus:   event.Status,
+		OperatorID: operator,
+		Note:       note,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// AssignEvent assigns an alert event to a specific user.
+func (s *AlertService) AssignEvent(id int64, operator int64, assigneeID int64) error {
+	event, err := s.eventRepo.GetByID(id)
+	if err != nil {
+		return errors.New("事件不存在")
+	}
+	event.OwnerID = assigneeID
+	if err := s.eventRepo.Update(event); err != nil {
+		return err
+	}
+	if err := s.activityRepo.Create(&model.AlertEventActivity{
+		EventID:    event.ID,
+		Action:     "assign",
+		FromStatus: event.Status,
+		ToStatus:   event.Status,
+		OperatorID: operator,
+		Note:       fmt.Sprintf("指派给用户 #%d", assigneeID),
+	}); err != nil {
+		logger.Warn("activity audit create failed", zap.Int64("event_id", event.ID), zap.Error(err))
+	}
 	return nil
 }
 
@@ -535,6 +619,13 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 	asset := s.matchAgentAsset(agent)
 	if s.isSilenced(rule, agent, asset, time.Now()) {
 		return "suppressed", nil
+	}
+
+	// Suppression: skip child alerts when a higher-priority parent alert exists
+	if triggered && rule.MetricType != "agent_offline" {
+		if parentEvent, parentErr := s.eventRepo.FindOpenByAgentMetric(agent.AgentID, "agent_offline"); parentErr == nil && parentEvent != nil {
+			return "suppressed", nil
+		}
 	}
 
 	switch {
@@ -657,13 +748,15 @@ func (s *AlertService) evaluateRule(agent *model.AgentInfo, rule *model.AlertRul
 		if notificationEventID > 0 {
 			s.notifySvc.DispatchEventAsync(notificationEventID)
 		}
-		_ = s.activityRepo.Create(&model.AlertEventActivity{
+		if err := s.activityRepo.Create(&model.AlertEventActivity{
 			EventID:    event.ID,
 			FromStatus: model.AlertEventStatusFiring,
 			ToStatus:   model.AlertEventStatusResolved,
 			OperatorID: 0,
 			Note:       "指标自动恢复",
-		})
+		}); err != nil {
+			logger.Warn("activity audit create failed", zap.Int64("event_id", event.ID), zap.Error(err))
+		}
 		return "resolved", nil
 	default:
 		return "noop", nil
@@ -898,6 +991,153 @@ func dedupeInt64s(items []int64) []int64 {
 	return result
 }
 
+// EscalateUnacknowledged finds firing alerts past their escalation window and notifies next-level oncall.
+func (s *AlertService) EscalateUnacknowledged() {
+	events, _ := s.eventRepo.ListFiringOlderThan(5 * time.Minute)
+	for _, event := range events {
+		if event.Escalated > 0 {
+			continue
+		}
+		rule, err := s.ruleRepo.GetByID(event.RuleID)
+		if err != nil || rule.OnCallScheduleID == 0 {
+			continue
+		}
+		scheduleRepo := repository.NewOnCallScheduleRepository()
+		schedule, err := scheduleRepo.GetByID(rule.OnCallScheduleID)
+		if err != nil || schedule.EscalationMinutes <= 0 {
+			continue
+		}
+		elapsed := time.Since(time.Time(event.TriggeredAt))
+		if elapsed < time.Duration(schedule.EscalationMinutes)*time.Minute {
+			continue
+		}
+		event.Escalated = 1
+		_ = s.eventRepo.Update(event)
+		if err := s.activityRepo.Create(&model.AlertEventActivity{
+			EventID:    event.ID,
+			Action:     "escalation",
+			FromStatus: event.Status,
+			ToStatus:   event.Status,
+			OperatorID: 0,
+			Note:       fmt.Sprintf("告警触发 %d 分钟未确认，自动升级通知", schedule.EscalationMinutes),
+		}); err != nil {
+			logger.Warn("escalation activity create failed", zap.Error(err))
+		}
+		logger.Info("alert escalated", zap.Int64("event_id", event.ID))
+	}
+}
+
+// TopologyView returns the health status of hosts in the same ServiceTree as the alert.
+type AlertTopologyNode struct {
+	AgentID    string  `json:"agent_id"`
+	Hostname   string  `json:"hostname"`
+	IP         string  `json:"ip"`
+	Status     string  `json:"status"`
+	CPUPct     float64 `json:"cpu_pct"`
+	MemPct     float64 `json:"mem_pct"`
+	DiskPct    float64 `json:"disk_pct"`
+	AlertCount int     `json:"alert_count"`
+}
+
+func (s *AlertService) TopologyView(eventID int64) ([]AlertTopologyNode, error) {
+	event, err := s.eventRepo.GetByID(eventID)
+	if err != nil {
+		return nil, err
+	}
+	if event.ServiceTreeID == 0 {
+		return nil, errors.New("该告警未关联服务树")
+	}
+	assetRepo := repository.NewAssetRepository()
+	assets, _, _ := assetRepo.List(repository.AssetListQuery{
+		Page:          1,
+		Size:          200,
+		ServiceTreeID: event.ServiceTreeID,
+	})
+	var nodes []AlertTopologyNode
+	for _, asset := range assets {
+		agents, _, _ := s.agentRepo.List(1, 5, asset.IP)
+		for _, agent := range agents {
+			firingCount := 0
+			if events, err := s.eventRepo.ListByAgentStatus(agent.AgentID, model.AlertEventStatusFiring); err == nil {
+				firingCount = len(events)
+			}
+			nodes = append(nodes, AlertTopologyNode{
+				AgentID:    agent.AgentID,
+				Hostname:   agent.Hostname,
+				IP:         agent.IP,
+				Status:     agent.Status,
+				CPUPct:     agent.CPUUsagePct,
+				MemPct:     agent.MemoryUsagePct,
+				DiskPct:    agent.DiskUsagePct,
+				AlertCount: firingCount,
+			})
+		}
+	}
+	return nodes, nil
+}
+
+// ChangeRiskAssessment evaluates risk before executing a task.
+type ChangeRiskResult struct {
+	RiskLevel         string `json:"risk_level"`
+	Score             int    `json:"score"`
+	HistoricalAlerts  int    `json:"historical_alerts"`
+	RecentDeployments int    `json:"recent_deployments"`
+	AffectedHosts     int    `json:"affected_hosts"`
+	Reason            string `json:"reason"`
+}
+
+func (s *AlertService) AssessChangeRisk(taskID int64, hosts []string) (*ChangeRiskResult, error) {
+	result := &ChangeRiskResult{RiskLevel: "low", Score: 0, AffectedHosts: len(hosts)}
+
+	alertCount := 0
+	for _, host := range hosts {
+		events, _, _ := s.eventRepo.List(repository.AlertEventListQuery{
+			Page:    1,
+			Size:    50,
+			Keyword: host,
+		})
+		alertCount += len(events)
+	}
+	result.HistoricalAlerts = alertCount
+	if alertCount > 10 {
+		result.Score += 30
+	} else if alertCount > 0 {
+		result.Score += 15
+	}
+
+	cicdRepo := repository.NewCICDPipelineRunRepository()
+	runs, _, _ := cicdRepo.List(repository.CICDPipelineRunListQuery{Page: 1, Size: 20})
+	recentDeploys := 0
+	cutoff := time.Now().Add(-24 * time.Hour)
+	for _, r := range runs {
+		if time.Time(r.StartedAt).After(cutoff) {
+			recentDeploys++
+		}
+	}
+	result.RecentDeployments = recentDeploys
+	if recentDeploys > 3 {
+		result.Score += 25
+	}
+
+	if len(hosts) > 10 {
+		result.Score += 20
+	} else if len(hosts) > 5 {
+		result.Score += 10
+	}
+
+	if result.Score >= 50 {
+		result.RiskLevel = "high"
+		result.Reason = "高风险：大量历史告警、频繁部署、影响面广"
+	} else if result.Score >= 25 {
+		result.RiskLevel = "medium"
+		result.Reason = "中等风险：建议观察后再执行"
+	} else {
+		result.RiskLevel = "low"
+		result.Reason = "低风险：可正常执行"
+	}
+	return result, nil
+}
+
 func buildAlertFingerprint(ev *model.AlertEvent) string {
 	return fmt.Sprintf("%d|%s|%d|%d|%s", ev.RuleID, ev.Severity, ev.ServiceTreeID, ev.OwnerID, ev.MetricType)
 }
@@ -1012,8 +1252,10 @@ func NewAlertScheduler() *AlertScheduler {
 
 func (s *AlertScheduler) Start() {
 	ticker := time.NewTicker(30 * time.Second)
+	escalationTicker := time.NewTicker(60 * time.Second)
 	safego.Go(func() {
 		defer ticker.Stop()
+		defer escalationTicker.Stop()
 		alertSvc := NewAlertService()
 		for {
 			select {
@@ -1023,6 +1265,8 @@ func (s *AlertScheduler) Start() {
 				if _, err := alertSvc.EvaluateAll(); err != nil {
 					logger.Warn("alert scheduler evaluate failed", zap.Error(err))
 				}
+			case <-escalationTicker.C:
+				alertSvc.EscalateUnacknowledged()
 			}
 		}
 	})

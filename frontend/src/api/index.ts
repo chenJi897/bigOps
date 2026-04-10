@@ -298,6 +298,17 @@ export const alertRuleApi = {
   eventContext: (id: number) => api.get(`/alert-events/${id}/context`),
   ackEvent: (id: number, note = '') => api.post(`/alert-events/${id}/ack`, { note }),
   resolveEvent: (id: number, note = '') => api.post(`/alert-events/${id}/resolve`, { note }),
+  commentEvent: (id: number, note: string) => api.post(`/alert-events/${id}/comment`, { note }),
+  assignEvent: (id: number, assigneeId: number) => api.post(`/alert-events/${id}/assign`, { assignee_id: assigneeId }),
+  eventTopology: (id: number) => api.get(`/alert-events/${id}/topology`),
+  changeRisk: (data: { task_id: number; hosts: string[] }) => api.post('/alert-events/change-risk', data),
+}
+
+export const monitorApi = {
+  sloConfig: () => api.get('/monitor/slo-config'),
+  updateSloConfig: (data: { target_availability?: number; target_latency_ms?: number }) => api.post('/monitor/slo-config', data),
+  anomalies: (params?: { stddev_multiplier?: number }) => api.get('/monitor/anomalies', { params }),
+  capacityPrediction: (params?: { metric_type?: string; threshold?: number }) => api.get('/monitor/capacity-prediction', { params }),
 }
 
 // 任务管理
@@ -336,6 +347,7 @@ export const inspectionApi = {
   recordReportExportUrl: (id: number, format: 'json' | 'csv' = 'json') =>
     `/api/v1/inspection/records/${id}/report/export?format=${format}`,
   templateTrend: (id: number) => api.get(`/inspection/templates/${id}/trend`),
+  diffRecords: (recordA: number, recordB: number) => api.get('/inspection/records/diff', { params: { record_a: recordA, record_b: recordB } }),
 }
 
 export default api

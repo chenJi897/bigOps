@@ -200,22 +200,49 @@ func (s *InspectionService) SyncRecordStatus(executionID int64) {
 		if exec.Status == "failed" {
 			severity = "critical"
 		}
-		_ = s.eventRepo.Create(&model.AlertEvent{
-			RuleID:          0,
-			RuleName:        "巡检任务异常",
-			AgentID:         "inspection",
-			Hostname:        tplName,
-			MetricType:      "inspection_failed",
-			MetricValue:     float64(exec.FailCount),
-			Threshold:       0,
-			Operator:        "gt",
-			Severity:        severity,
-			Action:          model.AlertRuleActionNotifyOnly,
-			Status:          model.AlertEventStatusFiring,
-			Description:     fmt.Sprintf("巡检执行%s: 成功%d 失败%d 总计%d", exec.Status, exec.SuccessCount, exec.FailCount, exec.TotalCount),
-			TriggeredAt:     now,
-			TaskExecutionID: exec.ID,
-		})
+		alertEvent := &model.AlertEvent{
+			RuleID:             0,
+			RuleName:           "巡检任务异常",
+			AgentID:            "inspection",
+			Hostname:           tplName,
+			MetricType:         "inspection_failed",
+			MetricValue:        float64(exec.FailCount),
+			Threshold:          0,
+			Operator:           "gt",
+			Severity:           severity,
+			Action:             model.AlertRuleActionCreateTicket,
+			Status:             model.AlertEventStatusFiring,
+			Description:        fmt.Sprintf("巡检执行%s: 成功%d 失败%d 总计%d", exec.Status, exec.SuccessCount, exec.FailCount, exec.TotalCount),
+			TriggeredAt:        now,
+			TaskExecutionID:    exec.ID,
+			InspectionRecordID: record.ID,
+		}
+		_ = s.eventRepo.Create(alertEvent)
+
+		// Auto-remediation: if template has a remediation task configured, trigger it
+		if tpl, err := s.repo.GetTemplate(record.TemplateID); err == nil && tpl.RemediationTaskID > 0 {
+			hosts := make([]string, 0)
+			_ = json.Unmarshal([]byte(tpl.DefaultHosts), &hosts)
+			if len(hosts) > 0 {
+				if _, remErr := s.taskSvc.ExecuteTask(tpl.RemediationTaskID, hosts, 0); remErr == nil {
+					alertEvent.Description += " [已触发自动修复]"
+				}
+			}
+		}
+
+		ticketSvc := NewTicketService()
+		ticket := &model.Ticket{
+			Title:           fmt.Sprintf("巡检异常：%s", tplName),
+			Description:     alertEvent.Description,
+			Source:          "monitor",
+			SourceEventType: "inspection",
+			SourceEventID:   fmt.Sprintf("%d", record.ID),
+			CreatorID:       0,
+		}
+		if err := ticketSvc.Create(ticket, 0, "inspection_scheduler"); err == nil {
+			alertEvent.TicketID = ticket.ID
+			_ = s.eventRepo.Update(alertEvent)
+		}
 	}
 }
 
@@ -302,6 +329,87 @@ func (s *InspectionService) ExportRecordReport(recordID int64, format string) ([
 	default:
 		return nil, "", "", errors.New("仅支持导出 json 或 csv")
 	}
+}
+
+type InspectionDiffResult struct {
+	RecordA      int64                    `json:"record_a"`
+	RecordB      int64                    `json:"record_b"`
+	NewFailed    []map[string]interface{} `json:"new_failed"`
+	Recovered    []map[string]interface{} `json:"recovered"`
+	StillFailing []map[string]interface{} `json:"still_failing"`
+}
+
+func (s *InspectionService) DiffRecords(idA, idB int64) (*InspectionDiffResult, error) {
+	reportA, err := s.GetRecordReport(idA)
+	if err != nil {
+		return nil, fmt.Errorf("记录 %d 不存在", idA)
+	}
+	reportB, err := s.GetRecordReport(idB)
+	if err != nil {
+		return nil, fmt.Errorf("记录 %d 不存在", idB)
+	}
+	hostsA := extractHostResults(reportA)
+	hostsB := extractHostResults(reportB)
+
+	failedA := hostFailSet(hostsA)
+	failedB := hostFailSet(hostsB)
+
+	result := &InspectionDiffResult{RecordA: idA, RecordB: idB}
+	for host, data := range failedB {
+		if _, wasF := failedA[host]; !wasF {
+			result.NewFailed = append(result.NewFailed, data)
+		} else {
+			result.StillFailing = append(result.StillFailing, data)
+		}
+	}
+	for host, data := range failedA {
+		if _, stillF := failedB[host]; !stillF {
+			result.Recovered = append(result.Recovered, data)
+		}
+	}
+	return result, nil
+}
+
+func extractHostResults(report map[string]interface{}) []map[string]interface{} {
+	detail, _ := report["detail"]
+	if detail == nil {
+		return nil
+	}
+	var detailMap map[string]interface{}
+	switch d := detail.(type) {
+	case map[string]interface{}:
+		detailMap = d
+	case string:
+		_ = json.Unmarshal([]byte(d), &detailMap)
+	}
+	if detailMap == nil {
+		return nil
+	}
+	hosts, _ := detailMap["host_results"].([]interface{})
+	var result []map[string]interface{}
+	for _, h := range hosts {
+		if m, ok := h.(map[string]interface{}); ok {
+			result = append(result, m)
+		}
+	}
+	return result
+}
+
+func hostFailSet(hosts []map[string]interface{}) map[string]map[string]interface{} {
+	set := make(map[string]map[string]interface{})
+	for _, h := range hosts {
+		status, _ := h["status"].(string)
+		if status == "failed" || status == "timeout" {
+			key, _ := h["host_ip"].(string)
+			if key == "" {
+				key, _ = h["hostname"].(string)
+			}
+			if key != "" {
+				set[key] = h
+			}
+		}
+	}
+	return set
 }
 
 func buildInspectionReportCSV(report map[string]interface{}) ([]byte, error) {

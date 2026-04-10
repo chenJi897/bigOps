@@ -241,3 +241,44 @@ func (h *MonitorHandler) GoldenSignalsDimensions(c *gin.Context) {
 	}
 	response.Success(c, data)
 }
+
+func (h *MonitorHandler) GetSLOConfig(c *gin.Context) {
+	response.Success(c, h.monitorSvc.GetSLOConfig())
+}
+
+func (h *MonitorHandler) UpdateSLOConfig(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	var req struct {
+		TargetAvailability float64 `json:"target_availability"`
+		TargetLatencyMs    float64 `json:"target_latency_ms"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误")
+		return
+	}
+	h.monitorSvc.UpdateSLOConfig(req.TargetAvailability, req.TargetLatencyMs)
+	response.SuccessWithMessage(c, "SLO 配置已更新", nil)
+}
+
+func (h *MonitorHandler) DetectAnomalies(c *gin.Context) {
+	multiplier, _ := strconv.ParseFloat(c.DefaultQuery("stddev_multiplier", "2.0"), 64)
+	data, err := h.monitorSvc.DetectAnomalies(multiplier)
+	if err != nil {
+		response.InternalServerError(c, "异常检测失败")
+		return
+	}
+	response.Success(c, data)
+}
+
+func (h *MonitorHandler) PredictCapacity(c *gin.Context) {
+	metricType := c.DefaultQuery("metric_type", "disk_usage")
+	threshold, _ := strconv.ParseFloat(c.DefaultQuery("threshold", "90"), 64)
+	data, err := h.monitorSvc.PredictCapacity(metricType, threshold)
+	if err != nil {
+		response.InternalServerError(c, "容量预测失败")
+		return
+	}
+	response.Success(c, data)
+}

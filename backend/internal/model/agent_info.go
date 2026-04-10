@@ -22,6 +22,7 @@ type AgentInfo struct {
 	DiskTotal      int64      `json:"disk_total"`
 	DiskUsed       int64      `json:"disk_used"`
 	DiskUsagePct   float64    `gorm:"column:disk_usage_pct;type:decimal(5,2);default:0" json:"disk_usage_pct"`
+	LatencyMs      float64    `gorm:"column:latency_ms;type:decimal(10,2);default:0" json:"latency_ms"`
 	LastHeartbeat  *LocalTime `json:"last_heartbeat" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	CreatedAt      LocalTime  `json:"created_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
 	UpdatedAt      LocalTime  `json:"updated_at" swaggertype:"string" example:"2024-01-01 00:00:00"`

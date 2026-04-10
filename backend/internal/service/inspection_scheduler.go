@@ -30,8 +30,21 @@ func NewInspectionScheduler() *InspectionScheduler {
 func (s *InspectionScheduler) Start() {
 	s.reloadPlans()
 	_, _ = s.cronEngine.AddFunc("@every 60s", s.reloadPlans)
+	_, _ = s.cronEngine.AddFunc("@every 30s", s.syncRunningRecords)
 	s.cronEngine.Start()
 	logger.Info("inspection scheduler started")
+}
+
+func (s *InspectionScheduler) syncRunningRecords() {
+	records, err := s.repo.ListRunningRecords()
+	if err != nil || len(records) == 0 {
+		return
+	}
+	for _, rec := range records {
+		if rec.TaskExecutionID > 0 {
+			s.svc.SyncRecordStatus(rec.TaskExecutionID)
+		}
+	}
 }
 
 func (s *InspectionScheduler) Stop() {

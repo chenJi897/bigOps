@@ -476,12 +476,23 @@ func (s *MonitorService) GoldenSignals(windowMinutes int) (*GoldenSignalsSummary
 
 	var totalSamples int64
 	var errorSamples int64
-	var latencyProxy float64
+	var latencyMs float64
+	hasLatency := false
 	for _, row := range rows {
+		if row.MetricType == "latency" {
+			latencyMs = row.AvgValue
+			hasLatency = true
+			continue
+		}
 		totalSamples += row.SampleCnt
 		errorSamples += row.OverThresh
-		if row.MetricType == "cpu_usage" {
-			latencyProxy = row.AvgValue
+	}
+	if !hasLatency {
+		for _, row := range rows {
+			if row.MetricType == "cpu_usage" {
+				latencyMs = row.AvgValue
+				break
+			}
 		}
 	}
 
@@ -505,13 +516,13 @@ func (s *MonitorService) GoldenSignals(windowMinutes int) (*GoldenSignalsSummary
 		WindowMinutes:         windowMinutes,
 		AvailabilityPct:       round2(availability),
 		ErrorRatePct:          round2(errorRate),
-		AvgLatencyMs:          round2(latencyProxy),
+		AvgLatencyMs:          round2(latencyMs),
 		ThroughputPerMinute:   round2(throughput),
 		TotalRequests:         totalSamples,
 		TotalErrors:           errorSamples,
 		SLOTargetAvailability: sloAvail,
 		SLOTargetLatencyMs:    sloLatency,
-		SLOBreached:           availability < sloAvail || latencyProxy > sloLatency,
+		SLOBreached:           availability < sloAvail || latencyMs > sloLatency,
 	}, nil
 }
 
@@ -540,6 +551,8 @@ func (s *MonitorService) GoldenSignalsByDimension(windowMinutes int, dimension s
 
 	sampleDim := "ip"
 	switch dimType {
+	case "service":
+		sampleDim = "service"
 	case "instance":
 		sampleDim = "instance"
 	case "interface", "metric_type":
@@ -652,6 +665,159 @@ func (s *MonitorService) resolveOperatorName(userID int64) string {
 		return "用户#" + strconv.FormatInt(userID, 10)
 	}
 	return firstNonEmptyString(user.RealName, user.Username, "用户#"+strconv.FormatInt(userID, 10))
+}
+
+// GetSLOConfig returns the current SLO configuration.
+func (s *MonitorService) GetSLOConfig() map[string]float64 {
+	return map[string]float64{
+		"target_availability": s.getSLOAvailability(),
+		"target_latency_ms":  s.getSLOLatencyMs(),
+	}
+}
+
+// UpdateSLOConfig updates SLO configuration in config.yaml (runtime only for now).
+func (s *MonitorService) UpdateSLOConfig(availability, latencyMs float64) {
+	cfg := config.Get()
+	if availability > 0 {
+		cfg.SLO.TargetAvailability = availability
+	}
+	if latencyMs > 0 {
+		cfg.SLO.TargetLatencyMs = latencyMs
+	}
+}
+
+// AnomalyDetection computes baseline stats and detects anomalies.
+type AnomalyItem struct {
+	AgentID    string  `json:"agent_id"`
+	Hostname   string  `json:"hostname"`
+	IP         string  `json:"ip"`
+	MetricType string  `json:"metric_type"`
+	Current    float64 `json:"current_value"`
+	Baseline   float64 `json:"baseline_avg"`
+	StdDev     float64 `json:"std_dev"`
+	ZScore     float64 `json:"z_score"`
+}
+
+func (s *MonitorService) DetectAnomalies(stddevMultiplier float64) ([]AnomalyItem, error) {
+	if stddevMultiplier <= 0 {
+		stddevMultiplier = 2.0
+	}
+	rows, err := s.sampleRepo.AggregateBaselineByAgent()
+	if err != nil {
+		return nil, err
+	}
+	agents, _, _ := s.agentRepo.List(1, 10000, "")
+	agentMap := make(map[string]*model.AgentInfo, len(agents))
+	for _, a := range agents {
+		agentMap[a.AgentID] = a
+	}
+
+	var anomalies []AnomalyItem
+	for _, row := range rows {
+		if row.StdDev == 0 || row.SampleCnt < 10 {
+			continue
+		}
+		agent := agentMap[row.AgentID]
+		if agent == nil {
+			continue
+		}
+		current := metricCurrentValue(agent, row.MetricType)
+		zScore := (current - row.AvgValue) / row.StdDev
+		if zScore > stddevMultiplier || zScore < -stddevMultiplier {
+			anomalies = append(anomalies, AnomalyItem{
+				AgentID:    row.AgentID,
+				Hostname:   agent.Hostname,
+				IP:         agent.IP,
+				MetricType: row.MetricType,
+				Current:    round2(current),
+				Baseline:   round2(row.AvgValue),
+				StdDev:     round2(row.StdDev),
+				ZScore:     round2(zScore),
+			})
+		}
+	}
+	return anomalies, nil
+}
+
+func metricCurrentValue(agent *model.AgentInfo, metricType string) float64 {
+	switch metricType {
+	case "cpu_usage":
+		return agent.CPUUsagePct
+	case "memory_usage":
+		return agent.MemoryUsagePct
+	case "disk_usage":
+		return agent.DiskUsagePct
+	case "latency":
+		return agent.LatencyMs
+	default:
+		return 0
+	}
+}
+
+// CapacityPrediction predicts when a metric will reach threshold based on linear regression.
+type CapacityPrediction struct {
+	AgentID      string  `json:"agent_id"`
+	Hostname     string  `json:"hostname"`
+	MetricType   string  `json:"metric_type"`
+	CurrentValue float64 `json:"current_value"`
+	TrendPerDay  float64 `json:"trend_per_day"`
+	DaysToFull   float64 `json:"days_to_full"`
+	Threshold    float64 `json:"threshold"`
+}
+
+func (s *MonitorService) PredictCapacity(metricType string, threshold float64) ([]CapacityPrediction, error) {
+	if metricType == "" {
+		metricType = "disk_usage"
+	}
+	if threshold <= 0 {
+		threshold = 90.0
+	}
+	agents, _, _ := s.agentRepo.List(1, 10000, "")
+	since := time.Now().Add(-7 * 24 * time.Hour)
+	var predictions []CapacityPrediction
+	for _, agent := range agents {
+		samples, err := s.sampleRepo.ListTrend(agent.AgentID, metricType, &since, nil, 500)
+		if err != nil || len(samples) < 5 {
+			continue
+		}
+		sumX, sumY, sumXY, sumX2 := 0.0, 0.0, 0.0, 0.0
+		n := float64(len(samples))
+		baseTime := time.Time(samples[0].CollectedAt)
+		for _, sample := range samples {
+			x := time.Time(sample.CollectedAt).Sub(baseTime).Hours() / 24.0
+			y := sample.MetricValue
+			sumX += x
+			sumY += y
+			sumXY += x * y
+			sumX2 += x * x
+		}
+		denom := n*sumX2 - sumX*sumX
+		if denom == 0 {
+			continue
+		}
+		slope := (n*sumXY - sumX*sumY) / denom
+		intercept := (sumY - slope*sumX) / n
+		currentValue := samples[len(samples)-1].MetricValue
+		if slope <= 0 || currentValue >= threshold {
+			continue
+		}
+		currentX := time.Since(baseTime).Hours() / 24.0
+		targetX := (threshold - intercept) / slope
+		daysToFull := targetX - currentX
+		if daysToFull < 0 || daysToFull > 365 {
+			continue
+		}
+		predictions = append(predictions, CapacityPrediction{
+			AgentID:      agent.AgentID,
+			Hostname:     agent.Hostname,
+			MetricType:   metricType,
+			CurrentValue: round2(currentValue),
+			TrendPerDay:  round2(slope),
+			DaysToFull:   round2(daysToFull),
+			Threshold:    threshold,
+		})
+	}
+	return predictions, nil
 }
 
 func round2(v float64) float64 {

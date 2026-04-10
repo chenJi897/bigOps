@@ -21,6 +21,7 @@ type AlertEvent struct {
 	NotificationEventID int64          `gorm:"index;default:0" json:"notification_event_id"`
 	TicketID            int64          `gorm:"index;default:0" json:"ticket_id"`
 	TaskExecutionID     int64          `gorm:"index;default:0" json:"task_execution_id"`
+	InspectionRecordID  int64          `gorm:"index;default:0" json:"inspection_record_id"`
 	ServiceTreeID       int64          `gorm:"index;default:0" json:"service_tree_id"`
 	OwnerID             int64          `gorm:"index;default:0" json:"owner_id"`
 	TriggeredAt         LocalTime      `gorm:"index" json:"triggered_at" swaggertype:"string" example:"2024-01-01 00:00:00"`
@@ -41,6 +42,7 @@ const (
 	AlertEventStatusFiring       = "firing"
 	AlertEventStatusAcknowledged = "acknowledged"
 	AlertEventStatusResolved     = "resolved"
+	AlertEventStatusSuppressed   = "suppressed"
 )
 
 func (AlertEvent) TableName() string {

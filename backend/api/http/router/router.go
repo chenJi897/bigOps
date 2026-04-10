@@ -199,6 +199,10 @@ func Setup(mode string) *gin.Engine {
 			authGroup.POST("/monitor/query-range", monitorHandler.QueryRange)
 			authGroup.GET("/monitor/golden-signals", monitorHandler.GoldenSignals)
 			authGroup.GET("/monitor/golden-signals/dimensions", monitorHandler.GoldenSignalsDimensions)
+			authGroup.GET("/monitor/slo-config", monitorHandler.GetSLOConfig)
+			authGroup.POST("/monitor/slo-config", monitorHandler.UpdateSLOConfig)
+			authGroup.GET("/monitor/anomalies", monitorHandler.DetectAnomalies)
+			authGroup.GET("/monitor/capacity-prediction", monitorHandler.PredictCapacity)
 			authGroup.GET("/alert-silences", alertSilenceHandler.List)
 			authGroup.POST("/alert-silences", alertSilenceHandler.Create)
 			authGroup.POST("/alert-silences/:id", alertSilenceHandler.Update)
@@ -220,6 +224,8 @@ func Setup(mode string) *gin.Engine {
 			authGroup.GET("/alert-events/:id/context", alertRuleHandler.EventContext)
 			authGroup.POST("/alert-events/:id/ack", alertRuleHandler.AcknowledgeEvent)
 			authGroup.POST("/alert-events/:id/resolve", alertRuleHandler.ResolveEvent)
+			authGroup.POST("/alert-events/:id/comment", alertRuleHandler.CommentEvent)
+			authGroup.POST("/alert-events/:id/assign", alertRuleHandler.AssignEvent)
 
 			// --- CI/CD ---
 			authGroup.GET("/cicd/projects", cicdHandler.ListProjects)
@@ -305,6 +311,9 @@ func Setup(mode string) *gin.Engine {
 			authGroup.GET("/inspection/records/:id/report", inspectionHandler.GetRecordReport)
 			authGroup.GET("/inspection/records/:id/report/export", inspectionHandler.ExportRecordReport)
 			authGroup.GET("/inspection/templates/:id/trend", inspectionHandler.TemplateTrend)
+			authGroup.GET("/inspection/records/diff", inspectionHandler.DiffRecords)
+			authGroup.GET("/alert-events/:id/topology", alertRuleHandler.TopologyView)
+			authGroup.POST("/alert-events/change-risk", alertRuleHandler.ChangeRiskAssessment)
 			authGroup.GET("/agents", taskHandler.ListAgents)
 
 		}

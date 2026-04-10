@@ -347,7 +347,38 @@ func (s *TicketService) Close(id int64, resolution, note string, operatorID int6
 	}); err != nil {
 		return fmt.Errorf("记录活动失败: %w", err)
 	}
+
+	s.autoResolveLinkedAlerts(ticket, operatorID)
 	return nil
+}
+
+func (s *TicketService) autoResolveLinkedAlerts(ticket *model.Ticket, operatorID int64) {
+	if ticket.Source != "monitor" {
+		return
+	}
+	alertRepo := repository.NewAlertEventRepository()
+	activityRepo := repository.NewAlertEventActivityRepository()
+	events, _ := alertRepo.ListByTicketID(ticket.ID)
+	now := model.LocalTime(time.Now())
+	for _, event := range events {
+		if event.Status == model.AlertEventStatusResolved {
+			continue
+		}
+		fromStatus := event.Status
+		event.Status = model.AlertEventStatusResolved
+		event.ResolvedAt = &now
+		event.ResolvedBy = operatorID
+		event.ResolutionNote = fmt.Sprintf("关联工单 #%d 已关闭", ticket.ID)
+		_ = alertRepo.Update(event)
+		_ = activityRepo.Create(&model.AlertEventActivity{
+			EventID:    event.ID,
+			Action:     "status_change",
+			FromStatus: fromStatus,
+			ToStatus:   model.AlertEventStatusResolved,
+			OperatorID: operatorID,
+			Note:       fmt.Sprintf("工单 #%d 关闭自动恢复", ticket.ID),
+		})
+	}
 }
 
 func (s *TicketService) Reopen(id int64, content string, operatorID int64) error {

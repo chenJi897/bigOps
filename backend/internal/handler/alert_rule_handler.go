@@ -462,13 +462,84 @@ func (h *AlertRuleHandler) ResolveEvent(c *gin.Context) {
 	response.SuccessWithMessage(c, "事件已关闭", nil)
 }
 
+// CommentEvent adds a comment to an alert event timeline.
+func (h *AlertRuleHandler) CommentEvent(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	var req AlertEventStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	userID, _ := c.Get("userID")
+	currentUserID, _ := userID.(int64)
+	if err := h.alertSvc.CommentEvent(id, currentUserID, req.Note); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "评论已添加", nil)
+}
+
+// AssignEvent assigns an alert event to a specific user.
+func (h *AlertRuleHandler) AssignEvent(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	var req struct {
+		AssigneeID int64 `json:"assignee_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	userID, _ := c.Get("userID")
+	currentUserID, _ := userID.(int64)
+	if err := h.alertSvc.AssignEvent(id, currentUserID, req.AssigneeID); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "已指派", nil)
+}
+
+// TopologyView returns health status of hosts in the same service tree as the alert.
+func (h *AlertRuleHandler) TopologyView(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	data, err := h.alertSvc.TopologyView(id)
+	if err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	response.Success(c, data)
+}
+
+// ChangeRiskAssessment evaluates risk before executing a change.
+func (h *AlertRuleHandler) ChangeRiskAssessment(c *gin.Context) {
+	var req struct {
+		TaskID int64    `json:"task_id" binding:"required"`
+		Hosts  []string `json:"hosts" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+	data, err := h.alertSvc.AssessChangeRisk(req.TaskID, req.Hosts)
+	if err != nil {
+		response.InternalServerError(c, "风险评估失败")
+		return
+	}
+	response.Success(c, data)
+}
+
 // Evaluate 手动触发告警巡检。
-// @Summary 手动触发告警巡检
-// @Tags 告警管理
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} response.Response
-// @Router /alert-rules/evaluate [post]
 func (h *AlertRuleHandler) Evaluate(c *gin.Context) {
 	if !requireAdmin(c) {
 		return

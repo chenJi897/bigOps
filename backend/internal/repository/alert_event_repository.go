@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/database"
 )
@@ -146,7 +148,7 @@ type AlertEventGroupRow struct {
 	LatestHost   string  `json:"latest_host"`
 }
 
-func (r *AlertEventRepository) GroupByFingerprint(q AlertEventListQuery) ([]AlertEventGroupRow, int64, error) {
+func (r *AlertEventRepository) GroupByFingerprint(q AlertEventListQuery, windowMinutes int) ([]AlertEventGroupRow, int64, error) {
 	db := database.GetDB().Table("alert_events").
 		Select(`rule_id, rule_name, severity, agent_id,
 			MAX(status) as status,
@@ -157,6 +159,9 @@ func (r *AlertEventRepository) GroupByFingerprint(q AlertEventListQuery) ([]Aler
 			COALESCE(MAX(hostname),'') as latest_host`).
 		Where("deleted_at IS NULL")
 
+	if windowMinutes > 0 {
+		db = db.Where("triggered_at >= NOW() - INTERVAL ? MINUTE", windowMinutes)
+	}
 	if q.Status != "" {
 		db = db.Where("status = ?", q.Status)
 	}
@@ -183,6 +188,51 @@ func (r *AlertEventRepository) GroupByFingerprint(q AlertEventListQuery) ([]Aler
 		return nil, 0, err
 	}
 	return rows, total, nil
+}
+
+func (r *AlertEventRepository) ListFiringOlderThan(age time.Duration) ([]*model.AlertEvent, error) {
+	cutoff := time.Now().Add(-age)
+	var items []*model.AlertEvent
+	if err := database.GetDB().
+		Where("status = ? AND triggered_at <= ? AND escalated = 0", model.AlertEventStatusFiring, cutoff).
+		Limit(100).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *AlertEventRepository) FindOpenByAgentMetric(agentID, metricType string) (*model.AlertEvent, error) {
+	var item model.AlertEvent
+	if err := database.GetDB().
+		Where("agent_id = ? AND metric_type = ? AND status IN ?", agentID, metricType, []string{
+			model.AlertEventStatusFiring, model.AlertEventStatusAcknowledged,
+		}).
+		Order("id DESC").First(&item).Error; err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (r *AlertEventRepository) ListByAgentStatus(agentID, status string) ([]*model.AlertEvent, error) {
+	var items []*model.AlertEvent
+	if err := database.GetDB().
+		Where("agent_id = ? AND status = ?", agentID, status).
+		Order("id DESC").Limit(50).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *AlertEventRepository) ListByTicketID(ticketID int64) ([]*model.AlertEvent, error) {
+	var items []*model.AlertEvent
+	if err := database.GetDB().
+		Where("ticket_id = ?", ticketID).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 func (r *AlertEventRepository) ListByRuleAgent(ruleID int64, agentID string, limit int) ([]*model.AlertEvent, error) {

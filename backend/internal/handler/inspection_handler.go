@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/url"
+	"strconv"
 
 	"github.com/bigops/platform/internal/model"
 	"github.com/bigops/platform/internal/pkg/response"
@@ -214,6 +215,21 @@ func (h *InspectionHandler) TemplateTrend(c *gin.Context) {
 	data, err := h.svc.TemplateTrend(id)
 	if err != nil {
 		response.Error(c, 404, "模板不存在")
+		return
+	}
+	response.Success(c, data)
+}
+
+func (h *InspectionHandler) DiffRecords(c *gin.Context) {
+	idA, _ := strconv.ParseInt(c.Query("record_a"), 10, 64)
+	idB, _ := strconv.ParseInt(c.Query("record_b"), 10, 64)
+	if idA == 0 || idB == 0 {
+		response.BadRequest(c, "需要 record_a 和 record_b 参数")
+		return
+	}
+	data, err := h.svc.DiffRecords(idA, idB)
+	if err != nil {
+		response.Error(c, 400, err.Error())
 		return
 	}
 	response.Success(c, data)

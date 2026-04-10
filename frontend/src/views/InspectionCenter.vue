@@ -1,9 +1,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'InspectionCenter' })
 
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { inspectionApi, taskApi } from '../api'
+
+let pollTimer: number | null = null
 
 const loading = ref(false)
 const tasks = ref<any[]>([])
@@ -144,7 +146,22 @@ async function runPlan(id: number) {
     await inspectionApi.runPlan(id)
     ElMessage.success('巡检执行已发起')
     await loadAll()
+    startRecordPoll()
   } catch { /* cancelled */ }
+}
+
+function startRecordPoll() {
+  stopRecordPoll()
+  pollTimer = window.setInterval(async () => {
+    const res = await inspectionApi.records({ page: 1, size: 100 })
+    records.value = (res as any).data?.list || []
+    const hasRunning = records.value.some((r: any) => r.status === 'running')
+    if (!hasRunning) stopRecordPoll()
+  }, 5000)
+}
+
+function stopRecordPoll() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
 }
 
 async function viewReport(id: number) {
@@ -216,7 +233,12 @@ const parsedReport = computed(() => {
   return detail
 })
 
-onMounted(loadAll)
+onMounted(() => {
+  loadAll().then(() => {
+    if (records.value.some((r: any) => r.status === 'running')) startRecordPoll()
+  })
+})
+onUnmounted(stopRecordPoll)
 </script>
 
 <template>
