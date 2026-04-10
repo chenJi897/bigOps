@@ -357,9 +357,6 @@ function metricLabel(metricType: string) {
   return metricLabels[metricType] || metricType
 }
 
-function goldenDimensionTypeText(value: string) {
-  return goldenDimensionTypeLabel[value] || value
-}
 
 function aggregateStatus(item: any) {
   if (Number(item.offline_total || 0) > 0) return 'warning'

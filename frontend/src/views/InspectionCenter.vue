@@ -209,7 +209,7 @@ async function openDiff() {
   catch { diffData.value = null } finally { diffLoading.value = false }
 }
 
-async function viewRelatedAlerts(row: any) {
+async function viewRelatedAlerts(_row: any) {
   alertsVisible.value = true; alertsLoading.value = true
   try {
     const res = await alertRuleApi.events({ page: 1, size: 50, keyword: '巡检' })
@@ -218,7 +218,6 @@ async function viewRelatedAlerts(row: any) {
   finally { alertsLoading.value = false }
 }
 
-function goAlertDetail(id: number) { router.push(`/monitor/alerts?keyword=巡检`) }
 
 function statusType(status: string) {
   if (status === 'success') return 'success'
