@@ -273,7 +273,7 @@ async function saveSLOConfig() {
   await monitorApi.updateSloConfig(sloForm.value)
   ElMessage.success('SLO 配置已更新')
   sloDialogVisible.value = false
-  await fetchSummaryAndAgents(false)
+  await fetchSummaryAndAgents(true)
 }
 
 async function loadAnomalies() {
@@ -528,7 +528,7 @@ onUnmounted(() => {
         <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
           <div class="text-xs tracking-wider text-slate-500 uppercase">平均延迟</div>
           <div class="mt-2 text-3xl font-bold text-amber-600">{{ Number(goldenSignals.avg_latency_ms || 0).toFixed(2) }}ms</div>
-          <div class="mt-2 text-xs text-slate-500">执行完成样本均值</div>
+          <div class="mt-2 text-xs text-slate-500">心跳 RTT 均值</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="12" :lg="6">

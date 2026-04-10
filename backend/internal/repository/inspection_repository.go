@@ -32,6 +32,10 @@ func (r *InspectionRepository) UpdateTemplate(item *model.InspectionTemplate) er
 	return database.GetDB().Save(item).Error
 }
 
+func (r *InspectionRepository) DeleteTemplate(id int64) error {
+	return database.GetDB().Delete(&model.InspectionTemplate{}, id).Error
+}
+
 func (r *InspectionRepository) GetTemplate(id int64) (*model.InspectionTemplate, error) {
 	var item model.InspectionTemplate
 	if err := database.GetDB().First(&item, id).Error; err != nil {
@@ -70,6 +74,10 @@ func (r *InspectionRepository) CreatePlan(item *model.InspectionPlan) error {
 
 func (r *InspectionRepository) UpdatePlan(item *model.InspectionPlan) error {
 	return database.GetDB().Save(item).Error
+}
+
+func (r *InspectionRepository) DeletePlan(id int64) error {
+	return database.GetDB().Delete(&model.InspectionPlan{}, id).Error
 }
 
 func (r *InspectionRepository) GetPlan(id int64) (*model.InspectionPlan, error) {

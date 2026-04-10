@@ -57,6 +57,10 @@ func (s *InspectionService) UpsertTemplate(id int64, req *model.InspectionTempla
 	return s.repo.UpdateTemplate(old)
 }
 
+func (s *InspectionService) DeleteTemplate(id int64) error {
+	return s.repo.DeleteTemplate(id)
+}
+
 func (s *InspectionService) ListPlans(page, size int) ([]*model.InspectionPlan, int64, error) {
 	return s.repo.ListPlans(page, size)
 }
@@ -84,6 +88,10 @@ func (s *InspectionService) UpsertPlan(id int64, req *model.InspectionPlan) erro
 	old.Enabled = req.Enabled
 	old.UpdatedBy = req.UpdatedBy
 	return s.repo.UpdatePlan(old)
+}
+
+func (s *InspectionService) DeletePlan(id int64) error {
+	return s.repo.DeletePlan(id)
 }
 
 func (s *InspectionService) ExecutePlan(planID int64) (*model.InspectionRecord, error) {

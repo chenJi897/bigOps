@@ -103,6 +103,21 @@ func (h *InspectionHandler) UpdateTemplate(c *gin.Context) {
 	response.SuccessWithMessage(c, "更新成功", nil)
 }
 
+func (h *InspectionHandler) DeleteTemplate(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.svc.DeleteTemplate(id); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "模板已删除", nil)
+}
+
 func (h *InspectionHandler) ListPlans(c *gin.Context) {
 	page, size := parsePageSize(c)
 	items, total, err := h.svc.ListPlans(page, size)
@@ -166,6 +181,21 @@ func (h *InspectionHandler) UpdatePlan(c *gin.Context) {
 		return
 	}
 	response.SuccessWithMessage(c, "更新成功", nil)
+}
+
+func (h *InspectionHandler) DeletePlan(c *gin.Context) {
+	if !requireAdmin(c) {
+		return
+	}
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.svc.DeletePlan(id); err != nil {
+		response.Error(c, 400, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "计划已删除", nil)
 }
 
 func (h *InspectionHandler) ExecutePlan(c *gin.Context) {
