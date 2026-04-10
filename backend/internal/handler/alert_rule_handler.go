@@ -25,23 +25,23 @@ func NewAlertRuleHandler() *AlertRuleHandler {
 }
 
 type UpsertAlertRuleRequest struct {
-	Name          string  `json:"name" binding:"required"`
-	MetricType    string  `json:"metric_type" binding:"required"`
-	Operator      string  `json:"operator"`
-	Threshold     float64 `json:"threshold"`
-	Severity      string  `json:"severity"`
-	Enabled       int8    `json:"enabled"`
-	Description   string  `json:"description"`
-	NotifyUserIDs []int64 `json:"notify_user_ids"`
-	NotifyChannels []string `json:"notify_channels"`
-	NotifyConfig  map[string]interface{} `json:"notify_config"`
-	NotifyGroupID int64                  `json:"notify_group_id"`
-	Action        string  `json:"action"`
-	RepairTaskID  int64   `json:"repair_task_id"`
-	TicketTypeID  int64   `json:"ticket_type_id"`
-	OnCallScheduleID int64 `json:"oncall_schedule_id"`
-	ServiceTreeID int64   `json:"service_tree_id"`
-	OwnerID       int64   `json:"owner_id"`
+	Name             string                 `json:"name" binding:"required"`
+	MetricType       string                 `json:"metric_type" binding:"required"`
+	Operator         string                 `json:"operator"`
+	Threshold        float64                `json:"threshold"`
+	Severity         string                 `json:"severity"`
+	Enabled          int8                   `json:"enabled"`
+	Description      string                 `json:"description"`
+	NotifyUserIDs    []int64                `json:"notify_user_ids"`
+	NotifyChannels   []string               `json:"notify_channels"`
+	NotifyConfig     map[string]interface{} `json:"notify_config"`
+	NotifyGroupID    int64                  `json:"notify_group_id"`
+	Action           string                 `json:"action"`
+	RepairTaskID     int64                  `json:"repair_task_id"`
+	TicketTypeID     int64                  `json:"ticket_type_id"`
+	OnCallScheduleID int64                  `json:"oncall_schedule_id"`
+	ServiceTreeID    int64                  `json:"service_tree_id"`
+	OwnerID          int64                  `json:"owner_id"`
 }
 
 type AlertEventStatusRequest struct {
@@ -104,25 +104,25 @@ func (h *AlertRuleHandler) Create(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
 	item := &model.AlertRule{
-		Name:          req.Name,
-		MetricType:    req.MetricType,
-		Operator:      req.Operator,
-		Threshold:     req.Threshold,
-		Severity:      req.Severity,
-		Enabled:       req.Enabled,
-		Description:   req.Description,
-		NotifyUserIDs: string(payload),
-		NotifyChannels: string(channelsPayload),
-		NotifyConfig:  string(notifyConfigPayload),
-		NotifyGroupID: req.NotifyGroupID,
-		Action:        req.Action,
-		RepairTaskID:  req.RepairTaskID,
-		TicketTypeID:  req.TicketTypeID,
+		Name:             req.Name,
+		MetricType:       req.MetricType,
+		Operator:         req.Operator,
+		Threshold:        req.Threshold,
+		Severity:         req.Severity,
+		Enabled:          req.Enabled,
+		Description:      req.Description,
+		NotifyUserIDs:    string(payload),
+		NotifyChannels:   string(channelsPayload),
+		NotifyConfig:     string(notifyConfigPayload),
+		NotifyGroupID:    req.NotifyGroupID,
+		Action:           req.Action,
+		RepairTaskID:     req.RepairTaskID,
+		TicketTypeID:     req.TicketTypeID,
 		OnCallScheduleID: req.OnCallScheduleID,
-		ServiceTreeID: req.ServiceTreeID,
-		OwnerID:       req.OwnerID,
-		CreatedBy:     currentUserID,
-		UpdatedBy:     currentUserID,
+		ServiceTreeID:    req.ServiceTreeID,
+		OwnerID:          req.OwnerID,
+		CreatedBy:        currentUserID,
+		UpdatedBy:        currentUserID,
 	}
 	if item.Operator == "" {
 		item.Operator = "gt"
@@ -167,24 +167,24 @@ func (h *AlertRuleHandler) Update(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	currentUserID, _ := userID.(int64)
 	item := &model.AlertRule{
-		Name:          req.Name,
-		MetricType:    req.MetricType,
-		Operator:      req.Operator,
-		Threshold:     req.Threshold,
-		Severity:      req.Severity,
-		Enabled:       req.Enabled,
-		Description:   req.Description,
-		NotifyUserIDs: string(payload),
-		NotifyChannels: string(channelsPayload),
-		NotifyConfig:  string(notifyConfigPayload),
-		NotifyGroupID: req.NotifyGroupID,
-		Action:        req.Action,
-		RepairTaskID:  req.RepairTaskID,
-		TicketTypeID:  req.TicketTypeID,
+		Name:             req.Name,
+		MetricType:       req.MetricType,
+		Operator:         req.Operator,
+		Threshold:        req.Threshold,
+		Severity:         req.Severity,
+		Enabled:          req.Enabled,
+		Description:      req.Description,
+		NotifyUserIDs:    string(payload),
+		NotifyChannels:   string(channelsPayload),
+		NotifyConfig:     string(notifyConfigPayload),
+		NotifyGroupID:    req.NotifyGroupID,
+		Action:           req.Action,
+		RepairTaskID:     req.RepairTaskID,
+		TicketTypeID:     req.TicketTypeID,
 		OnCallScheduleID: req.OnCallScheduleID,
-		ServiceTreeID: req.ServiceTreeID,
-		OwnerID:       req.OwnerID,
-		UpdatedBy:     currentUserID,
+		ServiceTreeID:    req.ServiceTreeID,
+		OwnerID:          req.OwnerID,
+		UpdatedBy:        currentUserID,
 	}
 	if err := h.alertSvc.UpdateRule(id, item); err != nil {
 		response.Error(c, 400, err.Error())
@@ -256,6 +256,38 @@ func (h *AlertRuleHandler) Events(c *gin.Context) {
 	response.Page(c, items, total, page, size)
 }
 
+// EventGroups 告警事件收敛分组列表。
+// @Summary 告警事件收敛分组
+// @Tags 告警管理
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "页码" default(1)
+// @Param size query int false "每页条数" default(20)
+// @Param status query string false "状态"
+// @Param severity query string false "严重级别"
+// @Param agent_id query string false "Agent ID"
+// @Param keyword query string false "关键字"
+// @Param window_minutes query int false "收敛窗口(分钟)" default(5)
+// @Success 200 {object} response.Response{data=response.PageData}
+// @Router /alert-events/groups [get]
+func (h *AlertRuleHandler) EventGroups(c *gin.Context) {
+	page, size := parsePageSize(c)
+	windowMinutes, _ := strconv.Atoi(c.DefaultQuery("window_minutes", "5"))
+	items, total, err := h.alertSvc.ListEventGroups(repository.AlertEventListQuery{
+		Page:     page,
+		Size:     size,
+		Status:   c.Query("status"),
+		Severity: c.Query("severity"),
+		AgentID:  c.Query("agent_id"),
+		Keyword:  c.Query("keyword"),
+	}, windowMinutes)
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Page(c, items, total, page, size)
+}
+
 // GetEvent 告警事件详情。
 // @Summary 告警事件详情
 // @Tags 告警管理
@@ -279,6 +311,81 @@ func (h *AlertRuleHandler) GetEvent(c *gin.Context) {
 		return
 	}
 	response.Success(c, event)
+}
+
+// EventTimeline 告警事件时间轴。
+// @Summary 告警事件时间轴
+// @Tags 告警管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "事件ID"
+// @Success 200 {object} response.Response
+// @Router /alert-events/{id}/timeline [get]
+func (h *AlertRuleHandler) EventTimeline(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	data, err := h.alertSvc.GetEventTimeline(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.Error(c, 404, "事件不存在")
+			return
+		}
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, data)
+}
+
+// EventRootCause 告警根因分析。
+// @Summary 告警根因分析
+// @Tags 告警管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "事件ID"
+// @Success 200 {object} response.Response
+// @Router /alert-events/{id}/root-cause [get]
+func (h *AlertRuleHandler) EventRootCause(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	data, err := h.alertSvc.AnalyzeRootCause(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.Error(c, 404, "事件不存在")
+			return
+		}
+		response.InternalServerError(c, "分析失败")
+		return
+	}
+	response.Success(c, data)
+}
+
+// EventContext 告警详情上下文。
+// @Summary 告警详情上下文
+// @Tags 告警管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "事件ID"
+// @Success 200 {object} response.Response
+// @Router /alert-events/{id}/context [get]
+func (h *AlertRuleHandler) EventContext(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	data, err := h.alertSvc.GetEventContext(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.Error(c, 404, "事件不存在")
+			return
+		}
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, data)
 }
 
 // AcknowledgeEvent 确认告警事件。

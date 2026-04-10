@@ -1053,12 +1053,12 @@ func (s *CICDService) resolvePipelineNotifyTargets(run *model.CICDPipelineRun) (
 
 func (s *CICDService) validatePipelineRefs(item *model.CICDPipeline) error {
 	if item.BuildTaskID > 0 {
-		if _, err := s.taskRepo.GetByID(item.BuildTaskID); err != nil {
+		if _, err := s.taskRepo.GetTask(item.BuildTaskID); err != nil {
 			return errors.New("构建任务不存在")
 		}
 	}
 	if item.DeployTaskID > 0 {
-		if _, err := s.taskRepo.GetByID(item.DeployTaskID); err != nil {
+		if _, err := s.taskRepo.GetTask(item.DeployTaskID); err != nil {
 			return errors.New("部署任务不存在")
 		}
 	}
@@ -1305,7 +1305,7 @@ func (s *CICDService) fillPipelines(items []*model.CICDPipeline) {
 	}
 	taskMap := make(map[int64]*model.Task)
 	for _, id := range taskIDs {
-		if item, err := s.taskRepo.GetByID(id); err == nil {
+		if item, err := s.taskRepo.GetTask(id); err == nil {
 			taskMap[id] = item
 		}
 	}

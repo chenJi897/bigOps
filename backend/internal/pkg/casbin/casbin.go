@@ -29,7 +29,7 @@ g = _, _
 e = some(where (p.eft == allow))
 
 [matchers]
-m = g(r.sub, p.sub) && keyMatch(r.obj, p.obj) && (p.act == "*" || r.act == p.act) || r.sub == "admin"
+m = (g(r.sub, p.sub) && keyMatch(r.obj, p.obj) && (p.act == "*" || r.act == p.act)) || r.sub == "admin" || g(r.sub, "admin")
 `
 
 var globalEnforcer *casbin.Enforcer

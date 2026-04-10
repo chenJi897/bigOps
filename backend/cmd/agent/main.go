@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -11,7 +10,10 @@ import (
 	"time"
 
 	"github.com/bigops/platform/internal/agent"
+	"github.com/bigops/platform/internal/pkg/config"
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -21,29 +23,43 @@ func main() {
 	viper.SetConfigFile(*configPath)
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Failed to read config: %v", err)
+		logger.Fatal("Failed to read config", zap.Error(err))
 	}
 
-	serverAddr := viper.GetString("server.address")
-	hostname := viper.GetString("agent.hostname")
-	configuredAgentID := viper.GetString("agent.id")
-	configuredStateFile := viper.GetString("agent.state_file")
-	publicIP := viper.GetString("agent.public_ip")
-	publicIPProvider := viper.GetString("agent.public_ip_provider")
-	publicIPCacheFile := viper.GetString("agent.public_ip_cache_file")
-	publicIPTimeoutSeconds := viper.GetInt("agent.public_ip_timeout_seconds")
-	publicIPRefreshHours := viper.GetInt("agent.public_ip_refresh_hours")
+	// 使用统一配置加载（取代直接viper调用）
+	if err := config.Load(*configPath); err != nil {
+		logger.Fatal("Failed to load config via config package", zap.Error(err))
+	}
+	cfg := config.Get()
+	agentCfg := config.GetAgentConfig()
+
+	serverAddr := cfg.Server.Address
+	hostname := agentCfg.Hostname
+	configuredAgentID := agentCfg.ID
+	configuredStateFile := agentCfg.StateFile
+	publicIP := agentCfg.PublicIP
+	publicIPProvider := agentCfg.PublicIPProvider
+	publicIPCacheFile := agentCfg.PublicIPCacheFile
+	publicIPTimeoutSeconds := agentCfg.PublicIPTimeoutSeconds
+	publicIPRefreshHours := agentCfg.PublicIPRefreshHours
 
 	// Resource limits (inspired by didi/falcon-log-agent)
-	maxCPURate := viper.GetFloat64("agent.max_cpu_rate")
-	maxMemMB := viper.GetInt("agent.max_mem_mb")
+	maxCPURate := agentCfg.MaxCPURate
+	maxMemMB := agentCfg.MaxMemMB
 	if maxCPURate > 0 {
 		cores := agent.ApplyCPULimit(maxCPURate)
-		log.Printf("CPU limit applied: GOMAXPROCS=%d (rate=%.0f%%)", cores, maxCPURate*100)
+		logger.Info("CPU limit applied",
+			zap.String("agent_id", configuredAgentID),
+			zap.Int("gomaxprocs", cores),
+			zap.Float64("rate", maxCPURate),
+		)
 	}
 	if maxMemMB > 0 {
-		agent.StartMemoryPatrol(maxMemMB, 10*time.Second)
-		log.Printf("Memory patrol started: limit=%dMB", maxMemMB)
+		agent.StartMemoryPatrol(configuredAgentID, maxMemMB, 10*time.Second)
+		logger.Info("Memory patrol started",
+			zap.String("agent_id", configuredAgentID),
+			zap.Int("limit_mb", maxMemMB),
+		)
 	}
 	if hostname == "" {
 		h, _ := os.Hostname()
@@ -55,7 +71,7 @@ func main() {
 	publicIPCachePath := resolvePublicIPCacheFile(*configPath, publicIPCacheFile)
 	agentID, err := resolveAgentID(configuredAgentID, stateFile)
 	if err != nil {
-		log.Fatalf("Failed to resolve agent id: %v", err)
+		logger.Fatal("Failed to resolve agent id", zap.Error(err))
 	}
 	publicIPCfg := publicIPConfig{
 		ConfiguredPublicIP: publicIP,
@@ -67,18 +83,31 @@ func main() {
 	}
 	resolvedPublicIP, err := resolvePublicIP(publicIPCfg)
 	if err != nil {
-		log.Printf("Resolve public ip failed: %v", err)
+		logger.Warn("Resolve public ip failed",
+			zap.String("agent_id", agentID),
+			zap.Error(err),
+		)
 	}
 	publicIP = resolvedPublicIP
 
-	log.Printf("BigOps Agent starting, server=%s hostname=%s private_ip=%s public_ip=%s agent_id=%s", serverAddr, hostname, privateIP, publicIP, agentID)
+	logger.Info("BigOps Agent starting",
+		zap.String("agent_id", agentID),
+		zap.String("server", serverAddr),
+		zap.String("hostname", hostname),
+		zap.String("private_ip", privateIP),
+		zap.String("public_ip", publicIP),
+	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	client := agent.NewAgentClient(serverAddr, agentID, hostname, privateIP, publicIP)
 	if err := client.Connect(); err != nil {
-		log.Fatalf("Failed to connect to server: %v", err)
+		logger.Fatal("Failed to connect to server",
+			zap.String("agent_id", agentID),
+			zap.String("server", serverAddr),
+			zap.Error(err),
+		)
 	}
 	defer client.Close()
 
@@ -88,7 +117,9 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Agent shutting down...")
+	logger.Info("Agent shutting down",
+		zap.String("agent_id", agentID),
+	)
 	cancel()
 }
 

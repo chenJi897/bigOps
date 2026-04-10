@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -18,15 +19,15 @@ import (
 )
 
 type AlertService struct {
-	ruleRepo  *repository.AlertRuleRepository
-	eventRepo *repository.AlertEventRepository
-	agentRepo *repository.AgentRepository
-	assetRepo *repository.AssetRepository
+	ruleRepo    *repository.AlertRuleRepository
+	eventRepo   *repository.AlertEventRepository
+	agentRepo   *repository.AgentRepository
+	assetRepo   *repository.AssetRepository
 	silenceRepo *repository.AlertSilenceRepository
-	notifySvc *NotificationService
-	ticketSvc *TicketService
-	taskSvc   *TaskService
-	oncallSvc *OnCallService
+	notifySvc   *NotificationService
+	ticketSvc   *TicketService
+	taskSvc     *TaskService
+	oncallSvc   *OnCallService
 }
 
 type AlertEvaluationSummary struct {
@@ -36,6 +37,60 @@ type AlertEvaluationSummary struct {
 	ResolvedCount  int `json:"resolved_count"`
 	UpdatedCount   int `json:"updated_count"`
 	ErrorCount     int `json:"error_count"`
+}
+
+type AlertEventGroup struct {
+	Fingerprint    string          `json:"fingerprint"`
+	RuleName       string          `json:"rule_name"`
+	Severity       string          `json:"severity"`
+	Status         string          `json:"status"`
+	TotalCount     int             `json:"total_count"`
+	FirstTriggered model.LocalTime `json:"first_triggered"`
+	LastTriggered  model.LocalTime `json:"last_triggered"`
+	DurationSec    int64           `json:"duration_sec"`
+	LatestEventID  int64           `json:"latest_event_id"`
+	LatestHost     string          `json:"latest_host"`
+	ServiceTreeID  int64           `json:"service_tree_id"`
+	OwnerID        int64           `json:"owner_id"`
+}
+
+type AlertTimelineItem struct {
+	Type      string           `json:"type"`
+	Timestamp *model.LocalTime `json:"timestamp,omitempty"`
+	Note      string           `json:"note,omitempty"`
+	Operator  int64            `json:"operator,omitempty"`
+}
+
+type AlertEventTimeline struct {
+	EventID      int64               `json:"event_id"`
+	RuleName     string              `json:"rule_name"`
+	Severity     string              `json:"severity"`
+	Status       string              `json:"status"`
+	RelatedCount int                 `json:"related_count"`
+	Items        []AlertTimelineItem `json:"items"`
+}
+
+type AlertRootCauseResult struct {
+	EventID           int64    `json:"event_id"`
+	PrimarySuspect    string   `json:"primary_suspect"`
+	Confidence        float64  `json:"confidence"`
+	Evidence          []string `json:"evidence"`
+	RelatedEventCount int      `json:"related_event_count"`
+	ServiceTreeID     int64    `json:"service_tree_id"`
+	OwnerID           int64    `json:"owner_id"`
+}
+
+type AlertEventContext struct {
+	EventID         int64    `json:"event_id"`
+	RuleName        string   `json:"rule_name"`
+	Status          string   `json:"status"`
+	Severity        string   `json:"severity"`
+	Action          string   `json:"action"`
+	TaskExecutionID int64    `json:"task_execution_id"`
+	TicketID        int64    `json:"ticket_id"`
+	ServiceTreeID   int64    `json:"service_tree_id"`
+	OwnerID         int64    `json:"owner_id"`
+	Suggestions     []string `json:"suggestions"`
 }
 
 func NewAlertService() *AlertService {
@@ -112,6 +167,209 @@ func (s *AlertService) ListEvents(q repository.AlertEventListQuery) ([]*model.Al
 
 func (s *AlertService) GetEvent(id int64) (*model.AlertEvent, error) {
 	return s.eventRepo.GetByID(id)
+}
+
+func (s *AlertService) ListEventGroups(q repository.AlertEventListQuery, windowMinutes int) ([]*AlertEventGroup, int64, error) {
+	if windowMinutes <= 0 {
+		windowMinutes = 5
+	}
+	if q.Page <= 0 {
+		q.Page = 1
+	}
+	if q.Size <= 0 {
+		q.Size = 20
+	}
+	baseQuery := q
+	baseQuery.Page = 1
+	baseQuery.Size = 1000
+	items, _, err := s.eventRepo.List(baseQuery)
+	if err != nil {
+		return nil, 0, err
+	}
+	type acc struct {
+		group *AlertEventGroup
+	}
+	buckets := make(map[string]*acc)
+	for _, ev := range items {
+		if ev == nil {
+			continue
+		}
+		ts := time.Time(ev.TriggeredAt)
+		slot := ts.Unix() / int64(windowMinutes*60)
+		fp := buildAlertFingerprint(ev)
+		key := fmt.Sprintf("%s:%d", fp, slot)
+		existed, ok := buckets[key]
+		if !ok {
+			buckets[key] = &acc{
+				group: &AlertEventGroup{
+					Fingerprint:    fp,
+					RuleName:       ev.RuleName,
+					Severity:       ev.Severity,
+					Status:         ev.Status,
+					TotalCount:     1,
+					FirstTriggered: ev.TriggeredAt,
+					LastTriggered:  ev.TriggeredAt,
+					LatestEventID:  ev.ID,
+					LatestHost:     firstNonEmptyAlertHost(ev),
+					ServiceTreeID:  ev.ServiceTreeID,
+					OwnerID:        ev.OwnerID,
+				},
+			}
+			continue
+		}
+		g := existed.group
+		g.TotalCount++
+		if time.Time(ev.TriggeredAt).Before(time.Time(g.FirstTriggered)) {
+			g.FirstTriggered = ev.TriggeredAt
+		}
+		if time.Time(ev.TriggeredAt).After(time.Time(g.LastTriggered)) {
+			g.LastTriggered = ev.TriggeredAt
+			g.LatestEventID = ev.ID
+			g.LatestHost = firstNonEmptyAlertHost(ev)
+			g.Status = ev.Status
+		}
+	}
+	groups := make([]*AlertEventGroup, 0, len(buckets))
+	for _, item := range buckets {
+		g := item.group
+		g.DurationSec = int64(time.Time(g.LastTriggered).Sub(time.Time(g.FirstTriggered)).Seconds())
+		if g.DurationSec < 0 {
+			g.DurationSec = 0
+		}
+		groups = append(groups, g)
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		return time.Time(groups[i].LastTriggered).After(time.Time(groups[j].LastTriggered))
+	})
+	total := int64(len(groups))
+	start := (q.Page - 1) * q.Size
+	if start >= len(groups) {
+		return []*AlertEventGroup{}, total, nil
+	}
+	end := start + q.Size
+	if end > len(groups) {
+		end = len(groups)
+	}
+	return groups[start:end], total, nil
+}
+
+func (s *AlertService) GetEventTimeline(id int64) (*AlertEventTimeline, error) {
+	event, err := s.eventRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	related, err := s.eventRepo.ListByRuleAgent(event.RuleID, event.AgentID, 100)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]AlertTimelineItem, 0, 4)
+	items = append(items, AlertTimelineItem{
+		Type:      "triggered",
+		Timestamp: &event.TriggeredAt,
+		Note:      event.Description,
+	})
+	if event.AcknowledgedAt != nil {
+		items = append(items, AlertTimelineItem{
+			Type:      "acknowledged",
+			Timestamp: event.AcknowledgedAt,
+			Note:      event.AcknowledgementNote,
+			Operator:  event.AcknowledgedBy,
+		})
+	}
+	if event.ResolvedAt != nil {
+		items = append(items, AlertTimelineItem{
+			Type:      "resolved",
+			Timestamp: event.ResolvedAt,
+			Note:      event.ResolutionNote,
+			Operator:  event.ResolvedBy,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Timestamp == nil {
+			return false
+		}
+		if items[j].Timestamp == nil {
+			return true
+		}
+		return time.Time(*items[i].Timestamp).Before(time.Time(*items[j].Timestamp))
+	})
+	return &AlertEventTimeline{
+		EventID:      event.ID,
+		RuleName:     event.RuleName,
+		Severity:     event.Severity,
+		Status:       event.Status,
+		RelatedCount: len(related),
+		Items:        items,
+	}, nil
+}
+
+func (s *AlertService) AnalyzeRootCause(id int64) (*AlertRootCauseResult, error) {
+	event, err := s.eventRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	related, err := s.eventRepo.ListByRuleAgent(event.RuleID, event.AgentID, 20)
+	if err != nil {
+		return nil, err
+	}
+	evidence := []string{
+		fmt.Sprintf("规则=%s", event.RuleName),
+		fmt.Sprintf("主机=%s", firstNonEmptyAlertHost(event)),
+		fmt.Sprintf("指标=%s 当前值=%.2f 阈值=%.2f", event.MetricType, event.MetricValue, event.Threshold),
+	}
+	confidence := 0.65
+	if len(related) >= 3 {
+		confidence = 0.8
+		evidence = append(evidence, fmt.Sprintf("最近存在 %d 条同规则同主机事件，具备持续性特征", len(related)))
+	}
+	if event.ServiceTreeID > 0 {
+		confidence += 0.05
+		evidence = append(evidence, fmt.Sprintf("已关联服务树 ID=%d", event.ServiceTreeID))
+	}
+	if confidence > 0.95 {
+		confidence = 0.95
+	}
+	return &AlertRootCauseResult{
+		EventID:           event.ID,
+		PrimarySuspect:    "rule_agent_hotspot",
+		Confidence:        confidence,
+		Evidence:          evidence,
+		RelatedEventCount: len(related),
+		ServiceTreeID:     event.ServiceTreeID,
+		OwnerID:           event.OwnerID,
+	}, nil
+}
+
+func (s *AlertService) GetEventContext(id int64) (*AlertEventContext, error) {
+	event, err := s.eventRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	suggestions := make([]string, 0, 4)
+	if event.Status == model.AlertEventStatusFiring {
+		suggestions = append(suggestions, "优先确认是否为持续抖动告警，必要时使用静默策略。")
+	}
+	if event.TaskExecutionID > 0 {
+		suggestions = append(suggestions, fmt.Sprintf("检查自动修复任务执行记录：task_execution_id=%d", event.TaskExecutionID))
+	}
+	if event.TicketID > 0 {
+		suggestions = append(suggestions, fmt.Sprintf("跟进关联工单处理进度：ticket_id=%d", event.TicketID))
+	}
+	if len(suggestions) == 0 {
+		suggestions = append(suggestions, "建议查看近 5 分钟同规则同主机事件，确认是否需升级告警级别。")
+	}
+	return &AlertEventContext{
+		EventID:         event.ID,
+		RuleName:        event.RuleName,
+		Status:          event.Status,
+		Severity:        event.Severity,
+		Action:          event.Action,
+		TaskExecutionID: event.TaskExecutionID,
+		TicketID:        event.TicketID,
+		ServiceTreeID:   event.ServiceTreeID,
+		OwnerID:         event.OwnerID,
+		Suggestions:     suggestions,
+	}, nil
 }
 
 // AcknowledgeEvent 允许人工确认当前仍在 firing/acknowledged 状态的告警。
@@ -583,6 +841,20 @@ func dedupeInt64s(items []int64) []int64 {
 		result = append(result, item)
 	}
 	return result
+}
+
+func buildAlertFingerprint(ev *model.AlertEvent) string {
+	return fmt.Sprintf("%d|%s|%d|%d|%s", ev.RuleID, ev.Severity, ev.ServiceTreeID, ev.OwnerID, ev.MetricType)
+}
+
+func firstNonEmptyAlertHost(ev *model.AlertEvent) string {
+	if strings.TrimSpace(ev.Hostname) != "" {
+		return ev.Hostname
+	}
+	if strings.TrimSpace(ev.IP) != "" {
+		return ev.IP
+	}
+	return ev.AgentID
 }
 
 func (s *AlertService) applyRuleAction(tx *gorm.DB, rule *model.AlertRule, agent *model.AgentInfo, event *model.AlertEvent) error {

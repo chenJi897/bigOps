@@ -3,11 +3,13 @@
 package agent
 
 import (
-	"log"
 	"math"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/bigops/platform/internal/pkg/logger"
+	"go.uber.org/zap"
 )
 
 // ResourceConfig Agent 资源限制配置。
@@ -33,7 +35,7 @@ func ApplyCPULimit(maxCPURate float64) int {
 
 // StartMemoryPatrol 启动内存巡检协程，每 interval 检查一次堆内存。
 // 超过 50% 打 warning，超过 100% 退出进程。
-func StartMemoryPatrol(maxMemMB int, interval time.Duration) {
+func StartMemoryPatrol(agentID string, maxMemMB int, interval time.Duration) {
 	if maxMemMB <= 0 {
 		maxMemMB = 512 // 默认 512MB
 	}
@@ -51,10 +53,20 @@ func StartMemoryPatrol(maxMemMB int, interval time.Duration) {
 			rate := (usedMB * 100) / uint64(maxMemMB)
 
 			if rate > 50 {
-				log.Printf("[patrol] WARNING: agent heap memory usage %dMB, rate %d%% (limit %dMB)", usedMB, rate, maxMemMB)
+				logger.Warn("Agent memory patrol warning",
+					zap.String("agent_id", agentID),
+					zap.Int("used_mb", int(usedMB)),
+					zap.Int("limit_mb", maxMemMB),
+					zap.Int("rate", int(rate)),
+				)
 			}
 			if rate > 100 {
-				log.Printf("[patrol] FATAL: agent heap memory over limit, exiting. used=%dMB limit=%dMB rate=%d%%", usedMB, maxMemMB, rate)
+				logger.Error("Agent memory over limit, exiting",
+					zap.String("agent_id", agentID),
+					zap.Int("used_mb", int(usedMB)),
+					zap.Int("limit_mb", maxMemMB),
+					zap.Int("rate", int(rate)),
+				)
 				os.Exit(1)
 			}
 		}

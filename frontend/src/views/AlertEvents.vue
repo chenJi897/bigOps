@@ -9,9 +9,20 @@ import { alertRuleApi } from '../api'
 const route = useRoute()
 const loading = ref(false)
 const events = ref<any[]>([])
+const groups = ref<any[]>([])
 const selectedRows = ref<any[]>([])
 const pager = ref({ page: 1, size: 20, total: 0 })
 const autoRefresh = ref(true)
+const viewMode = ref<'events' | 'groups'>('events')
+const groupWindowMinutes = ref(5)
+const timelineVisible = ref(false)
+const timelineLoading = ref(false)
+const timelineData = ref<any>(null)
+const rootCauseVisible = ref(false)
+const rootCauseLoading = ref(false)
+const rootCauseData = ref<any>(null)
+const contextLoading = ref(false)
+const contextData = ref<any>(null)
 let refreshTimer: number | null = null
 
 const filters = ref({
@@ -49,15 +60,32 @@ const canBatchResolve = computed(() => selectedRows.value.some(e => e.status !==
 async function fetchEvents(silent = false) {
   if (!silent) loading.value = true
   try {
-    const res = await alertRuleApi.events({
-      page: pager.value.page,
-      size: pager.value.size,
-      status: filters.value.status,
-      severity: filters.value.severity,
-      keyword: filters.value.keyword.trim(),
-    })
-    events.value = (res as any).data?.list || []
-    pager.value.total = Number((res as any).data?.total || 0)
+    let total = 0
+    if (viewMode.value === 'groups') {
+      const res = await alertRuleApi.eventGroups({
+        page: pager.value.page,
+        size: pager.value.size,
+        status: filters.value.status,
+        severity: filters.value.severity,
+        keyword: filters.value.keyword.trim(),
+        window_minutes: groupWindowMinutes.value,
+      })
+      groups.value = (res as any).data?.list || []
+      events.value = []
+      total = Number((res as any).data?.total || 0)
+    } else {
+      const res = await alertRuleApi.events({
+        page: pager.value.page,
+        size: pager.value.size,
+        status: filters.value.status,
+        severity: filters.value.severity,
+        keyword: filters.value.keyword.trim(),
+      })
+      events.value = (res as any).data?.list || []
+      groups.value = []
+      total = Number((res as any).data?.total || 0)
+    }
+    pager.value.total = total
   } finally {
     loading.value = false
   }
@@ -130,6 +158,34 @@ async function batchResolve() {
   } catch {}
 }
 
+async function openTimelineByEventID(eventID: number) {
+  timelineVisible.value = true
+  timelineLoading.value = true
+  try {
+    const res = await alertRuleApi.eventTimeline(eventID)
+    timelineData.value = (res as any).data
+  } finally {
+    timelineLoading.value = false
+  }
+}
+
+async function openRootCauseByEventID(eventID: number) {
+  rootCauseVisible.value = true
+  rootCauseLoading.value = true
+  contextLoading.value = true
+  try {
+    const [res, ctxRes] = await Promise.all([
+      alertRuleApi.eventRootCause(eventID),
+      alertRuleApi.eventContext(eventID),
+    ])
+    rootCauseData.value = (res as any).data
+    contextData.value = (ctxRes as any).data
+  } finally {
+    rootCauseLoading.value = false
+    contextLoading.value = false
+  }
+}
+
 function setupTimer() {
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
   if (autoRefresh.value) {
@@ -138,6 +194,11 @@ function setupTimer() {
 }
 
 watch(autoRefresh, setupTimer)
+watch(viewMode, () => {
+  pager.value.page = 1
+  selectedRows.value = []
+  fetchEvents()
+})
 onMounted(() => { fetchEvents(); setupTimer() })
 onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
 </script>
@@ -148,6 +209,15 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
     <div class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between gap-4">
       <h1 class="text-lg font-bold text-slate-800 whitespace-nowrap">告警事件</h1>
       <div class="flex items-center gap-2 flex-wrap">
+        <el-radio-group v-model="viewMode" size="small">
+          <el-radio-button label="events">事件视图</el-radio-button>
+          <el-radio-button label="groups">收敛分组</el-radio-button>
+        </el-radio-group>
+        <el-select v-if="viewMode === 'groups'" v-model="groupWindowMinutes" class="!w-32" size="small" @change="fetchEvents()">
+          <el-option :value="1" label="1分钟窗口" />
+          <el-option :value="5" label="5分钟窗口" />
+          <el-option :value="10" label="10分钟窗口" />
+        </el-select>
         <div class="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg">
           <span class="text-xs text-slate-500 whitespace-nowrap">自动刷新</span>
           <el-switch v-model="autoRefresh" size="small" />
@@ -214,7 +284,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
       </div>
 
       <!-- 事件列表 -->
-      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden" v-if="viewMode === 'events'">
         <el-table :data="events" v-loading="loading" stripe class="w-full" @selection-change="handleSelectionChange" :row-class-name="(r: any) => r.row.status === 'firing' ? 'firing-row' : ''">
           <el-table-column type="selection" width="40" align="center" />
           <el-table-column label="状态" width="90" align="center">
@@ -266,7 +336,8 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
                 <el-button link type="danger" size="small" @click="resolve(row)">关闭</el-button>
               </template>
               <template v-else>
-                <span class="text-xs text-slate-300">已处理</span>
+                <el-button link size="small" @click="openTimelineByEventID(row.id)">时间轴</el-button>
+                <el-button link type="warning" size="small" @click="openRootCauseByEventID(row.id)">根因</el-button>
               </template>
             </template>
           </el-table-column>
@@ -286,8 +357,100 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
           />
         </div>
       </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden" v-else>
+        <el-table :data="groups" v-loading="loading" stripe class="w-full">
+          <el-table-column label="状态" width="110" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="statusMap[row.status]?.tagType || 'info'">{{ statusMap[row.status]?.label || row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="规则" min-width="220" prop="rule_name" show-overflow-tooltip />
+          <el-table-column label="级别" width="80" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" :type="severityMap[row.severity]?.tagType || 'info'" effect="dark" round>
+                {{ severityMap[row.severity]?.label || row.severity }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="聚合数" width="90" prop="total_count" align="center" />
+          <el-table-column label="最新主机" width="160" prop="latest_host" show-overflow-tooltip />
+          <el-table-column label="首触发" width="160" prop="first_triggered" />
+          <el-table-column label="末触发" width="160" prop="last_triggered" />
+          <el-table-column label="时长(s)" width="90" prop="duration_sec" align="right" />
+          <el-table-column label="操作" width="100" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button link size="small" @click="openTimelineByEventID(row.latest_event_id)">时间轴</el-button>
+              <el-button link type="warning" size="small" @click="openRootCauseByEventID(row.latest_event_id)">根因</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="px-4 py-3 border-t border-slate-100 flex justify-end">
+          <el-pagination
+            background
+            size="small"
+            layout="total, sizes, prev, pager, next"
+            :total="pager.total"
+            :current-page="pager.page"
+            :page-size="pager.size"
+            :page-sizes="[20, 50, 100]"
+            @current-change="(page: number) => { pager.page = page; fetchEvents() }"
+            @size-change="(size: number) => { pager.size = size; pager.page = 1; fetchEvents() }"
+          />
+        </div>
+      </div>
     </div>
   </div>
+
+  <el-drawer v-model="timelineVisible" title="告警时间轴" size="36%">
+    <div v-loading="timelineLoading">
+      <template v-if="timelineData">
+        <div class="mb-3 text-xs text-slate-500">规则：{{ timelineData.rule_name }}，关联事件数：{{ timelineData.related_count }}</div>
+        <el-timeline>
+          <el-timeline-item
+            v-for="(item, idx) in timelineData.items || []"
+            :key="idx"
+            :timestamp="item.timestamp || '-'"
+            :type="item.type === 'resolved' ? 'success' : item.type === 'acknowledged' ? 'warning' : 'danger'"
+          >
+            <div class="font-medium">{{ item.type }}</div>
+            <div class="text-xs text-slate-500">{{ item.note || '—' }}</div>
+          </el-timeline-item>
+        </el-timeline>
+      </template>
+      <el-empty v-else description="暂无数据" />
+    </div>
+  </el-drawer>
+
+  <el-drawer v-model="rootCauseVisible" title="根因分析" size="36%">
+    <div v-loading="rootCauseLoading">
+      <template v-if="rootCauseData">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="事件ID">{{ rootCauseData.event_id }}</el-descriptions-item>
+          <el-descriptions-item label="嫌疑模式">{{ rootCauseData.primary_suspect }}</el-descriptions-item>
+          <el-descriptions-item label="置信度">{{ Number(rootCauseData.confidence || 0).toFixed(2) }}</el-descriptions-item>
+          <el-descriptions-item label="关联事件数">{{ rootCauseData.related_event_count }}</el-descriptions-item>
+          <el-descriptions-item label="服务树">{{ rootCauseData.service_tree_id || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="负责人">{{ rootCauseData.owner_id || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <div class="mt-3 text-sm font-medium">证据链</div>
+        <el-timeline class="mt-2">
+          <el-timeline-item v-for="(ev, idx) in rootCauseData.evidence || []" :key="idx">
+            <span class="text-xs text-slate-600">{{ ev }}</span>
+          </el-timeline-item>
+        </el-timeline>
+        <div class="mt-3" v-loading="contextLoading">
+          <div class="text-sm font-medium mb-1">处置建议</div>
+          <el-tag v-if="contextData?.task_execution_id" type="warning" class="mr-2 mb-2">修复任务: {{ contextData.task_execution_id }}</el-tag>
+          <el-tag v-if="contextData?.ticket_id" type="info" class="mr-2 mb-2">工单: {{ contextData.ticket_id }}</el-tag>
+          <ul class="text-xs text-slate-600 list-disc pl-5">
+            <li v-for="(s, idx) in contextData?.suggestions || []" :key="idx">{{ s }}</li>
+          </ul>
+        </div>
+      </template>
+      <el-empty v-else description="暂无数据" />
+    </div>
+  </el-drawer>
 </template>
 
 <style scoped>

@@ -203,3 +203,41 @@ func (h *MonitorHandler) QueryRange(c *gin.Context) {
 	}
 	response.Success(c, result)
 }
+
+// GoldenSignals 返回 SRE 四大黄金信号聚合。
+// @Summary Golden Signals
+// @Tags 监控
+// @Produce json
+// @Security BearerAuth
+// @Param minutes query int false "时间窗口(分钟)" default(60)
+// @Success 200 {object} response.Response{data=service.GoldenSignalsSummary}
+// @Router /monitor/golden-signals [get]
+func (h *MonitorHandler) GoldenSignals(c *gin.Context) {
+	minutes, _ := strconv.Atoi(c.DefaultQuery("minutes", "60"))
+	data, err := h.monitorSvc.GoldenSignals(minutes)
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, data)
+}
+
+// GoldenSignalsDimensions 返回按维度拆分的黄金信号。
+// @Summary Golden Signals 维度视图
+// @Tags 监控
+// @Produce json
+// @Security BearerAuth
+// @Param minutes query int false "时间窗口(分钟)" default(60)
+// @Param dimension query string false "维度(service/interface/instance)" default(service)
+// @Success 200 {object} response.Response{data=[]service.GoldenSignalDimensionItem}
+// @Router /monitor/golden-signals/dimensions [get]
+func (h *MonitorHandler) GoldenSignalsDimensions(c *gin.Context) {
+	minutes, _ := strconv.Atoi(c.DefaultQuery("minutes", "60"))
+	dimension := c.DefaultQuery("dimension", "service")
+	data, err := h.monitorSvc.GoldenSignalsByDimension(minutes, dimension)
+	if err != nil {
+		response.InternalServerError(c, "查询失败")
+		return
+	}
+	response.Success(c, data)
+}

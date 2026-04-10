@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	"encoding/json"
-	"strconv"
+	"errors"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/bigops/platform/internal/model"
@@ -62,6 +62,8 @@ type MonitorService struct {
 	assetRepo      *repository.AssetRepository
 	treeRepo       *repository.ServiceTreeRepository
 	userRepo       *repository.UserRepository
+	taskRepo       *repository.TaskRepository
+	taskExecRepo   *repository.TaskExecutionRepository
 }
 
 func NewMonitorService() *MonitorService {
@@ -74,18 +76,43 @@ func NewMonitorService() *MonitorService {
 		assetRepo:      repository.NewAssetRepository(),
 		treeRepo:       repository.NewServiceTreeRepository(),
 		userRepo:       repository.NewUserRepository(),
+		taskRepo:       repository.NewTaskRepository(),
+		taskExecRepo:   repository.NewTaskExecutionRepository(),
 	}
 }
 
+type GoldenSignalsSummary struct {
+	WindowMinutes         int     `json:"window_minutes"`
+	AvailabilityPct       float64 `json:"availability_pct"`
+	ErrorRatePct          float64 `json:"error_rate_pct"`
+	AvgLatencyMs          float64 `json:"avg_latency_ms"`
+	ThroughputPerMinute   float64 `json:"throughput_per_minute"`
+	TotalRequests         int64   `json:"total_requests"`
+	TotalErrors           int64   `json:"total_errors"`
+	SLOTargetAvailability float64 `json:"slo_target_availability"`
+	SLOTargetLatencyMs    float64 `json:"slo_target_latency_ms"`
+	SLOBreached           bool    `json:"slo_breached"`
+}
+
+type GoldenSignalDimensionItem struct {
+	DimensionType string  `json:"dimension_type"`
+	DimensionKey  string  `json:"dimension_key"`
+	DimensionName string  `json:"dimension_name"`
+	TotalRequests int64   `json:"total_requests"`
+	TotalErrors   int64   `json:"total_errors"`
+	ErrorRatePct  float64 `json:"error_rate_pct"`
+	AvgLatencyMs  float64 `json:"avg_latency_ms"`
+}
+
 type MonitorAggregateItem struct {
-	ID              int64   `json:"id"`
-	Name            string  `json:"name"`
-	AgentTotal      int     `json:"agent_total"`
-	OnlineTotal     int     `json:"online_total"`
-	OfflineTotal    int     `json:"offline_total"`
-	AvgCPUUsagePct  float64 `json:"avg_cpu_usage_pct"`
-	AvgMemoryPct    float64 `json:"avg_memory_usage_pct"`
-	AvgDiskPct      float64 `json:"avg_disk_usage_pct"`
+	ID             int64   `json:"id"`
+	Name           string  `json:"name"`
+	AgentTotal     int     `json:"agent_total"`
+	OnlineTotal    int     `json:"online_total"`
+	OfflineTotal   int     `json:"offline_total"`
+	AvgCPUUsagePct float64 `json:"avg_cpu_usage_pct"`
+	AvgMemoryPct   float64 `json:"avg_memory_usage_pct"`
+	AvgDiskPct     float64 `json:"avg_disk_usage_pct"`
 }
 
 func (s *MonitorService) Summary() (*MonitorSummary, error) {
@@ -422,4 +449,210 @@ func finalizeAggregates(grouped map[int64]*MonitorAggregateItem) []MonitorAggreg
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].AgentTotal > result[j].AgentTotal })
 	return result
+}
+
+func (s *MonitorService) GoldenSignals(windowMinutes int) (*GoldenSignalsSummary, error) {
+	if windowMinutes <= 0 {
+		windowMinutes = 60
+	}
+	since := time.Now().Add(-time.Duration(windowMinutes) * time.Minute)
+	executions, err := s.taskExecRepo.ListRecent(&since, 1000)
+	if err != nil {
+		return nil, err
+	}
+
+	var total int64
+	var errorsCount int64
+	var latencySum float64
+	var latencyCount int64
+	for _, exec := range executions {
+		if exec == nil {
+			continue
+		}
+		total++
+		if exec.Status == "failed" || exec.Status == "canceled" {
+			errorsCount++
+		}
+		if exec.StartedAt != nil && exec.FinishedAt != nil {
+			latency := time.Time(*exec.FinishedAt).Sub(time.Time(*exec.StartedAt)).Milliseconds()
+			if latency >= 0 {
+				latencySum += float64(latency)
+				latencyCount++
+			}
+		}
+	}
+
+	availability := 100.0
+	errorRate := 0.0
+	avgLatency := 0.0
+	throughput := 0.0
+	if total > 0 {
+		errorRate = float64(errorsCount) / float64(total) * 100
+		availability = 100 - errorRate
+		throughput = float64(total) / float64(windowMinutes)
+	}
+	if latencyCount > 0 {
+		avgLatency = latencySum / float64(latencyCount)
+	}
+
+	return &GoldenSignalsSummary{
+		WindowMinutes:         windowMinutes,
+		AvailabilityPct:       round2(availability),
+		ErrorRatePct:          round2(errorRate),
+		AvgLatencyMs:          round2(avgLatency),
+		ThroughputPerMinute:   round2(throughput),
+		TotalRequests:         total,
+		TotalErrors:           errorsCount,
+		SLOTargetAvailability: 99.9,
+		SLOTargetLatencyMs:    3000,
+		SLOBreached:           availability < 99.9 || avgLatency > 3000,
+	}, nil
+}
+
+func (s *MonitorService) GoldenSignalsByDimension(windowMinutes int, dimension string) ([]GoldenSignalDimensionItem, error) {
+	if windowMinutes <= 0 {
+		windowMinutes = 60
+	}
+	since := time.Now().Add(-time.Duration(windowMinutes) * time.Minute)
+	executions, err := s.taskExecRepo.ListRecent(&since, 2000)
+	if err != nil {
+		return nil, err
+	}
+	dimType := normalizeGoldenDimension(dimension)
+	type agg struct {
+		total      int64
+		errors     int64
+		latencySum float64
+		latencyCnt int64
+	}
+	grouped := map[string]*agg{}
+	labelMap := map[string]string{}
+	for _, exec := range executions {
+		if exec == nil {
+			continue
+		}
+		key := "unknown"
+		label := "未知"
+		switch dimType {
+		case "service":
+			key = "task:" + strconv.FormatInt(exec.TaskID, 10)
+			label = s.resolveTaskName(exec.TaskID)
+		case "interface":
+			key = "task_type:" + s.resolveTaskType(exec.TaskID)
+			label = s.resolveTaskTypeLabel(exec.TaskID)
+		case "instance":
+			var hosts []string
+			_ = json.Unmarshal([]byte(exec.TargetHosts), &hosts)
+			if len(hosts) > 0 {
+				key = "host:" + hosts[0]
+				label = hosts[0]
+			}
+		case "operator":
+			key = "operator:" + strconv.FormatInt(exec.OperatorID, 10)
+			label = s.resolveOperatorName(exec.OperatorID)
+		default:
+			key = "task:" + strconv.FormatInt(exec.TaskID, 10)
+			label = s.resolveTaskName(exec.TaskID)
+		}
+		labelMap[key] = label
+		item := grouped[key]
+		if item == nil {
+			item = &agg{}
+			grouped[key] = item
+		}
+		item.total++
+		if exec.Status == "failed" || exec.Status == "canceled" {
+			item.errors++
+		}
+		if exec.StartedAt != nil && exec.FinishedAt != nil {
+			latency := time.Time(*exec.FinishedAt).Sub(time.Time(*exec.StartedAt)).Milliseconds()
+			if latency >= 0 {
+				item.latencySum += float64(latency)
+				item.latencyCnt++
+			}
+		}
+	}
+	result := make([]GoldenSignalDimensionItem, 0, len(grouped))
+	for key, item := range grouped {
+		avg := 0.0
+		if item.latencyCnt > 0 {
+			avg = item.latencySum / float64(item.latencyCnt)
+		}
+		er := 0.0
+		if item.total > 0 {
+			er = float64(item.errors) / float64(item.total) * 100
+		}
+		result = append(result, GoldenSignalDimensionItem{
+			DimensionType: dimType,
+			DimensionKey:  key,
+			DimensionName: firstNonEmptyString(labelMap[key], key),
+			TotalRequests: item.total,
+			TotalErrors:   item.errors,
+			ErrorRatePct:  round2(er),
+			AvgLatencyMs:  round2(avg),
+		})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].TotalRequests > result[j].TotalRequests
+	})
+	return result, nil
+}
+
+func normalizeGoldenDimension(dimension string) string {
+	switch dimension {
+	case "service", "interface", "instance", "operator":
+		return dimension
+	default:
+		return "service"
+	}
+}
+
+func (s *MonitorService) resolveTaskName(taskID int64) string {
+	if taskID <= 0 {
+		return "未知任务"
+	}
+	task, err := s.taskRepo.GetTask(taskID)
+	if err != nil || task == nil {
+		return "任务#" + strconv.FormatInt(taskID, 10)
+	}
+	return firstNonEmptyString(task.Name, "任务#"+strconv.FormatInt(taskID, 10))
+}
+
+func (s *MonitorService) resolveTaskType(taskID int64) string {
+	if taskID <= 0 {
+		return "unknown"
+	}
+	task, err := s.taskRepo.GetTask(taskID)
+	if err != nil || task == nil || task.TaskType == "" {
+		return "unknown"
+	}
+	return task.TaskType
+}
+
+func (s *MonitorService) resolveTaskTypeLabel(taskID int64) string {
+	switch s.resolveTaskType(taskID) {
+	case "shell":
+		return "Shell 脚本"
+	case "python":
+		return "Python 脚本"
+	case "file_transfer":
+		return "文件分发"
+	default:
+		return "未知类型"
+	}
+}
+
+func (s *MonitorService) resolveOperatorName(userID int64) string {
+	if userID <= 0 {
+		return "系统"
+	}
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil || user == nil {
+		return "用户#" + strconv.FormatInt(userID, 10)
+	}
+	return firstNonEmptyString(user.RealName, user.Username, "用户#"+strconv.FormatInt(userID, 10))
+}
+
+func round2(v float64) float64 {
+	return float64(int(v*100+0.5)) / 100
 }

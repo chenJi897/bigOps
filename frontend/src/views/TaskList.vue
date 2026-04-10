@@ -58,6 +58,7 @@ function handleSearch() { query.value.page = 1; fetchData() }
 function handleReset() { query.value = { page: 1, size: 20, keyword: '', task_type: '' }; fetchData() }
 
 function openCreate() { router.push('/task/create') }
+function openExecutions() { router.push('/task/executions') }
 function openEdit(row: any) { router.push('/task/create/' + row.id) }
 
 async function handleDelete(row: any) {
@@ -101,7 +102,9 @@ async function confirmExecute() {
     ElMessage.success('任务已下发')
     execDialogVisible.value = false
     const execId = res.data?.id
-    if (execId) router.push('/task/execution/' + execId)
+    if (execId) {
+      router.push({ path: '/task/executions', query: { new_exec: String(execId) } })
+    }
   } catch (e: any) {
     ElMessage.error(e.message || '执行失败')
   } finally { execLoading.value = false }
@@ -135,11 +138,16 @@ onMounted(() => { fetchData() })
   <div class="p-4 md:p-6 min-h-full flex flex-col">
     <el-card shadow="never" class="border-0 shadow-sm flex-1 flex flex-col">
       <template #header>
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center flex-wrap gap-2">
           <span class="text-base font-medium text-gray-800">任务管理</span>
-          <el-button v-permission="'task:create'" type="primary" @click="openCreate">
-            <el-icon class="mr-1"><Plus /></el-icon> 创建任务
-          </el-button>
+          <div class="flex items-center gap-2">
+            <el-button @click="openExecutions">
+              <el-icon class="mr-1"><Document /></el-icon> 执行记录
+            </el-button>
+            <el-button v-permission="'task:create'" type="primary" @click="openCreate">
+              <el-icon class="mr-1"><Plus /></el-icon> 创建任务
+            </el-button>
+          </div>
         </div>
       </template>
 

@@ -232,6 +232,9 @@ export const monitorApi = {
   datasourceHealth: (id: number) => api.get(`/monitor/datasources/${id}/health`),
   query: (data: { datasource_id: number; query: string; time?: string }) => api.post('/monitor/query', data),
   queryRange: (data: { datasource_id: number; query: string; start?: string; end?: string; step?: string }) => api.post('/monitor/query-range', data),
+  goldenSignals: (minutes = 60) => api.get('/monitor/golden-signals', { params: { minutes } }),
+  goldenSignalsDimensions: (minutes = 60, dimension: 'service' | 'interface' | 'instance' = 'service') =>
+    api.get('/monitor/golden-signals/dimensions', { params: { minutes, dimension } }),
 }
 
 export const alertSilenceApi = {
@@ -287,7 +290,12 @@ export const alertRuleApi = {
   evaluate: () => api.post('/alert-rules/evaluate'),
   events: (params: { page?: number; size?: number; status?: string; severity?: string; agent_id?: string; keyword?: string; rule_id?: number }) =>
     api.get('/alert-events', { params }),
+  eventGroups: (params: { page?: number; size?: number; status?: string; severity?: string; agent_id?: string; keyword?: string; window_minutes?: number }) =>
+    api.get('/alert-events/groups', { params }),
   getEvent: (id: number) => api.get(`/alert-events/${id}`),
+  eventTimeline: (id: number) => api.get(`/alert-events/${id}/timeline`),
+  eventRootCause: (id: number) => api.get(`/alert-events/${id}/root-cause`),
+  eventContext: (id: number) => api.get(`/alert-events/${id}/context`),
   ackEvent: (id: number, note = '') => api.post(`/alert-events/${id}/ack`, { note }),
   resolveEvent: (id: number, note = '') => api.post(`/alert-events/${id}/resolve`, { note }),
 }
@@ -304,12 +312,30 @@ export const taskApi = {
   executions: (params: { task_id?: number; page?: number; size?: number }) =>
     api.get('/task-executions', { params }),
   getExecution: (id: number) => api.get(`/task-executions/${id}`),
+  cancelExecution: (id: number) => api.post(`/task-executions/${id}/cancel`),
+  retryExecution: (id: number, scope: 'failed' | 'all' = 'failed', host_ips?: string[]) =>
+    api.post(`/task-executions/${id}/retry`, host_ips?.length ? { host_ips } : {}, { params: { scope } }),
 }
 
 // Agent 管理
 export const agentApi = {
   list: (params: { page?: number; size?: number; status?: string }) =>
     api.get('/agents', { params }),
+}
+
+export const inspectionApi = {
+  templates: (params: { page?: number; size?: number }) => api.get('/inspection/templates', { params }),
+  createTemplate: (data: any) => api.post('/inspection/templates', data),
+  updateTemplate: (id: number, data: any) => api.post(`/inspection/templates/${id}`, data),
+  plans: (params: { page?: number; size?: number }) => api.get('/inspection/plans', { params }),
+  createPlan: (data: any) => api.post('/inspection/plans', data),
+  updatePlan: (id: number, data: any) => api.post(`/inspection/plans/${id}`, data),
+  runPlan: (id: number) => api.post(`/inspection/plans/${id}/run`),
+  records: (params: { page?: number; size?: number }) => api.get('/inspection/records', { params }),
+  recordReport: (id: number) => api.get(`/inspection/records/${id}/report`),
+  recordReportExportUrl: (id: number, format: 'json' | 'csv' = 'json') =>
+    `/api/v1/inspection/records/${id}/report/export?format=${format}`,
+  templateTrend: (id: number) => api.get(`/inspection/templates/${id}/trend`),
 }
 
 export default api

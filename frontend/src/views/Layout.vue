@@ -32,9 +32,13 @@ const activeMenu = computed(() => {
 
 function filterSidebarMenus(items: any[]): any[] {
   const result: any[] = []
+  const seen = new Set<string>()
   for (const item of items || []) {
     if (item.type === 3 || item.visible === 0 || item.component === 'TicketDetail') continue
     const children = item.children?.length ? filterSidebarMenus(item.children) : []
+    const key = String(item.title || '').toLowerCase().replace(/[\s\u200b-\u200d\ufeff]/g, '')
+    if (seen.has(key)) continue
+    seen.add(key)
     if (children.length > 0) {
       result.push({ ...item, children })
       continue
@@ -48,6 +52,16 @@ function filterSidebarMenus(items: any[]): any[] {
 
 // 从 permissionStore 获取菜单树，并过滤掉不应该出现在侧边栏的路由入口。
 const menuTree = computed(() => filterSidebarMenus(permissionStore.menus))
+const dedupedMenuTree = computed(() => {
+  const seen = new Set<string>()
+  return (menuTree.value || []).filter((item: any) => {
+    const key = String(item?.title || '').toLowerCase().replace(/[\s\u200b-\u200d\ufeff]/g, '')
+    if (!key) return true
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+})
 
 // 标签页：路由变化时自动添加
 watch(() => route.path, (path) => {
@@ -345,7 +359,7 @@ function openMyNotificationSettings() {
           text-color="#bfcbd9"
           active-text-color="#409eff"
         >
-          <template v-for="menu in menuTree" :key="menu.id">
+          <template v-for="menu in dedupedMenuTree" :key="menu.id">
             <el-sub-menu v-if="menu.children?.length && menu.type !== 3" :index="menu.path || String(menu.id)">
               <template #title>
                 <el-icon><component :is="menu.icon || 'Folder'" /></el-icon>
@@ -363,6 +377,7 @@ function openMyNotificationSettings() {
               <template #title>{{ menu.title }}</template>
             </el-menu-item>
           </template>
+
         </el-menu>
       </el-scrollbar>
     </el-aside>

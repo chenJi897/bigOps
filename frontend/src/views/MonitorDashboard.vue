@@ -20,6 +20,21 @@ const agents = ref<any[]>([])
 const alertEvents = ref<any[]>([])
 const serviceTreeAggregates = ref<any[]>([])
 const ownerAggregates = ref<any[]>([])
+const goldenWindow = ref(60)
+const goldenSignals = ref<any>({
+  window_minutes: 60,
+  availability_pct: 100,
+  error_rate_pct: 0,
+  avg_latency_ms: 0,
+  throughput_per_minute: 0,
+  total_requests: 0,
+  total_errors: 0,
+  slo_breached: false,
+  slo_target_availability: 99.9,
+  slo_target_latency_ms: 3000,
+})
+const goldenDimension = ref<'service' | 'interface' | 'instance'>('service')
+const goldenDimensionRows = ref<any[]>([])
 const detailVisible = ref(false)
 const currentAgent = ref<any | null>(null)
 const trends = ref<Record<string, MetricSample[]>>({
@@ -70,6 +85,13 @@ const metricLabels: Record<string, string> = {
   agent_offline: 'Agent 离线',
 }
 
+const goldenDimensionTypeLabel: Record<string, string> = {
+  service: '服务',
+  interface: '接口',
+  instance: '实例',
+  operator: '执行人',
+}
+
 const activeEventCount = computed(() => {
   return (summary.value.alert_status_counts || []).reduce((acc: number, item: any) => {
     if (item.status === 'firing' || item.status === 'acknowledged') {
@@ -84,7 +106,7 @@ async function fetchSummaryAndAgents(showLoading = true) {
     loading.value = true
   }
   try {
-    const [treeRes, ownerRes, summaryRes, agentRes, eventRes] = await Promise.all([
+    const [treeRes, ownerRes, summaryRes, agentRes, eventRes, goldenRes, goldenDimRes] = await Promise.all([
       monitorApi.aggregateServiceTrees(),
       monitorApi.aggregateOwners(),
       monitorApi.summary(),
@@ -99,6 +121,8 @@ async function fetchSummaryAndAgents(showLoading = true) {
         size: 8,
         status: '',
       }),
+      monitorApi.goldenSignals(goldenWindow.value),
+      monitorApi.goldenSignalsDimensions(goldenWindow.value, goldenDimension.value),
     ])
 
     serviceTreeAggregates.value = (treeRes as any).data || []
@@ -107,6 +131,8 @@ async function fetchSummaryAndAgents(showLoading = true) {
     agents.value = (agentRes as any).data?.list || []
     pager.value.total = Number((agentRes as any).data?.total || 0)
     alertEvents.value = (eventRes as any).data?.list || []
+    goldenSignals.value = (goldenRes as any).data || goldenSignals.value
+    goldenDimensionRows.value = (goldenDimRes as any).data || []
   } finally {
     loading.value = false
     eventLoading.value = false
@@ -216,6 +242,14 @@ function setupRefreshTimer() {
   }, 30000)
 }
 
+async function changeGoldenWindow() {
+  await fetchSummaryAndAgents(true)
+}
+
+async function changeGoldenDimension() {
+  await fetchSummaryAndAgents(true)
+}
+
 function formatPercent(value: number) {
   return `${Number(value || 0).toFixed(1)}%`
 }
@@ -269,8 +303,16 @@ function severityLabel(severity: string) {
   return map[severity] || severity
 }
 
+function sloTagType() {
+  return goldenSignals.value?.slo_breached ? 'danger' : 'success'
+}
+
 function metricLabel(metricType: string) {
   return metricLabels[metricType] || metricType
+}
+
+function goldenDimensionTypeText(value: string) {
+  return goldenDimensionTypeLabel[value] || value
 }
 
 function aggregateStatus(item: any) {
@@ -357,6 +399,16 @@ onUnmounted(() => {
             @change="setupRefreshTimer"
           />
         </div>
+        <el-select v-model="goldenWindow" class="!w-36" size="small" @change="changeGoldenWindow">
+          <el-option :value="30" label="30分钟窗口" />
+          <el-option :value="60" label="60分钟窗口" />
+          <el-option :value="180" label="180分钟窗口" />
+        </el-select>
+        <el-select v-model="goldenDimension" class="!w-36" size="small" @change="changeGoldenDimension">
+          <el-option value="service" label="服务维度" />
+          <el-option value="interface" label="接口维度" />
+          <el-option value="instance" label="实例维度" />
+        </el-select>
         <el-button type="primary" @click="refreshAll(true)" class="!bg-sky-500 hover:!bg-sky-400 !border-none">
           <el-icon class="mr-1"><RefreshRight /></el-icon>
           刷新
@@ -408,6 +460,62 @@ onUnmounted(() => {
         </el-card>
       </el-col>
     </el-row>
+
+    <el-row :gutter="16" class="mb-6">
+      <el-col :xs="12" :sm="12" :lg="6">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">可用性</div>
+          <div class="mt-2 text-3xl font-bold text-emerald-600">{{ Number(goldenSignals.availability_pct || 0).toFixed(2) }}%</div>
+          <div class="mt-2 text-xs text-slate-500">{{ goldenSignals.window_minutes }} 分钟窗口</div>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="12" :lg="6">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">错误率</div>
+          <div class="mt-2 text-3xl font-bold text-red-600">{{ Number(goldenSignals.error_rate_pct || 0).toFixed(2) }}%</div>
+          <div class="mt-2 text-xs text-slate-500">错误 {{ goldenSignals.total_errors }} / 总量 {{ goldenSignals.total_requests }}</div>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="12" :lg="6">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">平均延迟</div>
+          <div class="mt-2 text-3xl font-bold text-amber-600">{{ Number(goldenSignals.avg_latency_ms || 0).toFixed(2) }}ms</div>
+          <div class="mt-2 text-xs text-slate-500">执行完成样本均值</div>
+        </el-card>
+      </el-col>
+      <el-col :xs="12" :sm="12" :lg="6">
+        <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
+          <div class="text-xs tracking-wider text-slate-500 uppercase">吞吐</div>
+          <div class="mt-2 text-3xl font-bold text-sky-600">{{ Number(goldenSignals.throughput_per_minute || 0).toFixed(2) }}/min</div>
+          <div class="mt-2 text-xs text-slate-500">近窗口请求速率</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-card shadow="never" class="border-0 shadow-sm rounded-2xl mb-6">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <span class="font-medium text-slate-800">Golden Signals 维度拆分</span>
+          <el-tag :type="sloTagType()">
+            SLO {{ goldenSignals.slo_breached ? '未达标' : '达标' }}
+            (A>= {{ goldenSignals.slo_target_availability }}%, L<= {{ goldenSignals.slo_target_latency_ms }}ms)
+          </el-tag>
+        </div>
+      </template>
+      <el-table :data="goldenDimensionRows.slice(0, 10)" size="small" stripe>
+        <el-table-column prop="dimension_type" label="维度类型" width="100">
+          <template #default="{ row }">
+            <span>{{ goldenDimensionTypeText(row.dimension_type) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="dimension_name" label="维度名称" min-width="180" />
+        <el-table-column prop="dimension_key" label="维度键" min-width="180" />
+        <el-table-column prop="total_requests" label="请求总数" width="120" align="right" />
+        <el-table-column prop="total_errors" label="错误数" width="100" align="right" />
+        <el-table-column prop="error_rate_pct" label="错误率(%)" width="120" align="right" />
+        <el-table-column prop="avg_latency_ms" label="平均延迟(ms)" width="130" align="right" />
+      </el-table>
+    </el-card>
 
     <el-row :gutter="16">
       <el-col :xs="24" :xl="24" class="mb-6">

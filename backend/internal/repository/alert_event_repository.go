@@ -132,3 +132,18 @@ func (r *AlertEventRepository) ListLatest(limit int) ([]*model.AlertEvent, error
 	}
 	return items, nil
 }
+
+func (r *AlertEventRepository) ListByRuleAgent(ruleID int64, agentID string, limit int) ([]*model.AlertEvent, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	var items []*model.AlertEvent
+	if err := database.GetDB().
+		Where("rule_id = ? AND agent_id = ?", ruleID, agentID).
+		Order("triggered_at DESC").
+		Limit(limit).
+		Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}

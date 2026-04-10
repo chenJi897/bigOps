@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -13,8 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bigops/platform/internal/pkg/logger"
 	"github.com/bigops/platform/internal/pkg/scriptguard"
 	pb "github.com/bigops/platform/proto/gen/agent"
+	"go.uber.org/zap"
 )
 
 type Executor struct{}
@@ -64,7 +65,10 @@ func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream 
 		Phase:        "running",
 		Timestamp:    time.Now().Unix(),
 	}); err != nil {
-		log.Printf("Task host_result_id=%d: failed to send running phase: %v", task.HostResultId, err)
+		logger.Warn("Failed to send running phase",
+			zap.Int64("host_result_id", task.HostResultId),
+			zap.Error(err),
+		)
 		return
 	}
 
@@ -117,7 +121,10 @@ func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream 
 			ExitCode:     int32(exitCode),
 			Timestamp:    time.Now().Unix(),
 		}); err != nil {
-			log.Printf("Task host_result_id=%d: failed to send timeout: %v", task.HostResultId, err)
+			logger.Warn("Failed to send timeout message",
+				zap.Int64("host_result_id", task.HostResultId),
+				zap.Error(err),
+			)
 		}
 		return
 	}
@@ -129,10 +136,17 @@ func (e *Executor) Execute(ctx context.Context, task *pb.ExecuteRequest, stream 
 		ExitCode:     int32(exitCode),
 		Timestamp:    time.Now().Unix(),
 	}); err != nil {
-		log.Printf("Task host_result_id=%d: failed to send finished: %v", task.HostResultId, err)
+		logger.Warn("Failed to send finished message",
+			zap.Int64("host_result_id", task.HostResultId),
+			zap.Error(err),
+		)
 	}
 
-	log.Printf("Task host_result_id=%d finished with exit_code=%d", task.HostResultId, exitCode)
+	logger.Info("Task execution finished",
+		zap.Int64("host_result_id", task.HostResultId),
+		zap.Int("exit_code", exitCode),
+		zap.String("phase", phase),
+	)
 }
 
 func (e *Executor) buildCommand(ctx context.Context, task *pb.ExecuteRequest) *exec.Cmd {
@@ -181,17 +195,26 @@ func (e *Executor) streamOutput(stream reportOutputStream, hostResultID int64, r
 			Phase:        "running",
 			Timestamp:    time.Now().Unix(),
 		}); err != nil {
-			log.Printf("Task host_result_id=%d: stream send failed: %v", hostResultID, err)
+			logger.Warn("Stream send failed",
+				zap.Int64("host_result_id", hostResultID),
+				zap.Error(err),
+			)
 			return
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		log.Printf("Task host_result_id=%d: scanner error: %v", hostResultID, err)
+		logger.Warn("Scanner error",
+			zap.Int64("host_result_id", hostResultID),
+			zap.Error(err),
+		)
 	}
 }
 
 func (e *Executor) sendError(stream reportOutputStream, hostResultID int64, msg string) {
-	log.Printf("Task error: host_result_id=%d: %s", hostResultID, msg)
+	logger.Error("Task execution error",
+		zap.Int64("host_result_id", hostResultID),
+		zap.String("error_msg", msg),
+	)
 	if err := stream.Send(&pb.ExecuteResponse{
 		HostResultId: hostResultID,
 		OutputLine:   msg,
@@ -200,6 +223,9 @@ func (e *Executor) sendError(stream reportOutputStream, hostResultID int64, msg 
 		ExitCode:     -1,
 		Timestamp:    time.Now().Unix(),
 	}); err != nil {
-		log.Printf("Task host_result_id=%d: failed to send error: %v", hostResultID, err)
+		logger.Warn("Failed to send error response",
+			zap.Int64("host_result_id", hostResultID),
+			zap.Error(err),
+		)
 	}
 }

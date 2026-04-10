@@ -19,6 +19,7 @@ type Config struct {
 	Aliyun   AliyunConfig   `mapstructure:"aliyun"`
 	Notification NotificationConfig `mapstructure:"notification"`
 	GRPC     GRPCConfig     `mapstructure:"grpc"`
+	Agent    AgentConfig    `mapstructure:"agent"`
 }
 
 // GRPCConfig gRPC 服务器配置。
@@ -36,6 +37,21 @@ type AliyunConfig struct {
 	ECSEndpoint string `mapstructure:"ecs_endpoint"` // ECS API 地址模板，含 %s 占位符表示 region，例如 ecs.%s.aliyuncs.com
 }
 
+// AgentConfig Agent进程配置（对应 agent.yaml）。
+type AgentConfig struct {
+	ID                    string            `mapstructure:"id" json:"id"`
+	StateFile             string            `mapstructure:"state_file" json:"state_file"`
+	Hostname              string            `mapstructure:"hostname" json:"hostname"`
+	PublicIP              string            `mapstructure:"public_ip" json:"public_ip"`
+	PublicIPProvider      string            `mapstructure:"public_ip_provider" json:"public_ip_provider"`
+	PublicIPCacheFile     string            `mapstructure:"public_ip_cache_file" json:"public_ip_cache_file"`
+	PublicIPTimeoutSeconds int              `mapstructure:"public_ip_timeout_seconds" json:"public_ip_timeout_seconds"`
+	PublicIPRefreshHours  int               `mapstructure:"public_ip_refresh_hours" json:"public_ip_refresh_hours"`
+	Labels                map[string]string `mapstructure:"labels" json:"labels"`
+	MaxCPURate            float64           `mapstructure:"max_cpu_rate" json:"max_cpu_rate"`
+	MaxMemMB              int               `mapstructure:"max_mem_mb" json:"max_mem_mb"`
+}
+
 // NotificationConfig 通知中心配置。
 type NotificationConfig struct {
 	DefaultChannels          []string `mapstructure:"default_channels" json:"default_channels"`
@@ -47,8 +63,9 @@ type NotificationConfig struct {
 
 // ServerConfig HTTP 服务器配置。
 type ServerConfig struct {
-	Port int    `mapstructure:"port"`
-	Mode string `mapstructure:"mode"` // Gin 运行模式：debug, release, test
+	Address string `mapstructure:"address" json:"address"` // gRPC server address for agent
+	Port    int    `mapstructure:"port"`
+	Mode    string `mapstructure:"mode"` // Gin 运行模式：debug, release, test
 }
 
 // DatabaseConfig MySQL 数据库连接配置。
@@ -124,6 +141,14 @@ func Get() *Config {
 
 func ConfigPath() string {
 	return currentConfigPath
+}
+
+// GetAgentConfig 返回Agent配置
+func GetAgentConfig() AgentConfig {
+	if globalConfig == nil {
+		panic("config not loaded, call Load() first")
+	}
+	return globalConfig.Agent
 }
 
 func UpdateNotificationConfig(notificationCfg NotificationConfig) error {

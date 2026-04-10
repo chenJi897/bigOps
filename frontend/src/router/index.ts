@@ -58,11 +58,15 @@ const viewModules: Record<string, () => Promise<any>> = {
   'RequestTemplates': () => import('../views/RequestTemplates.vue'),
   'ApprovalPolicies': () => import('../views/ApprovalPolicies.vue'),
   'NotificationConsole': () => import('../views/NotificationConsole.vue'),
+  'TaskTemplates': () => import('../views/TaskList.vue'),
+  'TaskExecutions': () => import('../views/TaskExecutions.vue'),
+  'TaskInstanceDetail': () => import('../views/TaskInstanceDetail.vue'),
   'UserSettings': () => import('../views/UserSettings.vue'),
   'TaskList': () => import('../views/TaskList.vue'),
   'TaskCreate': () => import('../views/TaskCreate.vue'),
   'TaskExecution': () => import('../views/TaskExecution.vue'),
   'AgentList': () => import('../views/AgentList.vue'),
+  'InspectionCenter': () => import('../views/InspectionCenter.vue'),
 }
 
 // 系统管理静态路由（仪表盘始终可访问）
@@ -282,6 +286,34 @@ function ensureCompanionRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
     activeMenu: '/dashboard',
   })
 
+  // 任务中心固定路由（不依赖后端动态菜单）
+  ensureHiddenRoute(nextRoutes, {
+    path: 'task/templates',
+    name: 'TaskTemplates',
+    component: viewModules.TaskTemplates,
+    title: '任务模板',
+    componentName: 'TaskTemplates',
+    activeMenu: '/task',
+  })
+
+  ensureHiddenRoute(nextRoutes, {
+    path: 'task/executions',
+    name: 'TaskExecutions',
+    component: viewModules.TaskExecutions,
+    title: '执行记录',
+    componentName: 'TaskExecutions',
+    activeMenu: '/task',
+  })
+
+  ensureHiddenRoute(nextRoutes, {
+    path: 'task/executions/:id',
+    name: 'TaskInstanceDetail',
+    component: viewModules.TaskInstanceDetail,
+    title: '执行详情',
+    componentName: 'TaskInstanceDetail',
+    activeMenu: '/task',
+  })
+
   const taskListRoute = nextRoutes.find(route =>
     route.meta?.componentName === 'TaskList' || route.name === 'TaskList',
   )
@@ -320,6 +352,15 @@ function ensureCompanionRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
       })
     }
   }
+
+  ensureHiddenRoute(nextRoutes, {
+    path: 'inspection/center',
+    name: 'InspectionCenter',
+    component: viewModules.InspectionCenter,
+    title: '巡检中心',
+    componentName: 'InspectionCenter',
+    activeMenu: '/inspection/center',
+  })
 
   ensureHiddenRoute(nextRoutes, {
     path: 'monitor/dashboard',

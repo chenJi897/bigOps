@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,10 +20,10 @@ import (
 	"github.com/bigops/platform/internal/service"
 )
 
-var _ model.Task          // swag
-var _ model.TaskExecution // swag
+var _ model.Task           // swag
+var _ model.TaskExecution  // swag
 var _ model.TaskHostResult // swag
-var _ model.AgentInfo     // swag
+var _ model.AgentInfo      // swag
 
 // TaskHandler 任务管理 HTTP 处理器。
 type TaskHandler struct {
@@ -82,9 +84,15 @@ func (h *TaskHandler) List(c *gin.Context) {
 
 	q := repository.TaskListQuery{
 		Page:     page,
-		Size:     size,
+		PageSize: size,
 		Keyword:  c.Query("keyword"),
 		TaskType: c.Query("task_type"),
+		Status:   -1,
+	}
+	if rawStatus := c.Query("status"); rawStatus != "" {
+		if v, err := strconv.Atoi(rawStatus); err == nil {
+			q.Status = v
+		}
 	}
 
 	items, total, err := h.svc.List(q)
@@ -259,7 +267,7 @@ func (h *TaskHandler) Execute(c *gin.Context) {
 
 	exec, err := h.svc.ExecuteTask(id, req.HostIPs, operatorID)
 	if err != nil {
-		response.Error(c, 400, err.Error())
+		response.Error(c, classifyTaskExecErrorCode(err), err.Error())
 		return
 	}
 
@@ -314,6 +322,97 @@ func (h *TaskHandler) ListExecutions(c *gin.Context) {
 	response.Page(c, items, total, page, size)
 }
 
+// CancelExecution 取消执行。
+// @Summary 取消执行
+// @Tags 任务管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "执行ID"
+// @Success 200 {object} response.Response{data=model.TaskExecution}
+// @Router /task-executions/{id}/cancel [post]
+func (h *TaskHandler) CancelExecution(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	userID, _ := c.Get("userID")
+	operatorID, _ := userID.(int64)
+	operatorName := getOperator(c)
+
+	exec, err := h.svc.CancelExecution(id, operatorID)
+	if err != nil {
+		response.Error(c, classifyTaskExecErrorCode(err), err.Error())
+		return
+	}
+	logger.Info("取消执行", zap.String("operator", operatorName), zap.Int64("execution_id", id))
+	c.Set("audit_action", "cancel")
+	c.Set("audit_resource", "task_execution")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", "取消任务执行(status="+exec.Status+")")
+	response.SuccessWithMessage(c, "取消成功", exec)
+}
+
+// RetryExecution 重试执行。
+// @Summary 重试执行
+// @Tags 任务管理
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "执行ID"
+// @Param scope query string false "重试范围: failed/all" default(failed)
+// @Success 200 {object} response.Response{data=model.TaskExecution}
+// @Router /task-executions/{id}/retry [post]
+func (h *TaskHandler) RetryExecution(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	userID, _ := c.Get("userID")
+	operatorID, _ := userID.(int64)
+	operatorName := getOperator(c)
+
+	scope := c.DefaultQuery("scope", "failed")
+	if scope != "failed" && scope != "all" {
+		response.BadRequest(c, "无效的重试范围，支持: failed/all")
+		return
+	}
+	var retryBody struct {
+		HostIPs []string `json:"host_ips"`
+	}
+	if c.Request.Body != nil {
+		_ = json.NewDecoder(c.Request.Body).Decode(&retryBody)
+	}
+	exec, err := h.svc.RetryExecution(id, operatorID, scope, retryBody.HostIPs)
+	if err != nil {
+		response.Error(c, classifyTaskExecErrorCode(err), err.Error())
+		return
+	}
+	hostAudit := strings.Join(retryBody.HostIPs, ",")
+	if hostAudit == "" {
+		hostAudit = "*"
+	}
+	logger.Info("重试执行", zap.String("operator", operatorName), zap.Int64("from_execution_id", id), zap.Int64("new_execution_id", exec.ID), zap.String("host_ips", hostAudit))
+	c.Set("audit_action", "retry")
+	c.Set("audit_resource", "task_execution")
+	c.Set("audit_resource_id", id)
+	c.Set("audit_detail", "重试任务执行(scope="+scope+",host_ips="+hostAudit+",new_execution_id="+strconv.FormatInt(exec.ID, 10)+")")
+	response.SuccessWithMessage(c, "重试已创建", exec)
+}
+
+func classifyTaskExecErrorCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "不存在"):
+		return http.StatusNotFound
+	case strings.Contains(msg, "进行中"), strings.Contains(msg, "不允许"), strings.Contains(msg, "已禁用"):
+		return http.StatusConflict
+	default:
+		return http.StatusBadRequest
+	}
+}
+
 // ListAgents Agent 列表。
 // @Summary Agent 列表
 // @Tags 任务管理
@@ -359,6 +458,9 @@ func (h *TaskHandler) WSLogs(c *gin.Context) {
 		return
 	}
 
+	replay := c.DefaultQuery("replay", "0") == "1"
+	hostIPFilter := strings.TrimSpace(c.Query("host_ip"))
+
 	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		logger.Warn("WebSocket upgrade failed", zap.Error(err))
@@ -369,6 +471,12 @@ func (h *TaskHandler) WSLogs(c *gin.Context) {
 	mgr := agentgrpc.GetAgentManager()
 	logCh := mgr.SubscribeLogs(executionID)
 	defer mgr.UnsubscribeLogs(executionID, logCh)
+
+	if replay {
+		if err := h.writeExecutionLogReplay(conn, executionID, hostIPFilter); err != nil {
+			logger.Warn("ws execution log replay", zap.Int64("execution_id", executionID), zap.Error(err))
+		}
+	}
 
 	// Read pump: detect client disconnect
 	done := make(chan struct{})
@@ -392,7 +500,8 @@ func (h *TaskHandler) WSLogs(c *gin.Context) {
 			if !ok {
 				return
 			}
-			if err := conn.WriteJSON(line); err != nil {
+			ev := wsEventFromLogLine(executionID, line)
+			if err := conn.WriteJSON(ev); err != nil {
 				return
 			}
 		case <-ticker.C:

@@ -3,12 +3,13 @@ package agent
 import (
 	"context"
 	"fmt"
-	"log"
 	"runtime"
 	"sync"
 	"time"
 
+	"github.com/bigops/platform/internal/pkg/logger"
 	pb "github.com/bigops/platform/proto/gen/agent"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -58,7 +59,10 @@ func (c *AgentClient) Connect() error {
 	}
 	c.conn = conn
 	c.client = pb.NewAgentServiceClient(conn)
-	log.Printf("Connected to server %s", c.serverAddr)
+	logger.Info("Connected to server",
+		zap.String("agent_id", c.agentID),
+		zap.String("server", c.serverAddr),
+	)
 	return nil
 }
 
@@ -79,7 +83,11 @@ func (c *AgentClient) Run(ctx context.Context) {
 
 		err := c.heartbeatLoop(ctx)
 		if err != nil {
-			log.Printf("Heartbeat stream ended: %v, reconnecting in %s...", err, reconnectDelay)
+			logger.Warn("Heartbeat stream ended, reconnecting",
+				zap.String("agent_id", c.agentID),
+				zap.Error(err),
+				zap.Duration("reconnect_delay", reconnectDelay),
+			)
 		}
 
 		select {
@@ -103,12 +111,18 @@ func (c *AgentClient) heartbeatLoop(ctx context.Context) error {
 		for {
 			resp, err := stream.Recv()
 			if err != nil {
-				log.Printf("Heartbeat recv error: %v", err)
+				logger.Error("Heartbeat recv error",
+					zap.String("agent_id", c.agentID),
+					zap.Error(err),
+				)
 				return
 			}
 			if resp.Task != nil {
-				log.Printf("Received task: execution_id=%d host_result_id=%d",
-					resp.Task.ExecutionId, resp.Task.HostResultId)
+				logger.Info("Received task",
+					zap.String("agent_id", c.agentID),
+					zap.Int64("execution_id", resp.Task.ExecutionId),
+					zap.Int64("host_result_id", resp.Task.HostResultId),
+				)
 				c.taskWG.Add(1)
 				go func(task *pb.ExecuteRequest) {
 					defer c.taskWG.Done()
@@ -177,18 +191,29 @@ func (c *AgentClient) getPublicIP() string {
 }
 
 func (c *AgentClient) executeTask(ctx context.Context, executor taskExecutor, task *pb.ExecuteRequest) {
-	log.Printf("Executing task: host_result_id=%d script_type=%s",
-		task.HostResultId, task.ScriptType)
+	logger.Info("Executing task",
+		zap.String("agent_id", c.agentID),
+		zap.Int64("host_result_id", task.HostResultId),
+		zap.String("script_type", task.ScriptType),
+	)
 
 	// Open ReportOutput stream to send results back
 	reportStream, err := c.openReportStream()
 	if err != nil {
-		log.Printf("Failed to open report stream: %v", err)
+		logger.Error("Failed to open report stream",
+			zap.String("agent_id", c.agentID),
+			zap.Int64("host_result_id", task.HostResultId),
+			zap.Error(err),
+		)
 		return
 	}
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Task host_result_id=%d panic: %v", task.HostResultId, r)
+			logger.Error("Task panic recovered",
+				zap.String("agent_id", c.agentID),
+				zap.Int64("host_result_id", task.HostResultId),
+				zap.Any("panic", r),
+			)
 			_ = reportStream.Send(&pb.ExecuteResponse{
 				HostResultId: task.HostResultId,
 				OutputLine:   fmt.Sprintf("panic: %v", r),
@@ -206,7 +231,11 @@ func (c *AgentClient) executeTask(ctx context.Context, executor taskExecutor, ta
 
 	_, err = reportStream.CloseAndRecv()
 	if err != nil {
-		log.Printf("Failed to close report stream: %v", err)
+		logger.Warn("Failed to close report stream",
+			zap.String("agent_id", c.agentID),
+			zap.Int64("host_result_id", task.HostResultId),
+			zap.Error(err),
+		)
 	}
 }
 

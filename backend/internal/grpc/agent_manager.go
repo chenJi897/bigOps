@@ -32,6 +32,10 @@ type LogLine struct {
 	IsStderr     bool   `json:"is_stderr"`
 	Phase        string `json:"phase"`
 	ExitCode     int32  `json:"exit_code"`
+	DoneCount    int    `json:"done_count"`
+	TotalCount   int    `json:"total_count"`
+	SuccessCount int    `json:"success_count"`
+	FailCount    int    `json:"fail_count"`
 	Timestamp    int64  `json:"timestamp"`
 }
 

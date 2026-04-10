@@ -19,6 +19,7 @@ import (
 	grpcserver "github.com/bigops/platform/internal/grpc"
 	"github.com/bigops/platform/internal/model"
 	casbinPkg "github.com/bigops/platform/internal/pkg/casbin"
+	"github.com/bigops/platform/internal/pkg/bootstrap"
 	"github.com/bigops/platform/internal/pkg/config"
 	"github.com/bigops/platform/internal/pkg/database"
 	"github.com/bigops/platform/internal/pkg/logger"
@@ -85,49 +86,57 @@ func main() {
 	// 自动迁移数据库表结构（通过 database.auto_migrate 配置控制，生产环境建议关闭）
 	if cfg.Database.AutoMigrate {
 		if err := database.GetDB().AutoMigrate(
-		&model.User{},
-		&model.Role{},
-		&model.Menu{},
-		&model.UserRole{},
-		&model.AuditLog{},
-		&model.ServiceTree{},
-		&model.CloudAccount{},
-		&model.Asset{},
-		&model.AssetChange{},
-		&model.CloudSyncTask{},
-		&model.Department{},
-		&model.Ticket{},
-		&model.TicketType{},
-		&model.TicketActivity{},
-		&model.RequestTemplate{},
-		&model.ApprovalPolicy{},
-		&model.ApprovalPolicyStage{},
-		&model.ApprovalInstance{},
-		&model.ApprovalRecord{},
-		&model.ExecutionOrder{},
-		&model.NotificationEvent{},
-		&model.NotificationDelivery{},
-		&model.InAppNotification{},
-		&model.NotificationUserSetting{},
-		&model.NotificationTemplate{},
-		&model.NotifyGroup{},
-		&model.Task{},
-		&model.TaskExecution{},
-		&model.TaskHostResult{},
-		&model.AgentInfo{},
-		&model.AgentMetricSample{},
-		&model.AlertRule{},
-		&model.AlertEvent{},
-		&model.AlertSilence{},
-		&model.OnCallSchedule{},
-		&model.CICDProject{},
-		&model.CICDPipeline{},
-		&model.CICDPipelineRun{},
-		&model.MonitorDatasource{},
-	); err != nil {
+			&model.User{},
+			&model.Role{},
+			&model.Menu{},
+			&model.UserRole{},
+			&model.AuditLog{},
+			&model.ServiceTree{},
+			&model.CloudAccount{},
+			&model.Asset{},
+			&model.AssetChange{},
+			&model.CloudSyncTask{},
+			&model.Department{},
+			&model.Ticket{},
+			&model.TicketType{},
+			&model.TicketActivity{},
+			&model.RequestTemplate{},
+			&model.ApprovalPolicy{},
+			&model.ApprovalPolicyStage{},
+			&model.ApprovalInstance{},
+			&model.ApprovalRecord{},
+			&model.ExecutionOrder{},
+			&model.NotificationEvent{},
+			&model.NotificationDelivery{},
+			&model.InAppNotification{},
+			&model.NotificationUserSetting{},
+			&model.NotificationTemplate{},
+			&model.NotifyGroup{},
+			&model.Task{},
+			&model.TaskExecution{},
+			&model.TaskHostResult{},
+			&model.AgentInfo{},
+			&model.AgentMetricSample{},
+			&model.AlertRule{},
+			&model.AlertEvent{},
+			&model.AlertSilence{},
+			&model.OnCallSchedule{},
+			&model.CICDProject{},
+			&model.CICDPipeline{},
+			&model.CICDPipelineRun{},
+			&model.MonitorDatasource{},
+			&model.InspectionTemplate{},
+			&model.InspectionPlan{},
+			&model.InspectionRecord{},
+		); err != nil {
 			logger.Fatal("Failed to migrate database", zap.Error(err))
 		}
 		logger.Info("Database migration completed")
+	}
+
+	// 幂等种子：任务中心「执行记录」菜单写入 DB（侧栏依赖 menus 表；仅加迁移文件不会自动执行）
+	if err := bootstrap.EnsureTaskExecutionsMenu(database.GetDB()); err != nil {
+		logger.Warn("EnsureTaskExecutionsMenu failed", zap.Error(err))
 	}
 
 	// 初始化 Casbin 权限引擎
@@ -186,6 +195,10 @@ func main() {
 	alertScheduler := service.NewAlertScheduler()
 	alertScheduler.Start()
 	defer alertScheduler.Stop()
+
+	inspectionScheduler := service.NewInspectionScheduler()
+	inspectionScheduler.Start()
+	defer inspectionScheduler.Stop()
 	logger.Info("Alert scheduler started")
 
 	// 6. 优雅关闭：等待中断信号

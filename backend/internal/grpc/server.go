@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -279,6 +281,23 @@ func isPublicIP(raw string) bool {
 	return !ip.IsLoopback() && !ip.IsPrivate() && !ip.IsUnspecified()
 }
 
+func hostResultErrorSummary(phase string, exitCode int32, outputLine string, isStderr bool) string {
+	if phase == "finished" && exitCode == 0 {
+		return ""
+	}
+	s := strings.TrimSpace(outputLine)
+	if s == "" && isStderr {
+		s = "stderr 输出"
+	}
+	if s == "" {
+		s = "exit_code=" + strconv.Itoa(int(exitCode))
+	}
+	if len(s) > 500 {
+		return s[:500]
+	}
+	return s
+}
+
 func labelsToJSON(labels map[string]string) string {
 	if len(labels) == 0 {
 		return "{}"
@@ -348,11 +367,27 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 			})
 
 		case "finished", "error":
-			// Final update
-			now := model.LocalTime(time.Now())
+			// Final update（基于最新库内记录计算耗时，避免 StartedAt 在 running 阶段才写入）
+			hrLatest, errHR := s.execRepo.GetHostResult(hostResultID)
+			if errHR != nil {
+				logger.Warn("reload host result failed", zap.Int64("host_result_id", hostResultID), zap.Error(errHR))
+				hrLatest = hr
+			}
+			finishTime := time.Now()
+			now := model.LocalTime(finishTime)
+			var durationMs int64
+			if hrLatest.StartedAt != nil {
+				st := time.Time(*hrLatest.StartedAt)
+				if finishTime.After(st) {
+					durationMs = finishTime.Sub(st).Milliseconds()
+				}
+			}
+			summary := hostResultErrorSummary(phase, msg.GetExitCode(), outputLine, isStderr)
 			finalUpdates := map[string]interface{}{
-				"finished_at": &now,
-				"exit_code":   int(msg.GetExitCode()),
+				"finished_at":   &now,
+				"exit_code":     int(msg.GetExitCode()),
+				"duration_ms":   durationMs,
+				"error_summary": summary,
 			}
 			if phase == "finished" && msg.GetExitCode() == 0 {
 				finalUpdates["status"] = "success"
@@ -368,25 +403,52 @@ func (s *Server) ReportOutput(stream grpc.ClientStreamingServer[pb.ExecuteRespon
 					finalUpdates["stdout"] = gorm.Expr("CONCAT(COALESCE(stdout,''), ?)", appendLine)
 				}
 			}
-			if err := database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hr.ID).Updates(finalUpdates).Error; err != nil {
-				logger.Warn("update host result final status failed", zap.Int64("host_result_id", hr.ID), zap.Error(err))
+			if err := database.GetDB().Model(&model.TaskHostResult{}).Where("id = ?", hrLatest.ID).Updates(finalUpdates).Error; err != nil {
+				logger.Warn("update host result final status failed", zap.Int64("host_result_id", hrLatest.ID), zap.Error(err))
 			}
+			doneCount, totalCount, successCount, failCount := s.getExecutionProgressCounts(hrLatest.ExecutionID)
 
 			// Publish finish event to WebSocket
-			mgr.PublishLog(hr.ExecutionID, &LogLine{
+			mgr.PublishLog(hrLatest.ExecutionID, &LogLine{
 				HostResultID: hostResultID,
-				HostIP:       hr.HostIP,
+				HostIP:       hrLatest.HostIP,
 				Line:         outputLine,
 				IsStderr:     isStderr,
 				Phase:        phase,
 				ExitCode:     msg.GetExitCode(),
+				DoneCount:    doneCount,
+				TotalCount:   totalCount,
+				SuccessCount: successCount,
+				FailCount:    failCount,
 				Timestamp:    msg.GetTimestamp(),
 			})
 
 			// Check if all host results for this execution are done
-			s.checkExecutionCompletion(hr.ExecutionID)
+			s.checkExecutionCompletion(hrLatest.ExecutionID)
 		}
 	}
+}
+
+func (s *Server) getExecutionProgressCounts(executionID int64) (doneCount, totalCount, successCount, failCount int) {
+	results, err := s.execRepo.GetHostResultsByExecutionID(executionID)
+	if err != nil {
+		return 0, 0, 0, 0
+	}
+	totalCount = len(results)
+	for _, item := range results {
+		if item == nil {
+			continue
+		}
+		switch item.Status {
+		case "success":
+			successCount++
+			doneCount++
+		case "failed", "timeout", "canceled":
+			failCount++
+			doneCount++
+		}
+	}
+	return doneCount, totalCount, successCount, failCount
 }
 
 // FileTransfer handles file uploads from agents (stub for now).
@@ -415,6 +477,7 @@ func (s *Server) checkExecutionCompletion(executionID int64) {
 	if err != nil {
 		return
 	}
+	mgr := GetAgentManager()
 
 	allDone := true
 	successCount := 0
@@ -423,7 +486,7 @@ func (s *Server) checkExecutionCompletion(executionID int64) {
 		switch r.Status {
 		case "success":
 			successCount++
-		case "failed", "timeout":
+		case "failed", "timeout", "canceled":
 			failCount++
 		default:
 			allDone = false
@@ -460,6 +523,30 @@ func (s *Server) checkExecutionCompletion(executionID int64) {
 		// Already updated by another goroutine, skip
 		return
 	}
+
+	// Push completion summary to WebSocket subscribers
+	durationSec := int64(0)
+	if exec, e := s.execRepo.GetByID(executionID); e == nil {
+		if exec.StartedAt != nil && exec.FinishedAt != nil {
+			start := time.Time(*exec.StartedAt)
+			finish := time.Time(*exec.FinishedAt)
+			if finish.After(start) {
+				durationSec = int64(finish.Sub(start).Seconds())
+			}
+		}
+	}
+	mgr.PublishLog(executionID, &LogLine{
+		HostResultID: 0,
+		HostIP:       "",
+		Line:         fmt.Sprintf("执行完成: status=%s success=%d fail=%d duration=%ds", finalStatus, successCount, failCount, durationSec),
+		IsStderr:     finalStatus != "success",
+		Phase:        "finished",
+		DoneCount:    successCount + failCount,
+		TotalCount:   len(results),
+		SuccessCount: successCount,
+		FailCount:    failCount,
+		Timestamp:    time.Now().Unix(),
+	})
 
 	logger.Info("Execution completed",
 		zap.Int64("execution_id", executionID),
