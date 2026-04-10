@@ -138,6 +138,10 @@ async function resolve(row: any) {
   } catch {}
 }
 
+const topologyVisible = ref(false)
+const topologyLoading = ref(false)
+const topologyData = ref<any[]>([])
+
 async function commentEvent(row: any) {
   try {
     const { value } = await ElMessageBox.prompt('添加评论', '告警评论', {
@@ -150,6 +154,19 @@ async function commentEvent(row: any) {
     await alertRuleApi.commentEvent(row.id, value)
     ElMessage.success('评论已添加')
   } catch {}
+}
+
+async function openTopology(eventID: number) {
+  topologyVisible.value = true
+  topologyLoading.value = true
+  try {
+    const res = await alertRuleApi.eventTopology(eventID)
+    topologyData.value = (res as any).data || []
+  } catch {
+    topologyData.value = []
+  } finally {
+    topologyLoading.value = false
+  }
 }
 
 async function batchAcknowledge() {
@@ -340,7 +357,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
               <span class="text-xs text-slate-500">{{ row.triggered_at }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right" align="center">
+          <el-table-column label="操作" width="220" fixed="right" align="center">
             <template #default="{ row }">
               <template v-if="row.status === 'firing'">
                 <el-button link type="primary" size="small" @click="acknowledge(row)">确认</el-button>
@@ -352,6 +369,7 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
               <el-button link size="small" @click="openTimelineByEventID(row.id)">时间轴</el-button>
               <el-button link type="warning" size="small" @click="openRootCauseByEventID(row.id)">根因</el-button>
               <el-button link type="info" size="small" @click="commentEvent(row)">评论</el-button>
+              <el-button link type="success" size="small" @click="openTopology(row.id)">拓扑</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -463,6 +481,47 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
       <el-empty v-else description="暂无数据" />
     </div>
   </el-drawer>
+  <el-drawer v-model="topologyVisible" title="告警关联拓扑" size="50%" append-to-body>
+    <div v-loading="topologyLoading">
+      <template v-if="topologyData.length">
+        <div class="text-xs text-slate-500 mb-3">同服务树下的主机健康状况</div>
+        <el-table :data="topologyData" size="small" stripe>
+          <el-table-column label="主机" min-width="140" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.hostname || row.agent_id }}</template>
+          </el-table-column>
+          <el-table-column prop="ip" label="IP" width="120" />
+          <el-table-column label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'online' ? 'success' : 'danger'" size="small">{{ row.status === 'online' ? '在线' : '离线' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="CPU" width="70" align="right">
+            <template #default="{ row }">
+              <span :class="row.cpu_pct > 80 ? 'text-red-500 font-medium' : ''">{{ Number(row.cpu_pct || 0).toFixed(1) }}%</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="内存" width="70" align="right">
+            <template #default="{ row }">
+              <span :class="row.mem_pct > 80 ? 'text-red-500 font-medium' : ''">{{ Number(row.mem_pct || 0).toFixed(1) }}%</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="磁盘" width="70" align="right">
+            <template #default="{ row }">
+              <span :class="row.disk_pct > 80 ? 'text-red-500 font-medium' : ''">{{ Number(row.disk_pct || 0).toFixed(1) }}%</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="告警数" width="70" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.alert_count > 0" type="danger" size="small">{{ row.alert_count }}</el-tag>
+              <span v-else class="text-slate-400">0</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
+      <el-empty v-else description="该告警未关联服务树或暂无关联主机" />
+    </div>
+  </el-drawer>
+
   </div>
 </template>
 

@@ -6,6 +6,13 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { alertRuleApi, monitorApi } from '../api'
 
+const sloDialogVisible = ref(false)
+const sloForm = ref({ target_availability: 99.9, target_latency_ms: 3000 })
+const anomalies = ref<any[]>([])
+const anomalyLoading = ref(false)
+const predictions = ref<any[]>([])
+const predictionLoading = ref(false)
+
 type MetricSample = {
   id: number
   metric_value: number
@@ -250,6 +257,45 @@ async function changeGoldenDimension() {
   await fetchSummaryAndAgents(true)
 }
 
+async function openSLODialog() {
+  try {
+    const res = await monitorApi.sloConfig()
+    const data = (res as any).data
+    sloForm.value = {
+      target_availability: data?.target_availability ?? 99.9,
+      target_latency_ms: data?.target_latency_ms ?? 3000,
+    }
+  } catch {}
+  sloDialogVisible.value = true
+}
+
+async function saveSLOConfig() {
+  await monitorApi.updateSloConfig(sloForm.value)
+  ElMessage.success('SLO 配置已更新')
+  sloDialogVisible.value = false
+  await fetchSummaryAndAgents(false)
+}
+
+async function loadAnomalies() {
+  anomalyLoading.value = true
+  try {
+    const res = await monitorApi.anomalies({ stddev_multiplier: 2.0 })
+    anomalies.value = (res as any).data || []
+  } finally {
+    anomalyLoading.value = false
+  }
+}
+
+async function loadPredictions() {
+  predictionLoading.value = true
+  try {
+    const res = await monitorApi.capacityPrediction({ metric_type: 'disk_usage', threshold: 90 })
+    predictions.value = (res as any).data || []
+  } finally {
+    predictionLoading.value = false
+  }
+}
+
 function formatPercent(value: number) {
   return `${Number(value || 0).toFixed(1)}%`
 }
@@ -367,6 +413,8 @@ function latestPointTime(metricType: string) {
 onMounted(async () => {
   await fetchSummaryAndAgents(true)
   setupRefreshTimer()
+  loadAnomalies()
+  loadPredictions()
 })
 
 onUnmounted(() => {
@@ -496,10 +544,13 @@ onUnmounted(() => {
       <template #header>
         <div class="flex items-center justify-between">
           <span class="font-medium text-slate-800">Golden Signals 维度拆分</span>
-          <el-tag :type="sloTagType()">
-            SLO {{ goldenSignals.slo_breached ? '未达标' : '达标' }}
-            (A>= {{ goldenSignals.slo_target_availability }}%, L<= {{ goldenSignals.slo_target_latency_ms }}ms)
-          </el-tag>
+          <div class="flex items-center gap-2">
+            <el-tag :type="sloTagType()">
+              SLO {{ goldenSignals.slo_breached ? '未达标' : '达标' }}
+              (A>= {{ goldenSignals.slo_target_availability }}%, L<= {{ goldenSignals.slo_target_latency_ms }}ms)
+            </el-tag>
+            <el-button size="small" plain @click="openSLODialog">设置 SLO</el-button>
+          </div>
         </div>
       </template>
       <el-table :data="goldenDimensionRows.slice(0, 10)" size="small" stripe>
@@ -746,6 +797,82 @@ onUnmounted(() => {
         </el-row>
       </el-col>
     </el-row>
+
+    <!-- 异常检测 + 容量预测 -->
+    <el-row :gutter="16" class="mt-6">
+      <el-col :xs="24" :lg="12" class="mb-6 lg:mb-0">
+        <el-card shadow="never" class="border-0 shadow-sm rounded-2xl h-full" v-loading="anomalyLoading">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <span class="font-medium text-slate-800">指标异常检测</span>
+              <el-button size="small" plain @click="loadAnomalies">刷新</el-button>
+            </div>
+          </template>
+          <el-table v-if="anomalies.length" :data="anomalies.slice(0, 10)" size="small" stripe>
+            <el-table-column prop="agent_id" label="Agent" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="metric_type" label="指标" width="100">
+              <template #default="{ row }">{{ metricLabel(row.metric_type) }}</template>
+            </el-table-column>
+            <el-table-column prop="current_value" label="当前值" width="80" align="right">
+              <template #default="{ row }">{{ Number(row.current_value || 0).toFixed(1) }}</template>
+            </el-table-column>
+            <el-table-column prop="baseline" label="基线" width="70" align="right">
+              <template #default="{ row }">{{ Number(row.baseline || 0).toFixed(1) }}</template>
+            </el-table-column>
+            <el-table-column prop="deviation" label="偏差" width="80" align="right">
+              <template #default="{ row }">
+                <span class="text-red-500 font-medium">{{ Number(row.deviation || 0).toFixed(1) }}σ</span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="未发现异常指标" :image-size="54" />
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :lg="12">
+        <el-card shadow="never" class="border-0 shadow-sm rounded-2xl h-full" v-loading="predictionLoading">
+          <template #header>
+            <div class="flex justify-between items-center">
+              <span class="font-medium text-slate-800">容量预测（磁盘）</span>
+              <el-button size="small" plain @click="loadPredictions">刷新</el-button>
+            </div>
+          </template>
+          <el-table v-if="predictions.length" :data="predictions.slice(0, 10)" size="small" stripe>
+            <el-table-column prop="agent_id" label="Agent" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="hostname" label="主机" min-width="100" show-overflow-tooltip />
+            <el-table-column prop="current_value" label="当前" width="70" align="right">
+              <template #default="{ row }">{{ Number(row.current_value || 0).toFixed(1) }}%</template>
+            </el-table-column>
+            <el-table-column prop="predicted_days" label="预计耗尽" width="90" align="right">
+              <template #default="{ row }">
+                <span :class="(row.predicted_days || 999) < 30 ? 'text-red-500 font-medium' : 'text-slate-600'">
+                  {{ row.predicted_days > 0 ? row.predicted_days + '天' : '安全' }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="trend_per_day" label="日增长" width="80" align="right">
+              <template #default="{ row }">{{ Number(row.trend_per_day || 0).toFixed(2) }}%</template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无预测数据" :image-size="54" />
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- SLO 设置弹窗 -->
+    <el-dialog v-model="sloDialogVisible" title="SLO 目标设置" width="400px" append-to-body>
+      <el-form label-position="top">
+        <el-form-item label="可用性目标 (%)">
+          <el-input-number v-model="sloForm.target_availability" :min="90" :max="100" :step="0.1" :precision="2" class="w-full" />
+        </el-form-item>
+        <el-form-item label="延迟目标 (ms)">
+          <el-input-number v-model="sloForm.target_latency_ms" :min="100" :max="60000" :step="100" class="w-full" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="sloDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveSLOConfig">保存</el-button>
+      </template>
+    </el-dialog>
 
     <el-drawer v-model="detailVisible" size="720px" :title="currentAgent ? `${currentAgent.hostname || currentAgent.agent_id} 指标趋势` : '指标趋势'">
       <div v-loading="trendLoading" class="flex flex-col gap-5 p-2">

@@ -22,10 +22,17 @@ const trendData = ref<any>(null)
 const editingTemplateId = ref<number | null>(null)
 const editingPlanId = ref<number | null>(null)
 
+const diffVisible = ref(false)
+const diffLoading = ref(false)
+const diffData = ref<any>(null)
+const diffFormA = ref<number | undefined>(undefined)
+const diffFormB = ref<number | undefined>(undefined)
+
 const templateForm = ref<any>({
   name: '',
   description: '',
   task_id: undefined as number | undefined,
+  remediation_task_id: undefined as number | undefined,
   default_hosts_text: '',
   enabled: 1,
 })
@@ -60,7 +67,7 @@ async function loadAll() {
 
 function resetTemplateForm() {
   editingTemplateId.value = null
-  templateForm.value = { name: '', description: '', task_id: undefined, default_hosts_text: '', enabled: 1 }
+  templateForm.value = { name: '', description: '', task_id: undefined, remediation_task_id: undefined, default_hosts_text: '', enabled: 1 }
 }
 
 function editTemplate(row: any) {
@@ -71,6 +78,7 @@ function editTemplate(row: any) {
     name: row.name,
     description: row.description || '',
     task_id: row.task_id,
+    remediation_task_id: row.remediation_task_id || undefined,
     default_hosts_text: hosts.join('\n'),
     enabled: row.enabled,
   }
@@ -89,6 +97,7 @@ async function submitTemplate() {
     name: templateForm.value.name,
     description: templateForm.value.description,
     task_id: templateForm.value.task_id,
+    remediation_task_id: templateForm.value.remediation_task_id || 0,
     default_hosts: hosts,
     enabled: templateForm.value.enabled,
   }
@@ -207,6 +216,23 @@ async function viewTemplateTrend(id: number) {
   }
 }
 
+async function openDiff() {
+  if (!diffFormA.value || !diffFormB.value) {
+    ElMessage.warning('请选择两条记录进行对比')
+    return
+  }
+  diffVisible.value = true
+  diffLoading.value = true
+  try {
+    const res = await inspectionApi.diffRecords(diffFormA.value, diffFormB.value)
+    diffData.value = (res as any).data
+  } catch {
+    diffData.value = null
+  } finally {
+    diffLoading.value = false
+  }
+}
+
 function statusType(status: string) {
   if (status === 'success') return 'success'
   if (status === 'failed' || status === 'canceled') return 'danger'
@@ -267,6 +293,11 @@ onUnmounted(stopRecordPoll)
             </el-form-item>
             <el-form-item label="描述">
               <el-input v-model="templateForm.description" placeholder="可选描述" />
+            </el-form-item>
+            <el-form-item label="修复任务（失败自动触发）">
+              <el-select v-model="templateForm.remediation_task_id" placeholder="不自动修复" class="w-full" filterable clearable>
+                <el-option v-for="t in tasks" :key="t.id" :label="t.name" :value="t.id" />
+              </el-select>
             </el-form-item>
             <el-form-item label="默认巡检主机">
               <el-input
@@ -352,7 +383,17 @@ onUnmounted(stopRecordPoll)
       <template #header>
         <div class="flex items-center justify-between">
           <span class="font-medium">执行记录</span>
-          <el-button size="small" plain @click="loadAll">刷新</el-button>
+          <div class="flex items-center gap-2">
+            <el-select v-model="diffFormA" placeholder="记录A" size="small" class="!w-28" clearable>
+              <el-option v-for="r in records" :key="r.id" :label="`#${r.id}`" :value="r.id" />
+            </el-select>
+            <span class="text-xs text-slate-400">vs</span>
+            <el-select v-model="diffFormB" placeholder="记录B" size="small" class="!w-28" clearable>
+              <el-option v-for="r in records" :key="r.id" :label="`#${r.id}`" :value="r.id" />
+            </el-select>
+            <el-button size="small" type="warning" plain @click="openDiff" :disabled="!diffFormA || !diffFormB">对比</el-button>
+            <el-button size="small" plain @click="loadAll">刷新</el-button>
+          </div>
         </div>
       </template>
       <el-table :data="records" size="small" stripe>
@@ -441,6 +482,51 @@ onUnmounted(stopRecordPoll)
         </template>
 
         <el-empty v-else description="暂无报告数据" />
+      </div>
+    </el-drawer>
+
+    <!-- 对比 Drawer -->
+    <el-drawer v-model="diffVisible" title="巡检记录对比" size="60%" append-to-body>
+      <div v-loading="diffLoading">
+        <template v-if="diffData">
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="bg-slate-50 rounded-lg p-3 text-center">
+              <div class="text-xs text-slate-400">记录 A (#{{ diffData.record_a_id }})</div>
+              <el-tag :type="statusType(diffData.status_a)" class="mt-1">{{ diffData.status_a }}</el-tag>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-3 text-center">
+              <div class="text-xs text-slate-400">记录 B (#{{ diffData.record_b_id }})</div>
+              <el-tag :type="statusType(diffData.status_b)" class="mt-1">{{ diffData.status_b }}</el-tag>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mb-4">
+            <div class="bg-red-50 rounded-lg p-3 text-center">
+              <div class="text-xs text-red-400">新增失败</div>
+              <div class="text-lg font-bold text-red-600">{{ diffData.new_failures?.length || 0 }}</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-3 text-center">
+              <div class="text-xs text-green-400">已恢复</div>
+              <div class="text-lg font-bold text-green-600">{{ diffData.recovered?.length || 0 }}</div>
+            </div>
+            <div class="bg-amber-50 rounded-lg p-3 text-center">
+              <div class="text-xs text-amber-400">持续异常</div>
+              <div class="text-lg font-bold text-amber-600">{{ diffData.still_failing?.length || 0 }}</div>
+            </div>
+          </div>
+          <div v-if="diffData.new_failures?.length" class="mb-3">
+            <div class="text-sm font-medium text-red-600 mb-1">新增失败主机</div>
+            <el-tag v-for="h in diffData.new_failures" :key="h" type="danger" size="small" class="mr-1 mb-1">{{ h }}</el-tag>
+          </div>
+          <div v-if="diffData.recovered?.length" class="mb-3">
+            <div class="text-sm font-medium text-green-600 mb-1">已恢复主机</div>
+            <el-tag v-for="h in diffData.recovered" :key="h" type="success" size="small" class="mr-1 mb-1">{{ h }}</el-tag>
+          </div>
+          <div v-if="diffData.still_failing?.length">
+            <div class="text-sm font-medium text-amber-600 mb-1">持续异常主机</div>
+            <el-tag v-for="h in diffData.still_failing" :key="h" type="warning" size="small" class="mr-1 mb-1">{{ h }}</el-tag>
+          </div>
+        </template>
+        <el-empty v-else description="暂无对比数据" />
       </div>
     </el-drawer>
 
