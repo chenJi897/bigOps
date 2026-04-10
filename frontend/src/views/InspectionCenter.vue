@@ -2,11 +2,9 @@
 defineOptions({ name: 'InspectionCenter' })
 
 import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { inspectionApi, taskApi, alertRuleApi } from '../api'
 
-const router = useRouter()
 let pollTimer: number | null = null
 
 const loading = ref(false)
