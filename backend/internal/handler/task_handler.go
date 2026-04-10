@@ -513,3 +513,34 @@ func (h *TaskHandler) WSLogs(c *gin.Context) {
 		}
 	}
 }
+
+// ExportExecutionReport 导出执行报告（Markdown / JSON）。
+// @Summary 导出执行报告
+// @Tags 任务管理
+// @Produce text/markdown
+// @Security BearerAuth
+// @Param id path int true "执行ID"
+// @Param format query string false "格式: markdown/json" default(markdown)
+// @Router /task-executions/{id}/report [get]
+func (h *TaskHandler) ExportExecutionReport(c *gin.Context) {
+	id, ok := parsePathID(c, "id")
+	if !ok {
+		return
+	}
+	exec, err := h.svc.GetExecution(id)
+	if err != nil {
+		response.Error(c, 404, "执行记录不存在")
+		return
+	}
+
+	format := c.DefaultQuery("format", "markdown")
+	if format == "json" {
+		response.Success(c, exec)
+		return
+	}
+
+	md := h.svc.GenerateMarkdownReport(exec)
+	c.Header("Content-Type", "text/markdown; charset=utf-8")
+	c.Header("Content-Disposition", "attachment; filename=execution-"+strconv.FormatInt(id, 10)+"-report.md")
+	c.String(http.StatusOK, md)
+}

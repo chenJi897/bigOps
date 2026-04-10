@@ -515,13 +515,25 @@ func (s *AlertService) CommentEvent(id int64, operator int64, note string) error
 	return nil
 }
 
-// AssignEvent assigns an alert event to a specific user.
+// AssignEvent assigns an alert event to a specific user and sets SLA deadline.
 func (s *AlertService) AssignEvent(id int64, operator int64, assigneeID int64) error {
 	event, err := s.eventRepo.GetByID(id)
 	if err != nil {
 		return errors.New("事件不存在")
 	}
 	event.OwnerID = assigneeID
+	event.AssigneeID = assigneeID
+	now := model.LocalTime(time.Now())
+	event.AssignedAt = &now
+	slaMinutes := 60
+	if event.Severity == "critical" {
+		slaMinutes = 15
+	} else if event.Severity == "warning" {
+		slaMinutes = 30
+	}
+	deadline := model.LocalTime(time.Now().Add(time.Duration(slaMinutes) * time.Minute))
+	event.SLADeadlineAt = &deadline
+
 	if err := s.eventRepo.Update(event); err != nil {
 		return err
 	}
@@ -531,7 +543,7 @@ func (s *AlertService) AssignEvent(id int64, operator int64, assigneeID int64) e
 		FromStatus: event.Status,
 		ToStatus:   event.Status,
 		OperatorID: operator,
-		Note:       fmt.Sprintf("指派给用户 #%d", assigneeID),
+		Note:       fmt.Sprintf("指派给用户 #%d，SLA 截止: %s", assigneeID, time.Time(deadline).Format("2006-01-02 15:04:05")),
 	}); err != nil {
 		logger.Warn("activity audit create failed", zap.Int64("event_id", event.ID), zap.Error(err))
 	}

@@ -220,6 +220,22 @@ async function openRootCauseByEventID(eventID: number) {
 function goTicket(id: number) { if (id) router.push(`/tickets/${id}`) }
 function goExecution(id: number) { if (id) router.push(`/task/executions/${id}`) }
 
+function isSLABreached(event: any): boolean {
+  if (!event?.sla_deadline_at || event.status === 'resolved') return false
+  return new Date(event.sla_deadline_at).getTime() < Date.now()
+}
+
+function slaRemainingText(event: any): string {
+  if (!event?.sla_deadline_at) return '—'
+  if (event.status === 'resolved') return '已解决'
+  const deadline = new Date(event.sla_deadline_at).getTime()
+  const diff = deadline - Date.now()
+  if (diff <= 0) return '已超时'
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins} 分钟`
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`
+}
+
 function timelineItemType(t: string) { return timelineTypeMap[t]?.color || 'info' }
 function timelineItemLabel(t: string) { return timelineTypeMap[t]?.label || t }
 
@@ -475,6 +491,18 @@ onUnmounted(() => { if (refreshTimer) clearInterval(refreshTimer) })
             <el-descriptions-item label="阈值">{{ detailData.threshold }} ({{ detailData.operator }})</el-descriptions-item>
             <el-descriptions-item label="触发时间">{{ detailData.triggered_at }}</el-descriptions-item>
             <el-descriptions-item label="恢复时间">{{ detailData.resolved_at || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="指派给">{{ detailData.assignee_id ? `#${detailData.assignee_id}` : '—' }}</el-descriptions-item>
+            <el-descriptions-item label="指派时间">{{ detailData.assigned_at || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="SLA 截止">
+              <template v-if="detailData.sla_deadline_at">
+                <span :class="isSLABreached(detailData) ? 'text-red-600 font-bold' : 'text-green-600'">
+                  {{ detailData.sla_deadline_at }}
+                  {{ isSLABreached(detailData) ? '(已超时)' : '' }}
+                </span>
+              </template>
+              <span v-else>—</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="SLA 剩余">{{ slaRemainingText(detailData) }}</el-descriptions-item>
             <el-descriptions-item label="确认人">{{ detailData.acknowledged_by || '—' }}</el-descriptions-item>
             <el-descriptions-item label="确认时间">{{ detailData.acknowledged_at || '—' }}</el-descriptions-item>
             <el-descriptions-item label="确认备注" :span="2">{{ detailData.acknowledgement_note || '—' }}</el-descriptions-item>

@@ -323,6 +323,8 @@ export const taskApi = {
   cancelExecution: (id: number) => api.post(`/task-executions/${id}/cancel`),
   retryExecution: (id: number, scope: 'failed' | 'all' = 'failed', host_ips?: string[]) =>
     api.post(`/task-executions/${id}/retry`, host_ips?.length ? { host_ips } : {}, { params: { scope } }),
+  executionReportUrl: (id: number, format: 'markdown' | 'json' = 'markdown') =>
+    `/api/v1/task-executions/${id}/report?format=${format}`,
 }
 
 // Agent 管理

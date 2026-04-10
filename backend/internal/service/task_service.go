@@ -37,19 +37,45 @@ func NewTaskService() *TaskService {
 	}
 }
 
+var allowedTaskTypes = map[string]bool{"script": true, "file_transfer": true, "api_call": true, "shell": true}
+var allowedScriptTypes = map[string]bool{"bash": true, "python": true, "sh": true, "powershell": true}
+
+func normalizeTaskType(task *model.Task) {
+	if task.TaskType == "" || task.TaskType == "shell" || task.TaskType == "bash" || task.TaskType == "python" {
+		task.TaskType = "script"
+	}
+	if task.TaskType == "script" && task.ScriptType == "" {
+		task.ScriptType = "bash"
+	}
+}
+
+func validateTaskTypeCombo(task *model.Task) error {
+	if !allowedTaskTypes[task.TaskType] {
+		return fmt.Errorf("不支持的任务类型: %s（允许: script/file_transfer/api_call）", task.TaskType)
+	}
+	if task.TaskType == "script" {
+		if !allowedScriptTypes[task.ScriptType] {
+			return fmt.Errorf("不支持的脚本语言: %s（允许: bash/python/sh/powershell）", task.ScriptType)
+		}
+		if strings.TrimSpace(task.ScriptContent) == "" {
+			return errors.New("脚本类型任务的脚本内容不能为空")
+		}
+	} else {
+		if task.ScriptType != "" {
+			return fmt.Errorf("任务类型为 %s 时不应设置 script_type", task.TaskType)
+		}
+	}
+	return nil
+}
+
 // Create validates and creates a new task.
 func (s *TaskService) Create(task *model.Task) error {
 	if task.Name == "" {
 		return errors.New("任务名称不能为空")
 	}
-	if task.ScriptContent == "" {
-		return errors.New("脚本内容不能为空")
-	}
-	if task.TaskType == "" {
-		task.TaskType = "shell"
-	}
-	if task.ScriptType == "" {
-		task.ScriptType = "bash"
+	normalizeTaskType(task)
+	if err := validateTaskTypeCombo(task); err != nil {
+		return err
 	}
 	if task.Timeout <= 0 {
 		task.Timeout = 60
@@ -72,17 +98,17 @@ func (s *TaskService) Update(id int64, updates *model.Task) error {
 	if updates.TaskType != "" {
 		existing.TaskType = updates.TaskType
 	}
-	if updates.ScriptType != "" {
-		existing.ScriptType = updates.ScriptType
-	}
-	if updates.ScriptContent != "" {
-		existing.ScriptContent = updates.ScriptContent
-	}
+	existing.ScriptType = updates.ScriptType
+	existing.ScriptContent = updates.ScriptContent
 	if updates.Timeout > 0 {
 		existing.Timeout = updates.Timeout
 	}
 	existing.RunAsUser = updates.RunAsUser
 	existing.Description = updates.Description
+	normalizeTaskType(existing)
+	if err := validateTaskTypeCombo(existing); err != nil {
+		return err
+	}
 	return s.taskRepo.UpdateTask(existing)
 }
 
@@ -533,4 +559,63 @@ func (s *TaskService) getUserName(id int64) string {
 		return user.Username
 	}
 	return ""
+}
+
+// GenerateMarkdownReport produces a human-readable Markdown report from an execution record.
+func (s *TaskService) GenerateMarkdownReport(exec *model.TaskExecution) string {
+	var b strings.Builder
+	b.WriteString("# 任务执行报告\n\n")
+	b.WriteString(fmt.Sprintf("- **执行 ID**: %d\n", exec.ID))
+	b.WriteString(fmt.Sprintf("- **任务名称**: %s\n", exec.TaskName))
+	b.WriteString(fmt.Sprintf("- **操作人**: %s\n", exec.OperatorName))
+	b.WriteString(fmt.Sprintf("- **状态**: %s\n", exec.Status))
+	if exec.StartedAt != nil {
+		b.WriteString(fmt.Sprintf("- **开始时间**: %s\n", time.Time(*exec.StartedAt).Format("2006-01-02 15:04:05")))
+	}
+	if exec.FinishedAt != nil {
+		b.WriteString(fmt.Sprintf("- **结束时间**: %s\n", time.Time(*exec.FinishedAt).Format("2006-01-02 15:04:05")))
+	}
+	b.WriteString(fmt.Sprintf("- **主机总数**: %d\n", exec.TotalCount))
+	b.WriteString(fmt.Sprintf("- **成功**: %d\n", exec.SuccessCount))
+	b.WriteString(fmt.Sprintf("- **失败**: %d\n", exec.FailCount))
+
+	successRate := 0.0
+	if exec.TotalCount > 0 {
+		successRate = float64(exec.SuccessCount) / float64(exec.TotalCount) * 100
+	}
+	b.WriteString(fmt.Sprintf("- **成功率**: %.1f%%\n", successRate))
+	b.WriteString("\n---\n\n")
+
+	if len(exec.HostResults) > 0 {
+		b.WriteString("## 主机执行明细\n\n")
+		b.WriteString("| 主机 IP | 状态 | 退出码 | 耗时(ms) | 错误摘要 |\n")
+		b.WriteString("|---------|------|--------|----------|----------|\n")
+
+		var failedHosts []model.TaskHostResult
+		for _, hr := range exec.HostResults {
+			dur := hr.DurationMs
+			errSummary := hr.ErrorSummary
+			if errSummary == "" {
+				errSummary = "-"
+			}
+			b.WriteString(fmt.Sprintf("| %s | %s | %d | %d | %s |\n",
+				hr.HostIP, hr.Status, hr.ExitCode, dur, errSummary))
+			if hr.Status == "failed" || hr.Status == "timeout" {
+				failedHosts = append(failedHosts, hr)
+			}
+		}
+
+		if len(failedHosts) > 0 {
+			b.WriteString("\n## 失败主机 Top\n\n")
+			for _, fh := range failedHosts {
+				b.WriteString(fmt.Sprintf("### %s (退出码: %d)\n\n", fh.HostIP, fh.ExitCode))
+				if fh.ErrorSummary != "" {
+					b.WriteString(fmt.Sprintf("```\n%s\n```\n\n", fh.ErrorSummary))
+				}
+			}
+		}
+	}
+
+	b.WriteString("\n---\n\n_报告由 BigOps 自动生成_\n")
+	return b.String()
 }

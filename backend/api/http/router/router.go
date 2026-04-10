@@ -299,6 +299,7 @@ func Setup(mode string) *gin.Engine {
 			authGroup.GET("/task-executions", taskHandler.ListExecutions)
 			authGroup.POST("/task-executions/:id/cancel", taskHandler.CancelExecution)
 			authGroup.POST("/task-executions/:id/retry", taskHandler.RetryExecution)
+			authGroup.GET("/task-executions/:id/report", taskHandler.ExportExecutionReport)
 			inspectionHandler := handler.NewInspectionHandler()
 			authGroup.GET("/inspection/templates", inspectionHandler.ListTemplates)
 			authGroup.POST("/inspection/templates", inspectionHandler.CreateTemplate)

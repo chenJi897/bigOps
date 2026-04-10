@@ -33,6 +33,7 @@
           <el-button v-if="canCancel" type="danger" size="small" @click="cancelExecution">取消执行</el-button>
           <el-button v-if="canRetry" type="warning" size="small" @click="retryExecution">重试失败主机</el-button>
           <el-button v-if="canRetry" type="success" size="small" @click="retryExecutionAll">重试全部主机</el-button>
+          <el-button size="small" @click="exportMarkdownReport">导出报告</el-button>
         </div>
       </div>
     </div>
@@ -580,6 +581,17 @@ const exportLogs = () => {
   a.click()
   URL.revokeObjectURL(url)
   ElMessage.success('日志已导出')
+}
+
+const exportMarkdownReport = () => {
+  const url = taskApi.executionReportUrl(executionID, 'markdown')
+  const token = localStorage.getItem('token')
+  const a = document.createElement('a')
+  a.href = `${url}&token=${token}`
+  a.download = `execution-${executionID}-report.md`
+  a.target = '_blank'
+  a.click()
+  ElMessage.success('报告下载中...')
 }
 
 const goBack = () => {

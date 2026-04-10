@@ -511,28 +511,28 @@ onUnmounted(() => {
         <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
           <div class="text-xs tracking-wider text-slate-500 uppercase">可用性</div>
           <div class="mt-2 text-3xl font-bold text-emerald-600">{{ Number(goldenSignals.availability_pct || 0).toFixed(2) }}%</div>
-          <div class="mt-2 text-xs text-slate-500">{{ goldenSignals.window_minutes }} 分钟窗口</div>
+          <div class="mt-2 text-xs text-slate-500">{{ goldenSignals.window_minutes }}min · 口径: (总采样-超80%阈值) / 总采样</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="12" :lg="6">
         <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
           <div class="text-xs tracking-wider text-slate-500 uppercase">错误率</div>
           <div class="mt-2 text-3xl font-bold text-red-600">{{ Number(goldenSignals.error_rate_pct || 0).toFixed(2) }}%</div>
-          <div class="mt-2 text-xs text-slate-500">错误 {{ goldenSignals.total_errors }} / 总量 {{ goldenSignals.total_requests }}</div>
+          <div class="mt-2 text-xs text-slate-500">{{ goldenSignals.total_errors }}/{{ goldenSignals.total_requests }} · 超80%阈值采样占比</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="12" :lg="6">
         <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
           <div class="text-xs tracking-wider text-slate-500 uppercase">平均延迟</div>
           <div class="mt-2 text-3xl font-bold text-amber-600">{{ Number(goldenSignals.avg_latency_ms || 0).toFixed(2) }}ms</div>
-          <div class="mt-2 text-xs text-slate-500">心跳 RTT 均值</div>
+          <div class="mt-2 text-xs text-slate-500">来源: Agent 心跳 RTT (now - agent_ts) / 2</div>
         </el-card>
       </el-col>
       <el-col :xs="12" :sm="12" :lg="6">
         <el-card shadow="hover" class="border-0 shadow-sm rounded-2xl h-full">
           <div class="text-xs tracking-wider text-slate-500 uppercase">吞吐</div>
           <div class="mt-2 text-3xl font-bold text-sky-600">{{ Number(goldenSignals.throughput_per_minute || 0).toFixed(2) }}/min</div>
-          <div class="mt-2 text-xs text-slate-500">近窗口请求速率</div>
+          <div class="mt-2 text-xs text-slate-500">口径: 窗口内总采样数 / 窗口分钟数</div>
         </el-card>
       </el-col>
     </el-row>

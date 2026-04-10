@@ -26,6 +26,7 @@ const diffData = ref<any>(null)
 const diffFormA = ref<number | undefined>(undefined)
 const diffFormB = ref<number | undefined>(undefined)
 const recordStatusFilter = ref('')
+const selectedPlans = ref<any[]>([])
 const alertsVisible = ref(false)
 const alertsLoading = ref(false)
 const alertsData = ref<any[]>([])
@@ -140,6 +141,43 @@ async function togglePlanEnabled(row: any) {
   await loadAll()
 }
 
+function onPlanSelectionChange(rows: any[]) { selectedPlans.value = rows }
+
+async function batchTogglePlans(enable: boolean) {
+  for (const p of selectedPlans.value) {
+    await inspectionApi.updatePlan(p.id, { ...p, enabled: enable ? 1 : 0 })
+  }
+  ElMessage.success(enable ? `已批量启用 ${selectedPlans.value.length} 个计划` : `已批量禁用 ${selectedPlans.value.length} 个计划`)
+  selectedPlans.value = []
+  await loadAll()
+}
+
+async function batchDeletePlans() {
+  try {
+    await ElMessageBox.confirm(`确认批量删除 ${selectedPlans.value.length} 个计划？`, '确认删除', { type: 'warning' })
+    for (const p of selectedPlans.value) { await inspectionApi.deletePlan(p.id) }
+    ElMessage.success('批量删除完成')
+    selectedPlans.value = []
+    await loadAll()
+  } catch {}
+}
+
+function detectPlanConflict(): string | null {
+  const cronMap = new Map<string, string[]>()
+  for (const p of plans.value) {
+    if (!p.enabled) continue
+    const key = `${p.template_id}_${p.cron_expr}`
+    const existing = cronMap.get(key) || []
+    existing.push(p.name)
+    cronMap.set(key, existing)
+  }
+  const conflicts: string[] = []
+  for (const [, names] of cronMap) {
+    if (names.length > 1) conflicts.push(names.join(' 与 '))
+  }
+  return conflicts.length ? `冲突计划: ${conflicts.join('; ')}` : null
+}
+
 async function submitPlan() {
   if (!planFormValid.value) { ElMessage.warning('请填写计划名称、选择模板并输入 Cron 表达式'); return }
   const payload = { name: planForm.value.name, template_id: planForm.value.template_id, cron_expr: planForm.value.cron_expr, enabled: planForm.value.enabled }
@@ -152,6 +190,8 @@ async function submitPlan() {
   }
   resetPlanForm()
   await loadAll()
+  const conflict = detectPlanConflict()
+  if (conflict) { ElMessage.warning(`检测到计划冲突：${conflict}（同模板同Cron表达式）`) }
 }
 
 async function runPlan(id: number) {
@@ -318,9 +358,14 @@ onUnmounted(stopRecordPoll)
       <el-col :span="12">
         <el-card shadow="never">
           <template #header>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap gap-2">
               <span class="font-medium">巡检计划</span>
-              <el-button v-if="editingPlanId" link type="info" @click="resetPlanForm">取消编辑</el-button>
+              <div class="flex items-center gap-2">
+                <el-button size="small" plain @click="batchTogglePlans(true)" :disabled="!selectedPlans.length">批量启用</el-button>
+                <el-button size="small" plain @click="batchTogglePlans(false)" :disabled="!selectedPlans.length">批量禁用</el-button>
+                <el-button size="small" type="danger" plain @click="batchDeletePlans" :disabled="!selectedPlans.length">批量删除</el-button>
+                <el-button v-if="editingPlanId" link type="info" @click="resetPlanForm">取消编辑</el-button>
+              </div>
             </div>
           </template>
           <el-form label-position="top" size="small">
@@ -340,7 +385,8 @@ onUnmounted(stopRecordPoll)
             </el-button>
           </el-form>
 
-          <el-table :data="plans" class="mt-4" size="small" stripe>
+          <el-table :data="plans" class="mt-4" size="small" stripe @selection-change="onPlanSelectionChange">
+            <el-table-column type="selection" width="40" />
             <el-table-column prop="id" label="ID" width="50" />
             <el-table-column prop="name" label="计划名" min-width="100" show-overflow-tooltip />
             <el-table-column label="模板" min-width="80" show-overflow-tooltip>
